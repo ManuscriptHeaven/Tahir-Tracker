@@ -20,7 +20,8 @@ import {
   User, 
   X,
   Building,
-  History
+  History,
+  MessageSquare
 } from 'lucide-react';
 
 interface RentTrackerProps {
@@ -546,13 +547,33 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
 
               {/* Action Buttons */}
               <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
-                <button
-                  onClick={() => handleEditPortion(portion)}
-                  className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                  Edit Portion
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleEditPortion(portion)}
+                    className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                    Edit
+                  </button>
+
+                  {portion.tenantPhone && (
+                    <button
+                      onClick={() => {
+                        const cleanPhone = portion.tenantPhone?.replace(/[^0-9]/g, '') || '';
+                        const phoneWithCountry = cleanPhone.startsWith('0') ? '92' + cleanPhone.slice(1) : cleanPhone;
+                        const msg = isPaid
+                          ? `Assalam-o-Alaikum ${portion.tenantName},\n\n${portion.portionName} ka ${getMonthYearFormatted(selectedMonth)} ka rent (${formatCurrency(record?.paidAmount || fin.totalDue)}) receive ho chuka hai.\nPayment Method: ${record?.paymentMethod || 'Cash'}\nDate: ${record?.paymentDate || ''}\n\nShukriya!`
+                          : `Assalam-o-Alaikum ${portion.tenantName},\n\n${portion.portionName} ka ${getMonthYearFormatted(selectedMonth)} ka rent (${formatCurrency(fin.totalDue)}) payable hai.\nBaraye meherbani payment clear karein.\n\nShukriya!`;
+                        window.open(`https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(msg)}`, '_blank');
+                      }}
+                      className="p-2 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+                      title="Send WhatsApp Receipt / Reminder"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      WhatsApp
+                    </button>
+                  )}
+                </div>
 
                 <button
                   onClick={() => handleOpenCollect(portion, record)}

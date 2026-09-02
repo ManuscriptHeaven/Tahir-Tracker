@@ -66,44 +66,55 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const formattedMonth = getMonthYearFormatted(selectedMonth);
 
-  return (
+    const isRentMode = (import.meta as any).env?.VITE_APP_MODE === 'rent';
+    const desktopTabs = isRentMode
+      ? [
+          { id: 'rent' as NavTab, label: '🏠 Rent Portions' },
+          { id: 'reports' as NavTab, label: '📊 Reports & Receipts' },
+          { id: 'settings' as NavTab, label: '⚙️ Cloud Settings' }
+        ]
+      : [
+          { id: 'dashboard' as NavTab, label: 'Dashboard' },
+          { id: 'finance' as NavTab, label: '💰 Finance' },
+          { id: 'utility' as NavTab, label: 'Utility' },
+          { id: 'loans' as NavTab, label: 'Loans' },
+          { id: 'milk' as NavTab, label: 'Milk' },
+          { id: 'petrol' as NavTab, label: 'Petrol' },
+          { id: 'rent' as NavTab, label: 'Rent' },
+          { id: 'reports' as NavTab, label: 'Reports' },
+          { id: 'settings' as NavTab, label: 'Settings' },
+        ];
+
+    return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm no-print">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo & App Name */}
           <div 
             className="flex items-center gap-3 cursor-pointer select-none"
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => setActiveTab(isRentMode ? 'rent' : 'dashboard')}
           >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white font-bold shadow-md shadow-emerald-500/20">
-              <span className="text-xl">TT</span>
+              <span className="text-xl">{isRentMode ? '🏠' : 'TT'}</span>
             </div>
             <div>
               <div className="flex items-center gap-1.5">
                 <h1 className="font-bold text-slate-800 text-base sm:text-lg leading-tight tracking-tight">
-                  Tahir Tracker
+                  {isRentMode ? 'Rent Tracking' : 'Tahir Tracker'}
                 </h1>
                 <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 hidden sm:inline-block">
-                  PWA • Cloud
+                  {isRentMode ? 'Tenant' : 'PWA • Cloud'}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 leading-none">Finance & Household</p>
+              <p className="text-[11px] text-slate-500 leading-none">
+                {isRentMode ? 'Property & Tenant Management' : 'Finance & Household'}
+              </p>
             </div>
           </div>
 
           {/* Desktop Navigation Links */}
           <div className="hidden lg:flex items-center gap-1 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/80">
-            {[
-              { id: 'dashboard' as NavTab, label: 'Dashboard' },
-              { id: 'finance' as NavTab, label: '💰 Finance' },
-              { id: 'utility' as NavTab, label: 'Utility' },
-              { id: 'loans' as NavTab, label: 'Loans' },
-              { id: 'milk' as NavTab, label: 'Milk' },
-              { id: 'petrol' as NavTab, label: 'Petrol' },
-              { id: 'rent' as NavTab, label: 'Rent' },
-              { id: 'reports' as NavTab, label: 'Reports' },
-              { id: 'settings' as NavTab, label: 'Settings' },
-            ].map(tab => (
+            {desktopTabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}

@@ -25,10 +25,11 @@ import { AIAssistantModal } from './components/ai/AIAssistantModal';
 import { AIFloatingButton } from './components/ai/AIFloatingButton';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
+  const isRentMode = (import.meta as any).env?.VITE_APP_MODE === 'rent';
+  const [activeTab, setActiveTab] = useState<NavTab>(isRentMode ? 'rent' : 'dashboard');
   // Default to 2026-09 (current month matching spec)
   const [selectedMonth, setSelectedMonth] = useState<string>('2026-09');
-  const [reportCategory, setReportCategory] = useState<ReportCategory>('milk');
+  const [reportCategory, setReportCategory] = useState<ReportCategory>(isRentMode ? 'rent' : 'milk');
   const [isDbReady, setIsDbReady] = useState(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
@@ -87,11 +88,15 @@ export const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center p-4">
         <div className="text-center space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white font-black text-xl flex items-center justify-center mx-auto animate-bounce shadow-lg shadow-emerald-500/30">
-            TT
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white font-black text-2xl flex items-center justify-center mx-auto animate-bounce shadow-lg shadow-emerald-500/30">
+            {isRentMode ? '🏠' : 'TT'}
           </div>
-          <h2 className="font-bold text-lg text-slate-100">Personal Finance & Household Tracker</h2>
-          <p className="text-xs text-slate-400">Loading offline local database & cloud sync...</p>
+          <h2 className="font-bold text-lg text-slate-100">
+            {isRentMode ? 'Rent Tracking' : 'Personal Finance & Household Tracker'}
+          </h2>
+          <p className="text-xs text-slate-400">
+            {isRentMode ? 'Loading rental portions & cloud sync...' : 'Loading offline local database & cloud sync...'}
+          </p>
         </div>
       </div>
     );
@@ -105,104 +110,135 @@ export const App: React.FC = () => {
         setActiveTab={setActiveTab}
         selectedMonth={selectedMonth}
         setSelectedMonth={setSelectedMonth}
-        onOpenAI={() => setIsAIAssistantOpen(true)}
+        onOpenAI={!isRentMode ? () => setIsAIAssistantOpen(true) : undefined}
         installPrompt={deferredInstallPrompt}
         onInstallPWA={handleInstallPWA}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 pt-5 pb-24">
-        {/* Sub Navigation Switcher for Household Trackers */}
-        <TrackerSubNav
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-        />
-
-        {activeTab === 'dashboard' && (
-          <Dashboard
-            selectedMonth={selectedMonth}
+        {/* Sub Navigation Switcher only for Full Household Tracker */}
+        {!isRentMode && (
+          <TrackerSubNav
+            activeTab={activeTab}
             setActiveTab={setActiveTab}
-            onOpenReportWithCategory={openReportWithCategory}
           />
         )}
 
-        {activeTab === 'finance' && (
-          <FinanceTracker
-            selectedMonth={selectedMonth}
-            setSelectedMonth={setSelectedMonth}
-          />
-        )}
+        {isRentMode ? (
+          <>
+            {activeTab === 'rent' && (
+              <RentTracker
+                selectedMonth={selectedMonth}
+                onOpenReport={() => openReportWithCategory('rent')}
+              />
+            )}
 
-        {activeTab === 'utility' && (
-          <UtilityTracker
-            onOpenReport={() => openReportWithCategory('utility')}
-          />
-        )}
+            {activeTab === 'reports' && (
+              <ReportsView
+                selectedMonth={selectedMonth}
+                setSelectedMonth={setSelectedMonth}
+                initialCategory="rent"
+              />
+            )}
 
-        {activeTab === 'loans' && (
-          <LoanTracker
-            onOpenReport={() => openReportWithCategory('loans')}
-          />
-        )}
+            {activeTab === 'settings' && (
+              <SettingsView />
+            )}
+          </>
+        ) : (
+          <>
+            {activeTab === 'dashboard' && (
+              <Dashboard
+                selectedMonth={selectedMonth}
+                setActiveTab={setActiveTab}
+                onOpenReportWithCategory={openReportWithCategory}
+              />
+            )}
 
-        {activeTab === 'milk' && (
-          <MilkTracker
-            selectedMonth={selectedMonth}
-            onOpenReport={() => openReportWithCategory('milk')}
-          />
-        )}
+            {activeTab === 'finance' && (
+              <FinanceTracker
+                selectedMonth={selectedMonth}
+                setSelectedMonth={setSelectedMonth}
+              />
+            )}
 
-        {activeTab === 'petrol' && (
-          <PetrolTracker
-            selectedMonth={selectedMonth}
-            onOpenReport={() => openReportWithCategory('petrol')}
-          />
-        )}
+            {activeTab === 'utility' && (
+              <UtilityTracker
+                onOpenReport={() => openReportWithCategory('utility')}
+              />
+            )}
 
-        {activeTab === 'rent' && (
-          <RentTracker
-            selectedMonth={selectedMonth}
-            onOpenReport={() => openReportWithCategory('rent')}
-          />
-        )}
+            {activeTab === 'loans' && (
+              <LoanTracker
+                onOpenReport={() => openReportWithCategory('loans')}
+              />
+            )}
 
-        {activeTab === 'reports' && (
-          <ReportsView
-            selectedMonth={selectedMonth}
-            setSelectedMonth={setSelectedMonth}
-            initialCategory={reportCategory}
-          />
-        )}
+            {activeTab === 'milk' && (
+              <MilkTracker
+                selectedMonth={selectedMonth}
+                onOpenReport={() => openReportWithCategory('milk')}
+              />
+            )}
 
-        {activeTab === 'settings' && (
-          <SettingsView />
+            {activeTab === 'petrol' && (
+              <PetrolTracker
+                selectedMonth={selectedMonth}
+                onOpenReport={() => openReportWithCategory('petrol')}
+              />
+            )}
+
+            {activeTab === 'rent' && (
+              <RentTracker
+                selectedMonth={selectedMonth}
+                onOpenReport={() => openReportWithCategory('rent')}
+              />
+            )}
+
+            {activeTab === 'reports' && (
+              <ReportsView
+                selectedMonth={selectedMonth}
+                setSelectedMonth={setSelectedMonth}
+                initialCategory={reportCategory}
+              />
+            )}
+
+            {activeTab === 'settings' && (
+              <SettingsView />
+            )}
+          </>
         )}
       </main>
 
-      {/* Floating AI Voice Assistant Button */}
-      <AIFloatingButton
-        onClick={() => setIsAIAssistantOpen(true)}
-      />
+      {!isRentMode && (
+        <>
+          {/* Floating AI Voice Assistant Button */}
+          <AIFloatingButton
+            onClick={() => setIsAIAssistantOpen(true)}
+          />
 
-      {/* AI Voice & Text Assistant Modal */}
-      <AIAssistantModal
-        isOpen={isAIAssistantOpen}
-        onClose={() => setIsAIAssistantOpen(false)}
-        onNavigate={(tab) => setActiveTab(tab)}
-      />
+          {/* AI Voice & Text Assistant Modal */}
+          <AIAssistantModal
+            isOpen={isAIAssistantOpen}
+            onClose={() => setIsAIAssistantOpen(false)}
+            onNavigate={(tab) => setActiveTab(tab)}
+          />
 
-      {/* Mobile Bottom Navigation (4-Tab Standard + Center Quick Add) */}
+          {/* Quick Add Bottom Sheet */}
+          <QuickAddSheet
+            isOpen={isQuickAddOpen}
+            onClose={() => setIsQuickAddOpen(false)}
+            onSelectAction={handleSelectQuickAction}
+          />
+        </>
+      )}
+
+      {/* Mobile Bottom Navigation */}
       <BottomNav
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenQuickAdd={() => setIsQuickAddOpen(true)}
-      />
-
-      {/* Quick Add Bottom Sheet */}
-      <QuickAddSheet
-        isOpen={isQuickAddOpen}
-        onClose={() => setIsQuickAddOpen(false)}
-        onSelectAction={handleSelectQuickAction}
       />
     </div>
   );
