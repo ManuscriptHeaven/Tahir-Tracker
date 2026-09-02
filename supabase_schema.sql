@@ -337,25 +337,27 @@ BEGIN
     ALTER TABLE finance_goals REPLICA IDENTITY FULL;
     ALTER TABLE finance_voice_entries REPLICA IDENTITY FULL;
 
-    -- Add all tables to supabase_realtime publication
-    ALTER PUBLICATION supabase_realtime ADD TABLE utility_persons;
-    ALTER PUBLICATION supabase_realtime ADD TABLE utility_bills;
-    ALTER PUBLICATION supabase_realtime ADD TABLE utility_payments;
-    ALTER PUBLICATION supabase_realtime ADD TABLE milk_consumers;
-    ALTER PUBLICATION supabase_realtime ADD TABLE milk_logs;
-    ALTER PUBLICATION supabase_realtime ADD TABLE petrol_refills;
-    ALTER PUBLICATION supabase_realtime ADD TABLE rent_portions;
-    ALTER PUBLICATION supabase_realtime ADD TABLE rent_records;
-    ALTER PUBLICATION supabase_realtime ADD TABLE loans;
-    ALTER PUBLICATION supabase_realtime ADD TABLE settings;
-
-    ALTER PUBLICATION supabase_realtime ADD TABLE finance_accounts;
-    ALTER PUBLICATION supabase_realtime ADD TABLE finance_categories;
-    ALTER PUBLICATION supabase_realtime ADD TABLE finance_transactions;
-    ALTER PUBLICATION supabase_realtime ADD TABLE finance_budgets;
-    ALTER PUBLICATION supabase_realtime ADD TABLE finance_recurring_transactions;
-    ALTER PUBLICATION supabase_realtime ADD TABLE finance_goals;
-    ALTER PUBLICATION supabase_realtime ADD TABLE finance_voice_entries;
+    -- Add all tables to supabase_realtime publication (safely adding each table)
+    DECLARE
+        tbl text;
+        tbl_list text[] := ARRAY[
+            'utility_persons', 'utility_bills', 'utility_payments',
+            'milk_consumers', 'milk_logs', 'petrol_refills',
+            'rent_portions', 'rent_records', 'loans', 'settings',
+            'finance_accounts', 'finance_categories', 'finance_transactions',
+            'finance_budgets', 'finance_recurring_transactions',
+            'finance_goals', 'finance_voice_entries'
+        ];
+    BEGIN
+        FOREACH tbl IN ARRAY tbl_list LOOP
+            BEGIN
+                EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE %I', tbl);
+            EXCEPTION
+                WHEN duplicate_object THEN NULL;
+                WHEN others THEN NULL;
+            END;
+        END LOOP;
+    END;
 EXCEPTION
     WHEN duplicate_object THEN null;
     WHEN others THEN null;
