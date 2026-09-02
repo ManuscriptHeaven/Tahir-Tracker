@@ -11,6 +11,7 @@ import { QuickAddSheet } from './components/layout/QuickAddSheet';
 
 // Views
 import { Dashboard } from './components/dashboard/Dashboard';
+import { FinanceTracker } from './components/finance/FinanceTracker';
 import { UtilityTracker } from './components/utility/UtilityTracker';
 import { LoanTracker } from './components/loan/LoanTracker';
 import { MilkTracker } from './components/milk/MilkTracker';
@@ -25,8 +26,8 @@ import { AIFloatingButton } from './components/ai/AIFloatingButton';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
-  // Default to 2026-08 (as specified in user prompt, or current month)
-  const [selectedMonth, setSelectedMonth] = useState<string>('2026-08');
+  // Default to 2026-09 (current month matching spec)
+  const [selectedMonth, setSelectedMonth] = useState<string>('2026-09');
   const [reportCategory, setReportCategory] = useState<ReportCategory>('milk');
   const [isDbReady, setIsDbReady] = useState(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
@@ -122,6 +123,13 @@ export const App: React.FC = () => {
             selectedMonth={selectedMonth}
             setActiveTab={setActiveTab}
             onOpenReportWithCategory={openReportWithCategory}
+          />
+        )}
+
+        {activeTab === 'finance' && (
+          <FinanceTracker
+            selectedMonth={selectedMonth}
+            setSelectedMonth={setSelectedMonth}
           />
         )}
 

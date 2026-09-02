@@ -1,4 +1,6 @@
 export type AIActionType =
+  | 'add_finance_transaction'  // Add personal finance expense or income
+  | 'transfer_finance_funds'  // Transfer money between accounts
   | 'update_utility_bill'      // Set utility bill amounts (electricity/gas/water) for a month
   | 'add_utility_payment'     // Add payment entry for a utility bill
   | 'add_milk_log'            // Add/update milk delivery log for a consumer on a date
@@ -20,7 +22,7 @@ export interface AIProposal {
   id: string;
   actionType: AIActionType;
   title: string;
-  category: 'utility' | 'milk' | 'loans' | 'petrol' | 'rent' | 'nav' | 'general';
+  category: 'finance' | 'utility' | 'milk' | 'loans' | 'petrol' | 'rent' | 'nav' | 'general';
   urduSummary: string;
   englishSummary?: string;
   requiresApproval: boolean;

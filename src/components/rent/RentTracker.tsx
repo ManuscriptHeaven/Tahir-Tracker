@@ -388,9 +388,30 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
       </div>
 
       {/* Portions Grid for Selected Month */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {portions.map(portion => {
-          const record = currentRecordMap.get(portion.id);
+      {portions.length === 0 ? (
+        <div className="bg-white rounded-3xl p-8 sm:p-12 text-center border border-dashed border-slate-300 shadow-sm space-y-3">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
+            <Building className="w-7 h-7" />
+          </div>
+          <h3 className="font-bold text-slate-800 text-base">No Rental Portions Added</h3>
+          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            Add your house portions or apartments along with tenant details to start tracking monthly rents and collections.
+          </p>
+          <button
+            onClick={() => {
+              resetPortionForm();
+              setIsPortionModalOpen(true);
+            }}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs inline-flex items-center gap-1.5 shadow-sm transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            Add First Portion
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {portions.map(portion => {
+            const record = currentRecordMap.get(portion.id);
           const fin = getPortionFinancials(portion, record);
 
           const isPaid = fin.status === 'paid';
@@ -549,6 +570,7 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
           );
         })}
       </div>
+      )}
 
       {/* MODAL: COLLECT RENT / UPDATE RECORD */}
       {collectModalData && (

@@ -142,6 +142,130 @@ CREATE TABLE IF NOT EXISTS settings (
     last_backup_date TIMESTAMPTZ
 );
 
+-- ==============================================================================
+-- PERSONAL FINANCE TABLES
+-- ==============================================================================
+
+-- 11. FINANCE ACCOUNTS
+CREATE TABLE IF NOT EXISTS finance_accounts (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    account_type TEXT NOT NULL,
+    opening_balance NUMERIC DEFAULT 0,
+    current_balance NUMERIC DEFAULT 0,
+    currency TEXT DEFAULT 'PKR',
+    institution TEXT,
+    account_number TEXT,
+    icon TEXT,
+    color TEXT,
+    is_active BOOLEAN DEFAULT true,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 12. FINANCE CATEGORIES
+CREATE TABLE IF NOT EXISTS finance_categories (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('expense', 'income')),
+    parent_category_id TEXT,
+    icon TEXT DEFAULT '📦',
+    color TEXT,
+    is_default BOOLEAN DEFAULT false,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 13. FINANCE TRANSACTIONS
+CREATE TABLE IF NOT EXISTS finance_transactions (
+    id TEXT PRIMARY KEY,
+    transaction_type TEXT NOT NULL CHECK (transaction_type IN ('expense', 'income', 'transfer')),
+    amount NUMERIC NOT NULL DEFAULT 0,
+    currency TEXT DEFAULT 'PKR',
+    category_id TEXT,
+    category_name TEXT,
+    account_id TEXT NOT NULL,
+    account_name TEXT,
+    transfer_to_account_id TEXT,
+    transfer_to_account_name TEXT,
+    transaction_date TEXT NOT NULL,
+    description TEXT NOT NULL,
+    source TEXT DEFAULT 'manual',
+    status TEXT DEFAULT 'completed',
+    attachment_note TEXT,
+    raw_voice_transcript TEXT,
+    confidence_score NUMERIC,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_finance_tx_date ON finance_transactions(transaction_date);
+CREATE INDEX IF NOT EXISTS idx_finance_tx_cat ON finance_transactions(category_id);
+CREATE INDEX IF NOT EXISTS idx_finance_tx_acc ON finance_transactions(account_id);
+
+-- 14. FINANCE BUDGETS
+CREATE TABLE IF NOT EXISTS finance_budgets (
+    id TEXT PRIMARY KEY,
+    category_id TEXT,
+    category_name TEXT,
+    amount NUMERIC NOT NULL DEFAULT 0,
+    period TEXT DEFAULT 'monthly',
+    start_date TEXT,
+    end_date TEXT,
+    alert_threshold NUMERIC DEFAULT 80,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 15. FINANCE RECURRING TRANSACTIONS
+CREATE TABLE IF NOT EXISTS finance_recurring_transactions (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    transaction_type TEXT NOT NULL,
+    amount NUMERIC NOT NULL DEFAULT 0,
+    category_id TEXT,
+    account_id TEXT NOT NULL,
+    transfer_to_account_id TEXT,
+    description TEXT,
+    frequency TEXT NOT NULL DEFAULT 'monthly',
+    start_date TEXT NOT NULL,
+    next_run_date TEXT NOT NULL,
+    end_date TEXT,
+    auto_process BOOLEAN DEFAULT false,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 16. FINANCE GOALS
+CREATE TABLE IF NOT EXISTS finance_goals (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    target_amount NUMERIC NOT NULL DEFAULT 0,
+    current_amount NUMERIC NOT NULL DEFAULT 0,
+    target_date TEXT,
+    status TEXT DEFAULT 'in_progress',
+    notes TEXT,
+    icon TEXT,
+    color TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 17. FINANCE VOICE ENTRIES
+CREATE TABLE IF NOT EXISTS finance_voice_entries (
+    id TEXT PRIMARY KEY,
+    audio_url TEXT,
+    transcript TEXT NOT NULL,
+    parsed_data JSONB DEFAULT '{}'::jsonb,
+    confidence_score NUMERIC DEFAULT 0,
+    status TEXT DEFAULT 'confirmed',
+    transaction_id TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Enable Row Level Security (RLS)
 ALTER TABLE utility_persons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE utility_bills ENABLE ROW LEVEL SECURITY;
@@ -153,6 +277,14 @@ ALTER TABLE rent_portions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE rent_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE loans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE finance_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE finance_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE finance_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE finance_budgets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE finance_recurring_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE finance_goals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE finance_voice_entries ENABLE ROW LEVEL SECURITY;
 
 -- Allow full access to anon/authenticated users (for personal tracker)
 DO $$
@@ -167,6 +299,14 @@ BEGIN
     EXECUTE 'CREATE POLICY "Allow all access to rent_records" ON rent_records FOR ALL USING (true) WITH CHECK (true)';
     EXECUTE 'CREATE POLICY "Allow all access to loans" ON loans FOR ALL USING (true) WITH CHECK (true)';
     EXECUTE 'CREATE POLICY "Allow all access to settings" ON settings FOR ALL USING (true) WITH CHECK (true)';
+
+    EXECUTE 'CREATE POLICY "Allow all access to finance_accounts" ON finance_accounts FOR ALL USING (true) WITH CHECK (true)';
+    EXECUTE 'CREATE POLICY "Allow all access to finance_categories" ON finance_categories FOR ALL USING (true) WITH CHECK (true)';
+    EXECUTE 'CREATE POLICY "Allow all access to finance_transactions" ON finance_transactions FOR ALL USING (true) WITH CHECK (true)';
+    EXECUTE 'CREATE POLICY "Allow all access to finance_budgets" ON finance_budgets FOR ALL USING (true) WITH CHECK (true)';
+    EXECUTE 'CREATE POLICY "Allow all access to finance_recurring_transactions" ON finance_recurring_transactions FOR ALL USING (true) WITH CHECK (true)';
+    EXECUTE 'CREATE POLICY "Allow all access to finance_goals" ON finance_goals FOR ALL USING (true) WITH CHECK (true)';
+    EXECUTE 'CREATE POLICY "Allow all access to finance_voice_entries" ON finance_voice_entries FOR ALL USING (true) WITH CHECK (true)';
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;

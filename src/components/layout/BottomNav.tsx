@@ -4,8 +4,7 @@ import {
   LayoutDashboard, 
   Layers, 
   Plus, 
-  FileText, 
-  Settings 
+  FileText 
 } from 'lucide-react';
 
 interface BottomNavProps {
@@ -43,25 +42,20 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           </span>
         </button>
 
-        {/* 2. Expenses / Trackers Hub */}
+        {/* 2. Personal Finance */}
         <button
-          onClick={() => {
-            // If already on a tracker, keep it; otherwise default to utility
-            if (!isTrackerActive) {
-              setActiveTab('utility');
-            }
-          }}
+          onClick={() => setActiveTab('finance')}
           className={`flex-1 flex flex-col items-center justify-center py-1.5 transition-all duration-150 ${
-            isTrackerActive 
+            activeTab === 'finance' 
               ? 'text-emerald-600 font-bold' 
               : 'text-slate-500 hover:text-slate-800 font-medium'
           }`}
         >
-          <div className={`p-1.5 rounded-xl transition-colors ${isTrackerActive ? 'bg-emerald-50 text-emerald-600' : ''}`}>
-            <Layers className="w-5 h-5 stroke-[2.2]" />
+          <div className={`p-1.5 rounded-xl transition-colors ${activeTab === 'finance' ? 'bg-emerald-50 text-emerald-600' : ''}`}>
+            <span className="text-base leading-none">💰</span>
           </div>
           <span className="text-[10px] mt-0.5 leading-none tracking-tight">
-            Expenses
+            Finance
           </span>
         </button>
 
@@ -76,7 +70,28 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           </button>
         </div>
 
-        {/* 4. Reports */}
+        {/* 4. Household Trackers Hub */}
+        <button
+          onClick={() => {
+            if (!isTrackerActive) {
+              setActiveTab('utility');
+            }
+          }}
+          className={`flex-1 flex flex-col items-center justify-center py-1.5 transition-all duration-150 ${
+            isTrackerActive 
+              ? 'text-emerald-600 font-bold' 
+              : 'text-slate-500 hover:text-slate-800 font-medium'
+          }`}
+        >
+          <div className={`p-1.5 rounded-xl transition-colors ${isTrackerActive ? 'bg-emerald-50 text-emerald-600' : ''}`}>
+            <Layers className="w-5 h-5 stroke-[2.2]" />
+          </div>
+          <span className="text-[10px] mt-0.5 leading-none tracking-tight">
+            Trackers
+          </span>
+        </button>
+
+        {/* 5. Reports */}
         <button
           onClick={() => setActiveTab('reports')}
           className={`flex-1 flex flex-col items-center justify-center py-1.5 transition-all duration-150 ${
@@ -90,23 +105,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           </div>
           <span className="text-[10px] mt-0.5 leading-none tracking-tight">
             Reports
-          </span>
-        </button>
-
-        {/* 5. Settings */}
-        <button
-          onClick={() => setActiveTab('settings')}
-          className={`flex-1 flex flex-col items-center justify-center py-1.5 transition-all duration-150 ${
-            activeTab === 'settings' 
-              ? 'text-emerald-600 font-bold' 
-              : 'text-slate-500 hover:text-slate-800 font-medium'
-          }`}
-        >
-          <div className={`p-1.5 rounded-xl transition-colors ${activeTab === 'settings' ? 'bg-emerald-50 text-emerald-600' : ''}`}>
-            <Settings className="w-5 h-5 stroke-[2.2]" />
-          </div>
-          <span className="text-[10px] mt-0.5 leading-none tracking-tight">
-            Settings
           </span>
         </button>
 

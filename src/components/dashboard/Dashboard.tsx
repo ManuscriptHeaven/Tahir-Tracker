@@ -29,7 +29,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   setActiveTab,
   onOpenReportWithCategory: _onOpenReportWithCategory
 }) => {
-  // Live queries
+  const financeTransactions = useLiveQuery(() => db.finance_transactions.toArray()) || [];
   const loans = useLiveQuery(() => db.loans.toArray()) || [];
   const milkConsumers = useLiveQuery(() => db.milk_consumers.filter(c => c.active).toArray()) || [];
   const milkLogs = useLiveQuery(
@@ -49,6 +49,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const settingsList = useLiveQuery(() => db.settings.toArray());
   const currentSettings = settingsList?.[0];
   const milkRate = currentSettings?.milkDefaultRate || 260;
+
+  // 0. PERSONAL FINANCE STATS
+  const currentMonthFinanceTx = financeTransactions.filter(
+    tx => tx.transactionDate.startsWith(selectedMonth) && tx.status !== 'cancelled'
+  );
+  let financeIncome = 0;
+  let financeExpenses = 0;
+  currentMonthFinanceTx.forEach(tx => {
+    if (tx.transactionType === 'income') financeIncome += tx.amount;
+    if (tx.transactionType === 'expense') financeExpenses += tx.amount;
+  });
+  const financeSavings = financeIncome - financeExpenses;
+  const financeSavingsRate = financeIncome > 0 ? Math.round((financeSavings / financeIncome) * 100) : 0;
 
   const monthDays = getDaysInMonth(selectedMonth);
 
@@ -139,6 +152,47 @@ export const Dashboard: React.FC<DashboardProps> = ({
     <div className="space-y-6 pb-16">
       {/* Module Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* 0. PERSONAL FINANCE CARD */}
+        <div 
+          onClick={() => setActiveTab('finance')}
+          className="bg-gradient-to-br from-emerald-900 to-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-md hover:shadow-xl transition-all cursor-pointer group flex flex-col justify-between border border-emerald-500/30 sm:col-span-2 lg:col-span-1"
+        >
+          <div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center font-bold text-xl shadow-md shadow-emerald-500/30">
+                  💰
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="font-black text-white text-base group-hover:text-emerald-300 transition-colors">Personal Finance</h3>
+                    <span className="text-[9px] uppercase font-black px-1.5 py-0.2 rounded bg-emerald-400/20 text-emerald-300">Voice</span>
+                  </div>
+                  <p className="text-xs text-emerald-200/70">Income, Expenses & Budget</p>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-emerald-400 group-hover:translate-x-1 transition-transform" />
+            </div>
+
+            <div className="mt-4">
+              <div className="text-2xl sm:text-3xl font-black text-white">
+                {formatCurrency(financeExpenses)} <span className="text-xs text-emerald-300/80 font-bold">Spent this month</span>
+              </div>
+              <div className="flex items-center justify-between text-xs text-emerald-100/80 mt-2">
+                <span>Income: <strong>{formatCurrency(financeIncome)}</strong></span>
+                <span className="font-bold text-emerald-300">{financeSavingsRate}% Saved</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-3 mt-4 border-t border-white/10 text-xs">
+            <span className="text-emerald-200/70">
+              🎙️ Fast Urdu / English Voice Entry
+            </span>
+            <span className="text-emerald-300 font-bold group-hover:underline">Open Finance →</span>
+          </div>
+        </div>
+
         {/* UTILITY BILLS CARD */}
         <div 
           onClick={() => setActiveTab('utility')}

@@ -1,4 +1,6 @@
-export type NavTab = 'dashboard' | 'utility' | 'loans' | 'milk' | 'petrol' | 'rent' | 'reports' | 'settings';
+export type NavTab = 'dashboard' | 'finance' | 'utility' | 'loans' | 'milk' | 'petrol' | 'rent' | 'reports' | 'settings';
+
+export * from './finance';
 
 export interface UtilityPerson {
   id: string;

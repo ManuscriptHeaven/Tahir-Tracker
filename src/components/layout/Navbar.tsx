@@ -95,6 +95,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="hidden lg:flex items-center gap-1 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/80">
             {[
               { id: 'dashboard' as NavTab, label: 'Dashboard' },
+              { id: 'finance' as NavTab, label: '💰 Finance' },
               { id: 'utility' as NavTab, label: 'Utility' },
               { id: 'loans' as NavTab, label: 'Loans' },
               { id: 'milk' as NavTab, label: 'Milk' },

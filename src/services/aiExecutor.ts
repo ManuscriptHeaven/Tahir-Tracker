@@ -16,6 +16,70 @@ export async function executeAIProposal(proposal: AIProposal): Promise<Execution
   try {
     switch (actionType) {
       // -------------------------------------------------------------
+      // 0. ADD FINANCE TRANSACTION (Expense / Income)
+      // -------------------------------------------------------------
+      case 'add_finance_transaction': {
+        const { transactionType, amount, categoryId, categoryName, accountId, accountName, transactionDate, description, source, rawVoiceTranscript, confidenceScore } = payload;
+        
+        const newTx = {
+          id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          transactionType: transactionType || 'expense',
+          amount: Number(amount) || 0,
+          currency: 'PKR',
+          categoryId: categoryId || 'cat_food',
+          categoryName: categoryName || 'Food & Dining',
+          accountId: accountId || 'acc_cash',
+          accountName: accountName || 'Cash Wallet',
+          transactionDate: transactionDate || new Date().toISOString().split('T')[0],
+          description: description || 'Voice entry',
+          source: source || 'voice',
+          status: 'completed' as const,
+          rawVoiceTranscript,
+          confidenceScore: confidenceScore || 0.95,
+          createdAt: now,
+          updatedAt: now
+        };
+
+        await db.finance_transactions.add(newTx);
+
+        return {
+          success: true,
+          message: `✅ ${Number(amount).toLocaleString()} PKR ka ${transactionType === 'income' ? 'Income' : 'Expense'} (${categoryName || 'General'}) kamyabi se save ho gaya hai!`
+        };
+      }
+
+      // -------------------------------------------------------------
+      // 0.1 TRANSFER FINANCE FUNDS
+      // -------------------------------------------------------------
+      case 'transfer_finance_funds': {
+        const { amount, accountId, accountName, transferToAccountId, transferToAccountName, transactionDate, description } = payload;
+
+        const newTransfer = {
+          id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          transactionType: 'transfer' as const,
+          amount: Number(amount) || 0,
+          currency: 'PKR',
+          accountId: accountId || 'acc_cash',
+          accountName: accountName || 'Cash Wallet',
+          transferToAccountId: transferToAccountId || 'acc_hbl',
+          transferToAccountName: transferToAccountName || 'HBL Account',
+          transactionDate: transactionDate || new Date().toISOString().split('T')[0],
+          description: description || `Transfer to ${transferToAccountName || 'Bank'}`,
+          source: 'voice' as const,
+          status: 'completed' as const,
+          createdAt: now,
+          updatedAt: now
+        };
+
+        await db.finance_transactions.add(newTransfer);
+
+        return {
+          success: true,
+          message: `✅ ${Number(amount).toLocaleString()} PKR ka transfer (${accountName || 'Cash'} → ${transferToAccountName || 'Bank'}) save ho gaya!`
+        };
+      }
+
+      // -------------------------------------------------------------
       // 1. ADD UTILITY PAYMENT
       // -------------------------------------------------------------
       case 'add_utility_payment': {

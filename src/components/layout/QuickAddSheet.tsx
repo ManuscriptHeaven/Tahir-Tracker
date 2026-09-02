@@ -27,11 +27,19 @@ export const QuickAddSheet: React.FC<QuickAddSheetProps> = ({
 
   const quickActions = [
     {
-      id: 'ai_assistant' as const,
-      label: 'AI Voice Assistant',
-      subtitle: 'Speak or type any entry',
+      id: 'finance' as NavTab,
+      label: 'Personal Finance',
+      subtitle: 'Expense, Income & Transfer',
       icon: Sparkles,
       color: 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-800 border-emerald-300 col-span-2 shadow-sm',
+      badge: '💰 Voice & Fast'
+    },
+    {
+      id: 'ai_assistant' as const,
+      label: 'AI Assistant',
+      subtitle: 'Speak or type any command',
+      icon: Sparkles,
+      color: 'bg-purple-50 text-purple-700 border-purple-200 col-span-2 shadow-xs',
       badge: 'Smart Auto'
     },
     {

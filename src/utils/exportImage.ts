@@ -1,4 +1,4 @@
-import { toJpeg } from 'html-to-image';
+import { toJpeg, toPng } from 'html-to-image';
 import download from 'downloadjs';
 
 export async function exportElementAsJpg(elementId: string, filename: string): Promise<boolean> {
@@ -9,11 +9,10 @@ export async function exportElementAsJpg(elementId: string, filename: string): P
   }
 
   try {
-    // Render to high-quality JPEG
     const dataUrl = await toJpeg(node, {
       quality: 0.95,
       backgroundColor: '#ffffff',
-      pixelRatio: 2, // crisp high DPI for mobile and printing
+      pixelRatio: 2,
       style: {
         borderRadius: '0px',
         boxShadow: 'none',
@@ -25,6 +24,26 @@ export async function exportElementAsJpg(elementId: string, filename: string): P
     return true;
   } catch (error) {
     console.error('Error generating JPG image:', error);
+    throw error;
+  }
+}
+
+export async function exportElementAsPng(node: HTMLElement, filename: string): Promise<boolean> {
+  try {
+    const dataUrl = await toPng(node, {
+      backgroundColor: '#ffffff',
+      pixelRatio: 2,
+      style: {
+        borderRadius: '0px',
+        boxShadow: 'none',
+      }
+    });
+
+    const safeFilename = filename.endsWith('.png') ? filename : `${filename}.png`;
+    download(dataUrl, safeFilename, 'image/png');
+    return true;
+  } catch (error) {
+    console.error('Error generating PNG image:', error);
     throw error;
   }
 }

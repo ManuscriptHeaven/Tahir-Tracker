@@ -1,5 +1,6 @@
 import { db } from '../db/db';
 import { AIProposal } from '../types/ai';
+import { parseVoiceTransactionInput } from './voiceParser';
 
 // Helper to normalize Roman Urdu & English text
 function normalizeText(text: string): string {
@@ -119,11 +120,13 @@ export async function parseNaturalLanguageInput(rawInput: string): Promise<AIPro
   const id = `prop_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 
   // 1. Fetch DB entities to do intelligent dynamic matching
-  const [utilityPersons, milkConsumers, rentPortions, loans] = await Promise.all([
+  const [utilityPersons, milkConsumers, rentPortions, loans, financeAccounts, financeCategories] = await Promise.all([
     db.utility_persons.toArray(),
     db.milk_consumers.toArray(),
     db.rent_portions.toArray(),
     db.loans.toArray(),
+    db.finance_accounts.toArray(),
+    db.finance_categories.toArray()
   ]);
 
   // Extract all numbers / amounts
@@ -268,6 +271,21 @@ export async function parseNaturalLanguageInput(rawInput: string): Promise<AIPro
         requiresApproval: false,
         fields: [{ label: 'Target Tab', value: 'Settings', key: 'tab' }],
         payload: { targetTab: 'settings' },
+        confidence: 0.95,
+        rawPrompt: rawInput,
+        status: 'pending'
+      };
+    }
+    if (text.includes('finance') || text.includes('paisa') || text.includes('kharcha') || text.includes('budget') || text.includes('account') || text.includes('transact')) {
+      return {
+        id,
+        actionType: 'navigate',
+        category: 'finance',
+        title: 'Open Personal Finance',
+        urduSummary: 'Personal Finance Dashboard kholne lage hain.',
+        requiresApproval: false,
+        fields: [{ label: 'Target Tab', value: 'Personal Finance', key: 'tab' }],
+        payload: { targetTab: 'finance' },
         confidence: 0.95,
         rawPrompt: rawInput,
         status: 'pending'
@@ -483,15 +501,15 @@ export async function parseNaturalLanguageInput(rawInput: string): Promise<AIPro
       urduSummary: `${matchedPortion?.portionName || 'Portion'} (${matchedPortion?.tenantName || 'Tenant'}) ka ${monthYear} ka ${rentAmount.toLocaleString()} PKR rent receive mark karne ki confirmation.`,
       requiresApproval: true,
       fields: [
-        { label: 'Portion', value: matchedPortion?.portionName || 'Portion 1', key: 'portionName' },
+        { label: 'Portion', value: matchedPortion?.portionName || 'Portion', key: 'portionName' },
         { label: 'Tenant', value: matchedPortion?.tenantName || 'Tenant', key: 'tenantName' },
         { label: 'Month', value: monthYear, key: 'monthYear' },
         { label: 'Amount Received', value: `${rentAmount.toLocaleString()} PKR`, key: 'paidAmount' }
       ],
       payload: {
-        portionId: matchedPortion?.id || 'p1',
-        portionName: matchedPortion?.portionName || 'Portion 1',
-        tenantName: matchedPortion?.tenantName || 'Tenant 1',
+        portionId: matchedPortion?.id || 'p_custom',
+        portionName: matchedPortion?.portionName || 'Portion',
+        tenantName: matchedPortion?.tenantName || 'Tenant',
         monthYear,
         expectedAmount: matchedPortion?.expectedRent || 10000,
         paidAmount: rentAmount,
@@ -507,7 +525,68 @@ export async function parseNaturalLanguageInput(rawInput: string): Promise<AIPro
   }
 
   // -------------------------------------------------------------
-  // PATTERN 6: UTILITY BILL & PAYMENT COMMANDS (The User's Primary Request)
+  // PATTERN 6: PERSONAL FINANCE TRANSACTIONS (Expense, Income, Transfer)
+  // e.g. "Aaj 500 rupees lunch pe kharch kiye", "50 hazar receive hui", "1200 grocery cash se"
+  // -------------------------------------------------------------
+  const isSaleemMentioned = text.includes('saleem') || text.includes('salim');
+  const isUtilityExplicit = (text.includes('bijli') || text.includes('gas') || text.includes('water') || text.includes('utility')) && isSaleemMentioned;
+
+  if (!isUtilityExplicit && !isSaleemMentioned && (amounts.length > 0 || text.includes('lunch') || text.includes('dinner') || text.includes('grocery') || text.includes('petrol') || text.includes('kharch') || text.includes('receive') || text.includes('transfer') || text.includes('salary'))) {
+    const parsedList = parseVoiceTransactionInput(rawInput, financeAccounts, financeCategories);
+    if (parsedList.length > 0 && parsedList[0].amount > 0) {
+      const parsed = parsedList[0];
+      const isTransfer = parsed.transaction_type === 'transfer';
+      const isIncome = parsed.transaction_type === 'income';
+
+      return {
+        id,
+        actionType: isTransfer ? 'transfer_finance_funds' : 'add_finance_transaction',
+        category: 'finance',
+        title: isTransfer 
+          ? `Transfer ${parsed.amount.toLocaleString()} PKR to ${parsed.transfer_to_account || 'Bank'}`
+          : isIncome 
+          ? `Record ${parsed.amount.toLocaleString()} PKR Income`
+          : `Record ${parsed.amount.toLocaleString()} PKR Expense`,
+        urduSummary: isTransfer
+          ? `${parsed.account} se ${parsed.transfer_to_account || 'Bank'} me ${parsed.amount.toLocaleString()} PKR transfer karne ki confirmation.`
+          : isIncome
+          ? `${parsed.category} se ${parsed.amount.toLocaleString()} PKR (${parsed.account}) income record karne ki confirmation.`
+          : `${parsed.category} (${parsed.description}) pe ${parsed.amount.toLocaleString()} PKR (${parsed.account}) expense save karne ki confirmation.`,
+        englishSummary: `${isTransfer ? 'Transfer' : isIncome ? 'Income' : 'Expense'}: ${parsed.amount.toLocaleString()} PKR (${parsed.category} - ${parsed.account})`,
+        requiresApproval: true,
+        fields: [
+          { label: 'Type', value: parsed.transaction_type.toUpperCase(), key: 'transaction_type' },
+          { label: 'Amount', value: `${parsed.amount.toLocaleString()} PKR`, key: 'amount' },
+          { label: 'Category', value: parsed.category, key: 'category' },
+          { label: isTransfer ? 'From Account' : 'Account', value: parsed.account, key: 'account' },
+          ...(isTransfer ? [{ label: 'To Account', value: parsed.transfer_to_account || 'Bank Account', key: 'transfer_to_account' }] : []),
+          { label: 'Date', value: parsed.transaction_date, key: 'transaction_date' },
+          { label: 'Description', value: parsed.description, key: 'description' }
+        ],
+        payload: {
+          transactionType: parsed.transaction_type,
+          amount: parsed.amount,
+          categoryId: parsed.categoryId,
+          categoryName: parsed.category,
+          accountId: parsed.accountId,
+          accountName: parsed.account,
+          transferToAccountId: parsed.transfer_to_account_id,
+          transferToAccountName: parsed.transfer_to_account,
+          transactionDate: parsed.transaction_date,
+          description: parsed.description,
+          source: 'voice',
+          rawVoiceTranscript: rawInput,
+          confidenceScore: parsed.confidence
+        },
+        confidence: parsed.confidence,
+        rawPrompt: rawInput,
+        status: 'pending'
+      };
+    }
+  }
+
+  // -------------------------------------------------------------
+  // PATTERN 7: UTILITY BILL & PAYMENT COMMANDS
   // e.g. "Saleem bhai ka august k bill update kr do 2000"
   // "Saleem ka bijli ka bill 7500"
   // "Saleem ka payment 2000 add karo"

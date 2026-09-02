@@ -4,7 +4,8 @@ import {
   db, 
   exportDatabaseToJson, 
   importDatabaseFromJson, 
-  resetDatabaseToDefaults 
+  resetDatabaseToDefaults,
+  cleanupLegacyDummyData
 } from '../../db/db';
 import { 
   getSupabaseConfig, 
@@ -29,6 +30,7 @@ import {
   DollarSign,
   Milk,
   Home,
+  Trash2,
   Cloud,
   RefreshCw,
   Copy,
@@ -189,11 +191,22 @@ CREATE TABLE IF NOT EXISTS settings (id INT PRIMARY KEY DEFAULT 1, currency TEXT
     e.target.value = '';
   };
 
-  // Handle Reset to Demo
-  const handleResetToDemo = async () => {
-    if (!confirm('Reset all trackers to sample demo records? All custom changes will be reset.')) return;
+  // Handle Purge Dummy Records
+  const handlePurgeDummyData = async () => {
+    if (!confirm('Purge all sample/dummy records (dummy fuel entries, sample loans, fake tenants, etc.)? Your real custom entries will remain intact.')) return;
+    await cleanupLegacyDummyData();
+    if (isSupabaseConfigured()) {
+      await syncWithSupabase();
+    }
+    alert('All dummy and sample records have been purged successfully!');
+    window.location.reload();
+  };
+
+  // Handle Reset to Clean State
+  const handleResetToClean = async () => {
+    if (!confirm('Reset database to clean default state? All tracker entries will be wiped with zero dummy records added.')) return;
     await resetDatabaseToDefaults();
-    alert('Reset completed successfully.');
+    alert('Database successfully reset to clean state (zero dummy entries).');
     window.location.reload();
   };
 
@@ -432,13 +445,21 @@ CREATE TABLE IF NOT EXISTS settings (id INT PRIMARY KEY DEFAULT 1, currency TEXT
           </label>
         </div>
 
-        <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+        <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
           <button
-            onClick={handleResetToDemo}
+            onClick={handlePurgeDummyData}
+            className="px-3.5 py-2 text-xs font-bold text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Purge Legacy Dummy Records
+          </button>
+
+          <button
+            onClick={handleResetToClean}
             className="px-3.5 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            Reset to Sample Demo Data
+            Reset All Data to Clean State
           </button>
         </div>
       </div>
