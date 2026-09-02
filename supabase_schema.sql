@@ -310,3 +310,53 @@ BEGIN
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
+
+-- ==============================================================================
+-- 18. SUPABASE REALTIME CDC & REPLICA IDENTITY CONFIGURATION
+-- Enables sub-second WebSocket synchronization between Android APK, PWA & Desktop
+-- ==============================================================================
+DO $$
+BEGIN
+    -- Set REPLICA IDENTITY FULL so DELETE events contain old.id across all tables
+    ALTER TABLE utility_persons REPLICA IDENTITY FULL;
+    ALTER TABLE utility_bills REPLICA IDENTITY FULL;
+    ALTER TABLE utility_payments REPLICA IDENTITY FULL;
+    ALTER TABLE milk_consumers REPLICA IDENTITY FULL;
+    ALTER TABLE milk_logs REPLICA IDENTITY FULL;
+    ALTER TABLE petrol_refills REPLICA IDENTITY FULL;
+    ALTER TABLE rent_portions REPLICA IDENTITY FULL;
+    ALTER TABLE rent_records REPLICA IDENTITY FULL;
+    ALTER TABLE loans REPLICA IDENTITY FULL;
+    ALTER TABLE settings REPLICA IDENTITY FULL;
+
+    ALTER TABLE finance_accounts REPLICA IDENTITY FULL;
+    ALTER TABLE finance_categories REPLICA IDENTITY FULL;
+    ALTER TABLE finance_transactions REPLICA IDENTITY FULL;
+    ALTER TABLE finance_budgets REPLICA IDENTITY FULL;
+    ALTER TABLE finance_recurring_transactions REPLICA IDENTITY FULL;
+    ALTER TABLE finance_goals REPLICA IDENTITY FULL;
+    ALTER TABLE finance_voice_entries REPLICA IDENTITY FULL;
+
+    -- Add all tables to supabase_realtime publication
+    ALTER PUBLICATION supabase_realtime ADD TABLE utility_persons;
+    ALTER PUBLICATION supabase_realtime ADD TABLE utility_bills;
+    ALTER PUBLICATION supabase_realtime ADD TABLE utility_payments;
+    ALTER PUBLICATION supabase_realtime ADD TABLE milk_consumers;
+    ALTER PUBLICATION supabase_realtime ADD TABLE milk_logs;
+    ALTER PUBLICATION supabase_realtime ADD TABLE petrol_refills;
+    ALTER PUBLICATION supabase_realtime ADD TABLE rent_portions;
+    ALTER PUBLICATION supabase_realtime ADD TABLE rent_records;
+    ALTER PUBLICATION supabase_realtime ADD TABLE loans;
+    ALTER PUBLICATION supabase_realtime ADD TABLE settings;
+
+    ALTER PUBLICATION supabase_realtime ADD TABLE finance_accounts;
+    ALTER PUBLICATION supabase_realtime ADD TABLE finance_categories;
+    ALTER PUBLICATION supabase_realtime ADD TABLE finance_transactions;
+    ALTER PUBLICATION supabase_realtime ADD TABLE finance_budgets;
+    ALTER PUBLICATION supabase_realtime ADD TABLE finance_recurring_transactions;
+    ALTER PUBLICATION supabase_realtime ADD TABLE finance_goals;
+    ALTER PUBLICATION supabase_realtime ADD TABLE finance_voice_entries;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
+END $$;

@@ -1,3 +1,4 @@
+import { RealtimeChannel } from '@supabase/supabase-js';
 import { db, LEGACY_DUMMY_IDS } from '../db/db';
 import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
 import { 
@@ -20,7 +21,7 @@ import {
   FinanceVoiceEntry
 } from '../types';
 
-export type SyncState = 'idle' | 'syncing' | 'synced' | 'error' | 'offline' | 'unconfigured';
+export type SyncState = 'idle' | 'syncing' | 'synced' | 'realtime_active' | 'error' | 'offline' | 'unconfigured';
 
 export interface SyncStatus {
   state: SyncState;
@@ -81,6 +82,230 @@ function toCamelCase(obj: any): any {
     result[camelKey] = obj[key];
   }
   return result;
+}
+
+// Table instances mapping for automated reactive sync
+export const TABLE_MAP: Record<string, any> = {
+  utility_persons: db.utility_persons,
+  utility_bills: db.utility_bills,
+  utility_payments: db.utility_payments,
+  milk_consumers: db.milk_consumers,
+  milk_logs: db.milk_logs,
+  petrol_refills: db.petrol_refills,
+  rent_portions: db.rent_portions,
+  rent_records: db.rent_records,
+  loans: db.loans,
+  settings: db.settings,
+  finance_accounts: db.finance_accounts,
+  finance_categories: db.finance_categories,
+  finance_transactions: db.finance_transactions,
+  finance_budgets: db.finance_budgets,
+  finance_recurring_transactions: db.finance_recurring_transactions,
+  finance_goals: db.finance_goals,
+  finance_voice_entries: db.finance_voice_entries
+};
+
+// Guard flag to prevent mutation hooks from echoing remote sync back to Supabase
+let isRemoteSyncActive = false;
+
+export function setRemoteSyncActive(active: boolean) {
+  isRemoteSyncActive = active;
+}
+
+export function isRemoteSyncing(): boolean {
+  return isRemoteSyncActive;
+}
+
+let realtimeChannel: RealtimeChannel | null = null;
+const pendingPushTimeouts = new Map<string, any>();
+
+/**
+ * Handle incoming Realtime Change Data Capture event from Supabase WebSocket
+ */
+async function handleRealtimeChange(payload: any) {
+  const table = payload.table;
+  const dexieTable = TABLE_MAP[table];
+  if (!dexieTable) return;
+
+  const eventType = payload.eventType; // 'INSERT' | 'UPDATE' | 'DELETE'
+
+  setRemoteSyncActive(true);
+  try {
+    if (eventType === 'DELETE') {
+      const id = payload.old?.id;
+      if (id) {
+        await dexieTable.delete(id);
+        const now = new Date().toISOString();
+        localStorage.setItem(STORAGE_LAST_SYNCED, now);
+        updateStatus('realtime_active', `Live sync: removed from ${table}`);
+      }
+    } else if (eventType === 'INSERT' || eventType === 'UPDATE') {
+      const newRow = payload.new;
+      if (newRow && newRow.id) {
+        // Exclude legacy dummy entries
+        if ((LEGACY_DUMMY_IDS as any)[table]?.includes(newRow.id)) return;
+        const camelObj = toCamelCase(newRow);
+        await dexieTable.put(camelObj);
+        const now = new Date().toISOString();
+        localStorage.setItem(STORAGE_LAST_SYNCED, now);
+        updateStatus('realtime_active', `Live sync: updated ${table}`);
+      }
+    }
+  } catch (err) {
+    console.error(`Error handling realtime change on ${table}:`, err);
+  } finally {
+    setRemoteSyncActive(false);
+  }
+}
+
+/**
+ * Subscribe to all Postgres database changes across all tables via Supabase WebSocket
+ */
+export function subscribeToRealtimeChanges(): () => void {
+  const client = getSupabaseClient();
+  if (!client) return () => {};
+
+  if (realtimeChannel) {
+    try {
+      client.removeChannel(realtimeChannel);
+    } catch (_) {}
+    realtimeChannel = null;
+  }
+
+  try {
+    realtimeChannel = client
+      .channel('public-db-realtime-all')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public' },
+        (payload) => {
+          handleRealtimeChange(payload);
+        }
+      )
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          updateStatus('realtime_active', 'Realtime live sync connected');
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          console.warn('Realtime channel status:', status, err);
+          updateStatus('offline', 'Realtime disconnected. Will reconnect.');
+        }
+      });
+
+    return () => {
+      if (realtimeChannel && client) {
+        try {
+          client.removeChannel(realtimeChannel);
+        } catch (_) {}
+        realtimeChannel = null;
+      }
+    };
+  } catch (err) {
+    console.error('Failed to subscribe to realtime changes:', err);
+    return () => {};
+  }
+}
+
+/**
+ * Trigger debounced push for a table when local mutations occur
+ */
+export function triggerDebouncedPush(tableName: string) {
+  if (isRemoteSyncing()) return;
+  if (!isSupabaseConfigured() || !navigator.onLine) return;
+
+  if (pendingPushTimeouts.has(tableName)) {
+    clearTimeout(pendingPushTimeouts.get(tableName));
+  }
+
+  const timeoutId = setTimeout(async () => {
+    pendingPushTimeouts.delete(tableName);
+    await pushTableToSupabase(tableName);
+  }, 350);
+
+  pendingPushTimeouts.set(tableName, timeoutId);
+}
+
+/**
+ * Push an entire table's local records to Supabase
+ */
+export async function pushTableToSupabase(tableName: string): Promise<void> {
+  if (isRemoteSyncing()) return;
+  const client = getSupabaseClient();
+  const dexieTable = TABLE_MAP[tableName];
+  if (!client || !dexieTable) return;
+
+  try {
+    const records = await dexieTable.toArray();
+    const dummyIds = (LEGACY_DUMMY_IDS as any)[tableName] || [];
+    const cleanRecords = records.filter((r: any) => !dummyIds.includes(r.id));
+
+    if (cleanRecords.length > 0) {
+      const payload = cleanRecords.map(toSnakeCase);
+      const { error } = await client.from(tableName).upsert(payload, { onConflict: 'id' });
+      if (error) {
+        console.warn(`Supabase push error on ${tableName}:`, error.message);
+      } else {
+        const now = new Date().toISOString();
+        localStorage.setItem(STORAGE_LAST_SYNCED, now);
+        updateStatus('realtime_active', `Synced ${cleanRecords.length} records in ${tableName}`);
+      }
+    }
+  } catch (err) {
+    console.error(`Error in pushTableToSupabase for ${tableName}:`, err);
+  }
+}
+
+/**
+ * Delete a specific record from Supabase immediately when deleted locally
+ */
+export async function deleteRemoteRecord(tableName: string, id: any): Promise<void> {
+  if (isRemoteSyncing()) return;
+  const client = getSupabaseClient();
+  if (!client || !id) return;
+
+  try {
+    const { error } = await client.from(tableName).delete().eq('id', id);
+    if (error) {
+      console.warn(`Supabase delete error on ${tableName}:`, error.message);
+    } else {
+      const now = new Date().toISOString();
+      localStorage.setItem(STORAGE_LAST_SYNCED, now);
+      updateStatus('realtime_active', `Live sync: Deleted from ${tableName}`);
+    }
+  } catch (err) {
+    console.error(`Error deleting record from Supabase ${tableName}:`, err);
+  }
+}
+
+let hooksInitialized = false;
+
+/**
+ * Attach mutation hooks to all Dexie tables so local writes auto-push to Supabase
+ */
+export function initDexieMutationHooks() {
+  if (hooksInitialized) return;
+  hooksInitialized = true;
+
+  Object.entries(TABLE_MAP).forEach(([tableName, table]) => {
+    if (!table || typeof table.hook !== 'function') return;
+
+    table.hook('creating', function () {
+      if (!isRemoteSyncing()) {
+        setTimeout(() => triggerDebouncedPush(tableName), 50);
+      }
+    });
+
+    table.hook('updating', function () {
+      if (!isRemoteSyncing()) {
+        setTimeout(() => triggerDebouncedPush(tableName), 50);
+      }
+    });
+
+    table.hook('deleting', function (primKey: any) {
+      if (!isRemoteSyncing()) {
+        setTimeout(() => deleteRemoteRecord(tableName, primKey), 0);
+      }
+    });
+  });
 }
 
 /**
@@ -371,12 +596,24 @@ export async function syncWithSupabase(): Promise<{ success: boolean; message: s
 }
 
 /**
- * Initialize automatic sync listeners (network online/offline & initial sync)
+ * Initialize automatic sync listeners (network, realtime, mutation hooks, visibility change & heartbeat)
  */
 export function initSyncService(): () => void {
+  // 1. Initialize Dexie mutation hooks so any local write auto-pushes to Supabase
+  initDexieMutationHooks();
+
+  let unsubscribeRealtime = () => {};
+
+  const startRealtime = () => {
+    if (isSupabaseConfigured()) {
+      unsubscribeRealtime = subscribeToRealtimeChanges();
+    }
+  };
+
   const handleOnline = () => {
     if (isSupabaseConfigured()) {
       syncWithSupabase();
+      startRealtime();
     } else {
       updateStatus('unconfigured', 'Supabase not configured');
     }
@@ -384,23 +621,51 @@ export function initSyncService(): () => void {
 
   const handleOffline = () => {
     updateStatus('offline', 'Device is offline');
+    if (unsubscribeRealtime) unsubscribeRealtime();
+  };
+
+  // 2. Sync on tab focus / phone unlock / app return
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible' && isSupabaseConfigured()) {
+      syncWithSupabase();
+      startRealtime();
+    }
+  };
+
+  const handleFocus = () => {
+    if (isSupabaseConfigured()) {
+      syncWithSupabase();
+    }
   };
 
   window.addEventListener('online', handleOnline);
   window.addEventListener('offline', handleOffline);
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  window.addEventListener('focus', handleFocus);
 
-  // Initial sync attempt if online & configured
+  // 3. Initial sync and realtime connection
   if (navigator.onLine && isSupabaseConfigured()) {
-    // Delay slightly to allow Dexie initial population
     setTimeout(() => {
       syncWithSupabase();
-    }, 1500);
+      startRealtime();
+    }, 1000);
   } else if (!isSupabaseConfigured()) {
     updateStatus('unconfigured', 'Supabase not configured');
   }
 
+  // 4. Background heartbeat poll (every 25 seconds when app is active)
+  const heartbeatTimer = setInterval(() => {
+    if (document.visibilityState === 'visible' && navigator.onLine && isSupabaseConfigured()) {
+      syncWithSupabase();
+    }
+  }, 25000);
+
   return () => {
     window.removeEventListener('online', handleOnline);
     window.removeEventListener('offline', handleOffline);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    window.removeEventListener('focus', handleFocus);
+    clearInterval(heartbeatTimer);
+    if (unsubscribeRealtime) unsubscribeRealtime();
   };
 }
