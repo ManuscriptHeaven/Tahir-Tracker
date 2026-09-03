@@ -46,6 +46,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     () => db.milk_logs.filter(l => l.date.startsWith(selectedMonth)).toArray(),
     [selectedMonth]
   ) || [];
+  const milkMonthlyRecords = useLiveQuery(() => db.milk_monthly_records.toArray()) || [];
   const petrolRefills = useLiveQuery(
     () => db.petrol_refills.orderBy('odometerReading').toArray()
   ) || [];
@@ -526,26 +527,51 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         })()}
 
         {/* 1. MILK REPORT */}
-        {activeCategory === 'milk' && (
+        {activeCategory === 'milk' && (() => {
+          const currentMilkRecord = milkMonthlyRecords.find(r => r.monthYear === selectedMonth);
+          const paidAmount = currentMilkRecord ? Number(currentMilkRecord.paidAmount || 0) : 0;
+          const remainingAmount = currentMilkRecord?.remainingAmount !== undefined
+            ? Number(currentMilkRecord.remainingAmount)
+            : Math.max(0, totalMilkCost - paidAmount);
+          const prevRemaining = currentMilkRecord ? Number(currentMilkRecord.previousRemaining || 0) : 0;
+          const totalPayable = totalMilkCost + prevRemaining;
+
+          return (
           <div className="space-y-3 mt-2">
             {/* Top Stat Boxes */}
-            <div className="grid grid-cols-4 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
               <div>
                 <div className="text-[9px] font-bold uppercase text-slate-500">Total Supplied</div>
-                <div className="text-sm sm:text-base font-black text-slate-900 mt-0.5">{totalSuppliedKg} KG</div>
+                <div className="text-xs sm:text-sm font-black text-slate-900 mt-0.5">{totalSuppliedKg} KG</div>
+                <div className="text-[9px] text-slate-400">@ {milkRate} PKR/kg</div>
               </div>
               <div>
                 <div className="text-[9px] font-bold uppercase text-slate-500">Missed Deliveries</div>
-                <div className="text-sm sm:text-base font-black text-amber-600 mt-0.5">{totalMissedDays} Days</div>
+                <div className="text-xs sm:text-sm font-black text-amber-600 mt-0.5">{totalMissedDays} Days</div>
                 <div className="text-[9px] text-slate-400">({totalMissedKg} KG Saved)</div>
               </div>
               <div>
-                <div className="text-[9px] font-bold uppercase text-slate-500">Milk Rate</div>
-                <div className="text-sm sm:text-base font-black text-slate-800 mt-0.5">{milkRate} <span className="text-[9px]">PKR/kg</span></div>
+                <div className="text-[9px] font-bold uppercase text-slate-700">Month Bill</div>
+                <div className="text-xs sm:text-sm font-black text-slate-900 mt-0.5">{formatCurrency(totalMilkCost)}</div>
+                <div className="text-[9px] text-slate-400">Due: {formatCurrency(totalPayable)}</div>
               </div>
-              <div>
-                <div className="text-[9px] font-bold uppercase text-emerald-700">Total Bill</div>
-                <div className="text-sm sm:text-base font-black text-emerald-700 mt-0.5">{formatCurrency(totalMilkCost)}</div>
+              <div className="bg-emerald-50/80 p-1.5 rounded-lg border border-emerald-200/60">
+                <div className="text-[9px] font-bold uppercase text-emerald-800">Paid Amount</div>
+                <div className="text-xs sm:text-sm font-black text-emerald-800 mt-0.5">{formatCurrency(paidAmount)}</div>
+                <div className="text-[9px] text-emerald-600 font-semibold truncate">
+                  {currentMilkRecord?.paymentMethod || (paidAmount > 0 ? 'Recorded' : 'Unpaid')}
+                </div>
+              </div>
+              <div className={`p-1.5 rounded-lg border col-span-2 sm:col-span-1 ${
+                remainingAmount === 0 
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                  : 'bg-rose-50 border-rose-200 text-rose-800'
+              }`}>
+                <div className="text-[9px] font-bold uppercase">Remaining</div>
+                <div className="text-xs sm:text-sm font-black mt-0.5">{formatCurrency(remainingAmount)}</div>
+                <div className="text-[9px] font-semibold truncate">
+                  {remainingAmount === 0 ? 'Settled (0)' : 'Baqaya Due'}
+                </div>
               </div>
             </div>
 
@@ -648,7 +674,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               </div>
             </div>
           </div>
-        )}
+        );
+      })()}
 
         {/* 2. RENT REPORT (WITH PREVIOUS ARREARS BREAKDOWN) */}
         {activeCategory === 'rent' && (

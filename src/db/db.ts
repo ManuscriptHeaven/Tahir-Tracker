@@ -3,6 +3,7 @@ import {
   LoanTransaction,
   MilkConsumer,
   MilkDailyLog,
+  MilkMonthlyRecord,
   PetrolRefill,
   RentPortion,
   RentMonthlyRecord,
@@ -23,6 +24,7 @@ export class TahirTrackerDB extends Dexie {
   loans!: Table<LoanTransaction, string>;
   milk_consumers!: Table<MilkConsumer, string>;
   milk_logs!: Table<MilkDailyLog, string>;
+  milk_monthly_records!: Table<MilkMonthlyRecord, string>;
   petrol_refills!: Table<PetrolRefill, string>;
   rent_portions!: Table<RentPortion, string>;
   rent_records!: Table<RentMonthlyRecord, string>;
@@ -66,6 +68,10 @@ export class TahirTrackerDB extends Dexie {
       finance_recurring_transactions: 'id, transactionType, categoryId, accountId, frequency, nextRunDate, isActive',
       finance_goals: 'id, status, targetDate, createdAt',
       finance_voice_entries: 'id, status, createdAt'
+    });
+
+    this.version(4).stores({
+      milk_monthly_records: 'id, monthYear, status, updatedAt'
     });
   }
 }

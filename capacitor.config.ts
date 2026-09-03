@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.tahir.renttracking',
-  appName: 'Rent Tracking',
+  appId: 'com.tahir.tracker',
+  appName: 'Tahir Tracker',
   webDir: 'dist'
 };
 

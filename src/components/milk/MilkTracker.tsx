@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
-import { MilkConsumer, MilkDailyLog } from '../../types';
+import { MilkConsumer, MilkDailyLog, MilkMonthlyRecord } from '../../types';
 import { 
   formatCurrency, 
+  formatDate,
   getDaysInMonth, 
   getMonthYearFormatted 
 } from '../../utils/formatters';
@@ -19,7 +20,11 @@ import {
   Trash2,
   Calendar,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  CreditCard,
+  CheckCircle2,
+  Wallet,
+  MessageSquare
 } from 'lucide-react';
 
 interface MilkTrackerProps {
@@ -40,10 +45,31 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
   const currentSettings = settingsList?.[0];
   const ratePerKg = currentSettings?.milkDefaultRate || 260;
 
+  // Monthly records query for selectedMonth and previous month
+  const monthlyRecords = useLiveQuery(() => db.milk_monthly_records.toArray()) || [];
+  const currentMonthRecord = monthlyRecords.find(r => r.monthYear === selectedMonth);
+
+  // Helper to find previous month record for automatic arrears carryover
+  const [curY, curM] = selectedMonth.split('-').map(Number);
+  const prevDate = new Date(curY, curM - 2, 1);
+  const prevMonthStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+  const prevMonthRecord = monthlyRecords.find(r => r.monthYear === prevMonthStr);
+
   // Local states
   const [isConsumersModalOpen, setIsConsumersModalOpen] = useState(false);
   const [isRateModalOpen, setIsRateModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [newRateInput, setNewRateInput] = useState(ratePerKg.toString());
+
+  // Payment form state
+  const [paymentForm, setPaymentForm] = useState({
+    paidAmount: '',
+    previousRemaining: '0',
+    remainingAmount: '',
+    paymentDate: new Date().toISOString().split('T')[0],
+    paymentMethod: 'Cash' as 'Cash' | 'Easypaisa' | 'JazzCash' | 'Bank Transfer',
+    notes: ''
+  });
 
   // Consumer management state
   const [newConsumerName, setNewConsumerName] = useState('');
@@ -296,6 +322,120 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
 
   const totalMonthlyAmount = totalSuppliedKg * ratePerKg;
 
+  // Previous remaining balance (defaults to previous month's remaining if not explicitly set in current record)
+  const previousRemaining = currentMonthRecord?.previousRemaining !== undefined
+    ? Number(currentMonthRecord.previousRemaining)
+    : (prevMonthRecord ? Number(prevMonthRecord.remainingAmount || 0) : 0);
+
+  const totalPayable = totalMonthlyAmount + previousRemaining;
+  const paidAmount = currentMonthRecord ? Number(currentMonthRecord.paidAmount || 0) : 0;
+  const remainingAmount = currentMonthRecord?.remainingAmount !== undefined
+    ? Number(currentMonthRecord.remainingAmount)
+    : Math.max(0, totalPayable - paidAmount);
+
+  const paymentStatus: 'paid' | 'partial' | 'unpaid' = currentMonthRecord?.status || (
+    remainingAmount <= 0 && (paidAmount > 0 || totalPayable === 0)
+      ? 'paid'
+      : paidAmount > 0
+      ? 'partial'
+      : 'unpaid'
+  );
+
+  const handleOpenPaymentModal = () => {
+    setPaymentForm({
+      paidAmount: currentMonthRecord ? String(currentMonthRecord.paidAmount) : '',
+      previousRemaining: String(previousRemaining),
+      remainingAmount: String(remainingAmount),
+      paymentDate: currentMonthRecord?.paymentDate || new Date().toISOString().split('T')[0],
+      paymentMethod: (currentMonthRecord?.paymentMethod as any) || 'Cash',
+      notes: currentMonthRecord?.notes || ''
+    });
+    setIsPaymentModalOpen(true);
+  };
+
+  const handlePaidAmountChange = (newPaidStr: string) => {
+    const paidVal = parseFloat(newPaidStr) || 0;
+    const prevRem = parseFloat(paymentForm.previousRemaining) || 0;
+    const due = totalMonthlyAmount + prevRem;
+    const rem = Math.max(0, due - paidVal);
+    setPaymentForm(prev => ({
+      ...prev,
+      paidAmount: newPaidStr,
+      remainingAmount: String(rem)
+    }));
+  };
+
+  const handlePrevRemainingChange = (newPrevStr: string) => {
+    const prevRem = parseFloat(newPrevStr) || 0;
+    const paidVal = parseFloat(paymentForm.paidAmount) || 0;
+    const due = totalMonthlyAmount + prevRem;
+    const rem = Math.max(0, due - paidVal);
+    setPaymentForm(prev => ({
+      ...prev,
+      previousRemaining: newPrevStr,
+      remainingAmount: String(rem)
+    }));
+  };
+
+  const handleSavePayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const paid = parseFloat(paymentForm.paidAmount) || 0;
+    const prevRem = parseFloat(paymentForm.previousRemaining) || 0;
+    const rem = parseFloat(paymentForm.remainingAmount);
+    const calculatedRem = !isNaN(rem) ? rem : Math.max(0, (totalMonthlyAmount + prevRem) - paid);
+    const status: 'paid' | 'partial' | 'unpaid' = calculatedRem <= 0 && (paid > 0 || (totalMonthlyAmount + prevRem) === 0)
+      ? 'paid'
+      : paid > 0
+      ? 'partial'
+      : 'unpaid';
+
+    const recordToSave: MilkMonthlyRecord = {
+      id: selectedMonth,
+      monthYear: selectedMonth,
+      totalKg: totalSuppliedKg,
+      ratePerKg,
+      totalBill: totalMonthlyAmount,
+      previousRemaining: prevRem,
+      totalPayable: totalMonthlyAmount + prevRem,
+      paidAmount: paid,
+      remainingAmount: calculatedRem,
+      status,
+      paymentDate: paymentForm.paymentDate,
+      paymentMethod: paymentForm.paymentMethod,
+      notes: paymentForm.notes.trim(),
+      updatedAt: new Date().toISOString()
+    };
+
+    await db.milk_monthly_records.put(recordToSave);
+    setIsPaymentModalOpen(false);
+  };
+
+  const handleMarkAsFullyPaid = async () => {
+    const recordToSave: MilkMonthlyRecord = {
+      id: selectedMonth,
+      monthYear: selectedMonth,
+      totalKg: totalSuppliedKg,
+      ratePerKg,
+      totalBill: totalMonthlyAmount,
+      previousRemaining,
+      totalPayable,
+      paidAmount: totalPayable,
+      remainingAmount: 0,
+      status: 'paid',
+      paymentDate: new Date().toISOString().split('T')[0],
+      paymentMethod: currentMonthRecord?.paymentMethod || 'Cash',
+      notes: currentMonthRecord?.notes || 'Paid in full',
+      updatedAt: new Date().toISOString()
+    };
+    await db.milk_monthly_records.put(recordToSave);
+  };
+
+  const handleSendWhatsAppReceipt = () => {
+    const monthName = getMonthYearFormatted(selectedMonth);
+    const msg = `Assalam-o-Alaikum,\n\nMilk Delivery Account (${monthName}):\n• Total Milk: ${totalSuppliedKg} KG (@ ${ratePerKg} PKR/kg)\n• Monthly Bill: ${formatCurrency(totalMonthlyAmount)}\n${previousRemaining > 0 ? `• Previous Arrears: ${formatCurrency(previousRemaining)}\n• Total Due: ${formatCurrency(totalPayable)}\n` : ''}• Paid: ${formatCurrency(paidAmount)}${currentMonthRecord?.paymentMethod ? ` (${currentMonthRecord.paymentMethod})` : ''}\n• Remaining Balance: ${formatCurrency(remainingAmount)}\n• Status: ${paymentStatus === 'paid' ? 'Paid / Settled ✅' : paymentStatus === 'partial' ? 'Partial Payment ⚠️' : 'Unpaid ⏳'}\n\nShukriya!`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
   // Today's date helper
   const todayStr = new Date().toISOString().split('T')[0];
   const isTodayInSelectedMonth = todayStr.startsWith(selectedMonth);
@@ -348,6 +488,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
 
       {/* Main Monthly Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        {/* Card 1: Total Bill */}
         <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-4 text-white shadow-md">
           <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-100">
             Total Milk Bill
@@ -360,6 +501,49 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
           </div>
         </div>
 
+        {/* Card 2: Paid Amount */}
+        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            Paid Amount
+          </div>
+          <div className="text-xl sm:text-2xl font-extrabold text-emerald-700 mt-1">
+            {formatCurrency(paidAmount)}
+          </div>
+          <div className="text-[11px] text-slate-500 mt-1 truncate">
+            {currentMonthRecord?.paymentDate 
+              ? `Paid on ${formatDate(currentMonthRecord.paymentDate, 'short')}` 
+              : paidAmount > 0 
+              ? 'Recorded' 
+              : 'No payment yet'}
+          </div>
+        </div>
+
+        {/* Card 3: Remaining Balance */}
+        <div className={`rounded-2xl p-4 border shadow-sm ${
+          remainingAmount === 0 
+            ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900' 
+            : 'bg-white border-slate-200 text-slate-900'
+        }`}>
+          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            Remaining Balance
+          </div>
+          <div className={`text-xl sm:text-2xl font-extrabold mt-1 ${
+            remainingAmount === 0 ? 'text-emerald-700' : 'text-rose-600'
+          }`}>
+            {formatCurrency(remainingAmount)}
+          </div>
+          <div className="text-[11px] font-semibold mt-1">
+            {remainingAmount === 0 ? (
+              <span className="text-emerald-700">All Cleared (Nil)</span>
+            ) : paymentStatus === 'partial' ? (
+              <span className="text-amber-600">Partial Balance Due</span>
+            ) : (
+              <span className="text-rose-600">Pending Full Payment</span>
+            )}
+          </div>
+        </div>
+
+        {/* Card 4: Supplied Milk */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
             Supplied Milk
@@ -367,34 +551,132 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
           <div className="text-xl sm:text-2xl font-extrabold text-slate-800 mt-1">
             {totalSuppliedKg} <span className="text-sm font-semibold text-slate-500">KG</span>
           </div>
-          <div className="text-[11px] text-emerald-600 font-medium mt-1">
-            Active Deliveries
+          <div className="text-[11px] text-slate-500 mt-1">
+            Missed: {totalMissedDays} Days ({totalMissedKg} KG)
+          </div>
+        </div>
+      </div>
+
+      {/* Monthly Settlement & Payment Action Banner */}
+      <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className={`p-2.5 rounded-xl ${
+              paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-700' :
+              paymentStatus === 'partial' ? 'bg-amber-100 text-amber-700' :
+              'bg-rose-100 text-rose-700'
+            }`}>
+              <Wallet className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-slate-800 text-sm sm:text-base">
+                  Monthly Settlement & Milk Bill ({getMonthYearFormatted(selectedMonth)})
+                </h3>
+                <span className={`text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full ${
+                  paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-800' :
+                  paymentStatus === 'partial' ? 'bg-amber-100 text-amber-800' :
+                  'bg-rose-100 text-rose-800'
+                }`}>
+                  {paymentStatus === 'paid' ? 'Paid / Cleared' : paymentStatus === 'partial' ? 'Partially Paid' : 'Unpaid'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {currentMonthRecord?.paymentDate 
+                  ? `Last recorded on ${formatDate(currentMonthRecord.paymentDate, 'short')} via ${currentMonthRecord.paymentMethod || 'Cash'}`
+                  : 'Record payments made to the milkman and track carryover remaining'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={handleOpenPaymentModal}
+              className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
+            >
+              <CreditCard className="w-3.5 h-3.5" />
+              <span>{currentMonthRecord ? 'Update Payment' : 'Record Payment'}</span>
+            </button>
+
+            {paymentStatus !== 'paid' && totalPayable > 0 && (
+              <button
+                onClick={handleMarkAsFullyPaid}
+                className="px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95"
+                title="Mark the entire bill as paid"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Mark Fully Paid</span>
+              </button>
+            )}
+
+            <button
+              onClick={handleSendWhatsAppReceipt}
+              className="p-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+              title="Share payment summary on WhatsApp"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">WhatsApp</span>
+            </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-            Missed Days
+        {/* Financial Flow Breakdown Row */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-3 text-center">
+          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+            <div className="text-[10px] font-bold text-slate-400 uppercase">Month Milk Bill</div>
+            <div className="text-sm sm:text-base font-extrabold text-slate-800 mt-0.5">
+              {formatCurrency(totalMonthlyAmount)}
+            </div>
+            <div className="text-[10px] text-slate-400">{totalSuppliedKg} KG × {ratePerKg}</div>
           </div>
-          <div className="text-xl sm:text-2xl font-extrabold text-amber-600 mt-1">
-            {totalMissedDays} <span className="text-sm font-semibold text-slate-500">Days</span>
+
+          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+            <div className="text-[10px] font-bold text-slate-400 uppercase">Previous Remaining</div>
+            <div className="text-sm sm:text-base font-extrabold text-slate-700 mt-0.5">
+              {formatCurrency(previousRemaining)}
+            </div>
+            <div className="text-[10px] text-slate-400">Past arrears</div>
           </div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            Saved: {totalMissedKg} KG
+
+          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+            <div className="text-[10px] font-bold text-slate-400 uppercase">Total Payable</div>
+            <div className="text-sm sm:text-base font-extrabold text-slate-900 mt-0.5">
+              {formatCurrency(totalPayable)}
+            </div>
+            <div className="text-[10px] text-slate-400">Bill + Arrears</div>
+          </div>
+
+          <div className="bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-100">
+            <div className="text-[10px] font-bold text-emerald-700 uppercase">Paid Amount</div>
+            <div className="text-sm sm:text-base font-black text-emerald-800 mt-0.5">
+              {formatCurrency(paidAmount)}
+            </div>
+            <div className="text-[10px] text-emerald-600 font-semibold truncate">
+              {currentMonthRecord?.paymentMethod || (paidAmount > 0 ? 'Recorded' : 'Unpaid')}
+            </div>
+          </div>
+
+          <div className={`p-2.5 rounded-xl border col-span-2 sm:col-span-1 ${
+            remainingAmount === 0 
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+              : 'bg-rose-50 text-rose-800 border-rose-200'
+          }`}>
+            <div className="text-[10px] font-bold uppercase tracking-wider">Remaining Balance</div>
+            <div className="text-sm sm:text-base font-black mt-0.5">
+              {formatCurrency(remainingAmount)}
+            </div>
+            <div className="text-[10px] font-semibold truncate">
+              {remainingAmount === 0 ? 'Nil (Cleared)' : 'Baqaya to pay'}
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-            People Count
+        {currentMonthRecord?.notes && (
+          <div className="mt-3 text-xs bg-slate-50 p-2 rounded-xl text-slate-600 border border-slate-100 flex items-center gap-1.5">
+            <span className="font-semibold text-slate-500">Note:</span>
+            <span>"{currentMonthRecord.notes}"</span>
           </div>
-          <div className="text-xl sm:text-2xl font-extrabold text-slate-800 mt-1">
-            {consumers.length} <span className="text-sm font-semibold text-slate-500">People</span>
-          </div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            {consumers.map(c => c.name).join(', ') || 'None'}
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Person-wise breakdown cards */}
@@ -985,6 +1267,196 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                   className="px-4 py-1.5 bg-emerald-600 text-white rounded-xl font-bold text-xs shadow-md"
                 >
                   Save Rate
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: RECORD / UPDATE MILK PAYMENT & REMAINING */}
+      {isPaymentModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm sm:text-base">
+                    Record Milk Payment
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {getMonthYearFormatted(selectedMonth)} Account
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsPaymentModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100"
+              >
+                <XIcon className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePayment} className="space-y-4 mt-4">
+              {/* Overview Summary Box */}
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <div className="text-[10px] font-bold uppercase text-slate-500">Milk Bill</div>
+                  <div className="text-xs sm:text-sm font-extrabold text-slate-800 mt-0.5">
+                    {formatCurrency(totalMonthlyAmount)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold uppercase text-slate-500">Past Arrears</div>
+                  <div className="text-xs sm:text-sm font-extrabold text-slate-700 mt-0.5">
+                    {formatCurrency(parseFloat(paymentForm.previousRemaining) || 0)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold uppercase text-emerald-700">Total Due</div>
+                  <div className="text-xs sm:text-sm font-black text-emerald-700 mt-0.5">
+                    {formatCurrency(totalMonthlyAmount + (parseFloat(paymentForm.previousRemaining) || 0))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Previous Remaining / Arrears Input */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Previous Remaining (Past Arrears)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">PKR</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={paymentForm.previousRemaining}
+                    onChange={(e) => handlePrevRemainingChange(e.target.value)}
+                    className="w-full pl-12 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/20"
+                    placeholder="0"
+                  />
+                </div>
+                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  Defaults to remaining balance of previous month ({prevMonthStr})
+                </span>
+              </div>
+
+              {/* Paid Amount Input */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-700">
+                    Paid Amount (This Month) *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handlePaidAmountChange(String(totalMonthlyAmount + (parseFloat(paymentForm.previousRemaining) || 0)))}
+                    className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 underline"
+                  >
+                    Set Full ({formatCurrency(totalMonthlyAmount + (parseFloat(paymentForm.previousRemaining) || 0))})
+                  </button>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">PKR</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    required
+                    value={paymentForm.paidAmount}
+                    onChange={(e) => handlePaidAmountChange(e.target.value)}
+                    className="w-full pl-12 pr-3 py-2.5 bg-emerald-50/50 border border-emerald-300 rounded-xl text-base font-black text-emerald-900 focus:ring-2 focus:ring-emerald-500/20"
+                    placeholder="e.g. 15000"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              {/* Remaining Balance (Calculated / Override) */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Remaining Balance (Baqaya)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">PKR</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={paymentForm.remainingAmount}
+                    onChange={(e) => setPaymentForm(prev => ({ ...prev, remainingAmount: e.target.value }))}
+                    className="w-full pl-12 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/20"
+                    placeholder="0"
+                  />
+                </div>
+                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  Automatically calculated as (Total Due - Paid). You can manually adjust if needed.
+                </span>
+              </div>
+
+              {/* Payment Date & Method */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Payment Date
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={paymentForm.paymentDate}
+                    onChange={(e) => setPaymentForm(prev => ({ ...prev, paymentDate: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500/20"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Payment Method
+                  </label>
+                  <select
+                    value={paymentForm.paymentMethod}
+                    onChange={(e) => setPaymentForm(prev => ({ ...prev, paymentMethod: e.target.value as any }))}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500/20"
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="Easypaisa">Easypaisa</option>
+                    <option value="JazzCash">JazzCash</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Notes (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={paymentForm.notes}
+                  onChange={(e) => setPaymentForm(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="e.g. Paid to milkman Aslam in cash"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsPaymentModalOpen(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl font-bold text-xs shadow-md shadow-emerald-600/20 transition-all"
+                >
+                  Save Payment Record
                 </button>
               </div>
             </form>

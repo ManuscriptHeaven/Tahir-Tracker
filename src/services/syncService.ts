@@ -7,6 +7,7 @@ import {
   UtilityPayment, 
   MilkConsumer, 
   MilkDailyLog, 
+  MilkMonthlyRecord,
   PetrolRefill, 
   RentPortion, 
   RentMonthlyRecord, 
@@ -91,6 +92,7 @@ export const TABLE_MAP: Record<string, any> = {
   utility_payments: db.utility_payments,
   milk_consumers: db.milk_consumers,
   milk_logs: db.milk_logs,
+  milk_monthly_records: db.milk_monthly_records,
   petrol_refills: db.petrol_refills,
   rent_portions: db.rent_portions,
   rent_records: db.rent_records,
@@ -404,6 +406,19 @@ export async function syncWithSupabase(): Promise<{ success: boolean; message: s
         .filter((l: any) => !LEGACY_DUMMY_IDS.milk_logs.includes(l.id))
         .map(toCamelCase);
       if (camelLogs.length > 0) await db.milk_logs.bulkPut(camelLogs);
+    }
+
+    // 5b. MILK MONTHLY RECORDS (Monthly payments and remaining balances)
+    const localMilkRecords = await db.milk_monthly_records.toArray();
+    if (localMilkRecords.length > 0) {
+      const payload = localMilkRecords.map(toSnakeCase);
+      const { error } = await client.from('milk_monthly_records').upsert(payload, { onConflict: 'id' });
+      if (error) console.warn('Supabase milk_monthly_records push error:', error.message);
+    }
+    const { data: remoteMilkRecords } = await client.from('milk_monthly_records').select('*');
+    if (remoteMilkRecords && remoteMilkRecords.length > 0) {
+      const camelMilkRecords: MilkMonthlyRecord[] = remoteMilkRecords.map(toCamelCase);
+      if (camelMilkRecords.length > 0) await db.milk_monthly_records.bulkPut(camelMilkRecords);
     }
 
     // 6. PETROL REFILLS (Guaranteed no dummy entries)

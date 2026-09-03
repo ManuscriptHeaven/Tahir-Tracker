@@ -4,7 +4,7 @@ android {
     namespace = "com.tahir.tracker"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.tahir.renttracking"
+        applicationId "com.tahir.tracker"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 2

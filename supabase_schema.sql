@@ -70,6 +70,26 @@ CREATE TABLE IF NOT EXISTS milk_logs (
 );
 CREATE INDEX IF NOT EXISTS idx_milk_logs_date ON milk_logs(date);
 
+-- 5b. MILK MONTHLY RECORDS (Payment and remaining balances)
+CREATE TABLE IF NOT EXISTS milk_monthly_records (
+    id TEXT PRIMARY KEY,
+    month_year TEXT NOT NULL,
+    total_kg NUMERIC DEFAULT 0,
+    rate_per_kg NUMERIC DEFAULT 260,
+    total_bill NUMERIC DEFAULT 0,
+    previous_remaining NUMERIC DEFAULT 0,
+    total_payable NUMERIC DEFAULT 0,
+    paid_amount NUMERIC DEFAULT 0,
+    remaining_amount NUMERIC DEFAULT 0,
+    status TEXT DEFAULT 'unpaid',
+    payment_date TEXT,
+    payment_method TEXT,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_milk_monthly_records_month ON milk_monthly_records(month_year);
+
 -- 6. PETROL REFILLS
 CREATE TABLE IF NOT EXISTS petrol_refills (
     id TEXT PRIMARY KEY,
@@ -272,6 +292,7 @@ ALTER TABLE utility_bills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE utility_payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE milk_consumers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE milk_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE milk_monthly_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE petrol_refills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE rent_portions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE rent_records ENABLE ROW LEVEL SECURITY;
@@ -294,6 +315,7 @@ BEGIN
     EXECUTE 'CREATE POLICY "Allow all access to utility_payments" ON utility_payments FOR ALL USING (true) WITH CHECK (true)';
     EXECUTE 'CREATE POLICY "Allow all access to milk_consumers" ON milk_consumers FOR ALL USING (true) WITH CHECK (true)';
     EXECUTE 'CREATE POLICY "Allow all access to milk_logs" ON milk_logs FOR ALL USING (true) WITH CHECK (true)';
+    EXECUTE 'CREATE POLICY "Allow all access to milk_monthly_records" ON milk_monthly_records FOR ALL USING (true) WITH CHECK (true)';
     EXECUTE 'CREATE POLICY "Allow all access to petrol_refills" ON petrol_refills FOR ALL USING (true) WITH CHECK (true)';
     EXECUTE 'CREATE POLICY "Allow all access to rent_portions" ON rent_portions FOR ALL USING (true) WITH CHECK (true)';
     EXECUTE 'CREATE POLICY "Allow all access to rent_records" ON rent_records FOR ALL USING (true) WITH CHECK (true)';
@@ -323,6 +345,7 @@ BEGIN
     ALTER TABLE utility_payments REPLICA IDENTITY FULL;
     ALTER TABLE milk_consumers REPLICA IDENTITY FULL;
     ALTER TABLE milk_logs REPLICA IDENTITY FULL;
+    ALTER TABLE milk_monthly_records REPLICA IDENTITY FULL;
     ALTER TABLE petrol_refills REPLICA IDENTITY FULL;
     ALTER TABLE rent_portions REPLICA IDENTITY FULL;
     ALTER TABLE rent_records REPLICA IDENTITY FULL;
@@ -342,7 +365,7 @@ BEGIN
         tbl text;
         tbl_list text[] := ARRAY[
             'utility_persons', 'utility_bills', 'utility_payments',
-            'milk_consumers', 'milk_logs', 'petrol_refills',
+            'milk_consumers', 'milk_logs', 'milk_monthly_records', 'petrol_refills',
             'rent_portions', 'rent_records', 'loans', 'settings',
             'finance_accounts', 'finance_categories', 'finance_transactions',
             'finance_budgets', 'finance_recurring_transactions',

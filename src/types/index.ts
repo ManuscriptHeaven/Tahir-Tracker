@@ -93,6 +93,23 @@ export interface MilkDailyLog {
   notes?: string;
 }
 
+export interface MilkMonthlyRecord {
+  id: string; // `${monthYear}` e.g. "2026-09"
+  monthYear: string; // YYYY-MM
+  totalKg: number;
+  ratePerKg: number;
+  totalBill: number; // totalKg * ratePerKg
+  previousRemaining: number; // Arrears carried over from previous month
+  totalPayable: number; // totalBill + previousRemaining
+  paidAmount: number; // Actual payment made
+  remainingAmount: number; // totalPayable - paidAmount
+  status: 'paid' | 'partial' | 'unpaid';
+  paymentDate?: string; // YYYY-MM-DD
+  paymentMethod?: 'Cash' | 'Easypaisa' | 'JazzCash' | 'Bank Transfer';
+  notes?: string;
+  updatedAt: string;
+}
+
 export interface PetrolRefill {
   id: string;
   date: string; // YYYY-MM-DD
