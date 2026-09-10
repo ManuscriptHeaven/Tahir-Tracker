@@ -522,6 +522,48 @@ async function mergeRemoteRecords(dexieTable: any, remoteRecords: any[], tableNa
   }
 }
 
+export interface TableSyncError {
+  table: string;
+  operation: 'push' | 'pull';
+  code: string;
+  message: string;
+  details?: string | null;
+  hint?: string | null;
+}
+
+/**
+ * Strips any sensitive tokens, JWTs, or credentials from error messages
+ */
+export function sanitizeErrorMessage(text: string | undefined | null): string {
+  if (!text) return '';
+  return String(text)
+    .replace(/Bearer\s+[A-Za-z0-9-_=.]+/gi, 'Bearer [REDACTED]')
+    .replace(/eyJ[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*/g, '[JWT_REDACTED]')
+    .replace(/anonKey=[^\s&]+/gi, 'anonKey=[REDACTED]')
+    .replace(/apikey=[^\s&]+/gi, 'apikey=[REDACTED]');
+}
+
+/**
+ * Formats a list of per-table sync errors into a clear, actionable summary message
+ */
+export function formatSyncErrorsSummary(errors: TableSyncError[]): string {
+  if (!errors || errors.length === 0) return '';
+  const lines = errors.map((err) => {
+    const parts: string[] = [`• [${err.table}] ${err.operation.toUpperCase()} failed: ${err.message}`];
+    if (err.code && err.code !== 'UNKNOWN') {
+      parts.push(`(Code: ${err.code})`);
+    }
+    if (err.details) {
+      parts.push(`Details: ${err.details}`);
+    }
+    if (err.hint) {
+      parts.push(`Hint: ${err.hint}`);
+    }
+    return parts.join(' ');
+  });
+  return `Cloud sync failed on ${errors.length} table operation(s):\n${lines.join('\n')}`;
+}
+
 /**
  * Execute a complete two-way synchronization between Dexie and Supabase
  */
@@ -549,6 +591,7 @@ export async function syncWithSupabase(): Promise<{ success: boolean; message: s
   }
 
   updateStatus('syncing', 'Synchronizing with cloud database...');
+  const syncErrors: TableSyncError[] = [];
 
   try {
     // 0. Process offline mutation queue first (deletes propagate and prevent resurrecting)
@@ -575,29 +618,71 @@ export async function syncWithSupabase(): Promise<{ success: boolean; message: s
       const dexieTable = TABLE_MAP[tableName];
       if (!dexieTable) continue;
 
-      // 1. Push local records scoped to current authenticated user
-      const localRecords = await dexieTable.toArray();
-      const dummyIds = (LEGACY_DUMMY_IDS as any)[tableName] || [];
-      const cleanLocal = localRecords.filter((r: any) => !dummyIds.includes(r.id));
-      if (cleanLocal.length > 0) {
-        const payload = cleanLocal.map((r: any) => {
-          const s = toSnakeCase(r);
-          s.user_id = currentUserId;
-          return s;
-        });
-        const { error } = await client.from(tableName).upsert(payload, { onConflict: 'id' });
-        if (error) console.warn(`Supabase push error on ${tableName}:`, error.message);
-      }
+      try {
+        // 1. Push local records scoped to current authenticated user
+        const localRecords = await dexieTable.toArray();
+        const dummyIds = (LEGACY_DUMMY_IDS as any)[tableName] || [];
+        const cleanLocal = localRecords.filter((r: any) => !dummyIds.includes(r.id));
+        if (cleanLocal.length > 0) {
+          const payload = cleanLocal.map((r: any) => {
+            const s = toSnakeCase(r);
+            s.user_id = currentUserId;
+            return s;
+          });
+          const { error: pushError } = await client.from(tableName).upsert(payload, { onConflict: 'id' });
+          if (pushError) {
+            const errEntry: TableSyncError = {
+              table: tableName,
+              operation: 'push',
+              code: pushError.code || 'UNKNOWN',
+              message: sanitizeErrorMessage(pushError.message || 'Upsert failed'),
+              details: sanitizeErrorMessage(pushError.details) || null,
+              hint: sanitizeErrorMessage(pushError.hint) || null
+            };
+            syncErrors.push(errEntry);
+            console.error(`[CloudSync] Supabase PUSH error on table "${tableName}":`, errEntry);
+          }
+        }
 
-      // 2. Pull remote records scoped to current authenticated user with LWW merge
-      const { data: remoteRecords } = await client
-        .from(tableName)
-        .select('*')
-        .eq('user_id', currentUserId);
+        // 2. Pull remote records scoped to current authenticated user with LWW merge
+        const { data: remoteRecords, error: pullError } = await client
+          .from(tableName)
+          .select('*')
+          .eq('user_id', currentUserId);
 
-      if (remoteRecords) {
-        await mergeRemoteRecords(dexieTable, remoteRecords, tableName);
+        if (pullError) {
+          const errEntry: TableSyncError = {
+            table: tableName,
+            operation: 'pull',
+            code: pullError.code || 'UNKNOWN',
+            message: sanitizeErrorMessage(pullError.message || 'Fetch failed'),
+            details: sanitizeErrorMessage(pullError.details) || null,
+            hint: sanitizeErrorMessage(pullError.hint) || null
+          };
+          syncErrors.push(errEntry);
+          console.error(`[CloudSync] Supabase PULL error on table "${tableName}":`, errEntry);
+        } else if (remoteRecords) {
+          await mergeRemoteRecords(dexieTable, remoteRecords, tableName);
+        }
+      } catch (tableErr: any) {
+        // Safe continuation: unexpected table exceptions don't prevent remaining tables from syncing
+        const errEntry: TableSyncError = {
+          table: tableName,
+          operation: 'push',
+          code: 'TABLE_EXCEPTION',
+          message: sanitizeErrorMessage(tableErr?.message || 'Unexpected table error'),
+          details: null,
+          hint: null
+        };
+        syncErrors.push(errEntry);
+        console.error(`[CloudSync] Exception during sync of table "${tableName}":`, tableErr);
       }
+    }
+
+    if (syncErrors.length > 0) {
+      const failureMessage = formatSyncErrorsSummary(syncErrors);
+      updateStatus('error', failureMessage);
+      return { success: false, message: failureMessage };
     }
 
     const now = new Date().toISOString();
@@ -607,7 +692,8 @@ export async function syncWithSupabase(): Promise<{ success: boolean; message: s
     return { success: true, message: 'Synchronization completed successfully!' };
   } catch (err: any) {
     console.error('Synchronization failed:', err);
-    updateStatus('error', `Sync failed: ${err?.message || 'Unknown network error'}`);
+    const sanitizedMsg = sanitizeErrorMessage(err?.message || 'Unknown network error');
+    updateStatus('error', `Sync failed: ${sanitizedMsg}`);
     return { success: false, message: err?.message || 'Sync failed' };
   }
 }

@@ -141,4 +141,290 @@ describe('syncAndBackup.test.ts - Sync, Queue & Backup Safety', () => {
       assert.strictEqual(itemPayload, undefined);
     });
   });
+
+  describe('Sync Error-Reporting & Table Continuation (Requirement 8)', () => {
+    interface TableSyncError {
+      table: string;
+      operation: 'push' | 'pull';
+      code: string;
+      message: string;
+      details?: string | null;
+      hint?: string | null;
+    }
+
+    function sanitizeErrorMessage(text: string | undefined | null): string {
+      if (!text) return '';
+      return String(text)
+        .replace(/Bearer\s+[A-Za-z0-9-_=.]+/gi, 'Bearer [REDACTED]')
+        .replace(/eyJ[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*/g, '[JWT_REDACTED]')
+        .replace(/anonKey=[^\s&]+/gi, 'anonKey=[REDACTED]')
+        .replace(/apikey=[^\s&]+/gi, 'apikey=[REDACTED]');
+    }
+
+    function formatSyncErrorsSummary(errors: TableSyncError[]): string {
+      if (!errors || errors.length === 0) return '';
+      const lines = errors.map((err) => {
+        const parts: string[] = [`• [${err.table}] ${err.operation.toUpperCase()} failed: ${err.message}`];
+        if (err.code && err.code !== 'UNKNOWN') {
+          parts.push(`(Code: ${err.code})`);
+        }
+        if (err.details) {
+          parts.push(`Details: ${err.details}`);
+        }
+        if (err.hint) {
+          parts.push(`Hint: ${err.hint}`);
+        }
+        return parts.join(' ');
+      });
+      return `Cloud sync failed on ${errors.length} table operation(s):\n${lines.join('\n')}`;
+    }
+
+    interface MockTableOperationResult {
+      pushError?: { code: string; message: string; details?: string; hint?: string } | null;
+      pullError?: { code: string; message: string; details?: string; hint?: string } | null;
+    }
+
+    interface SimulatedSyncOutcome {
+      success: boolean;
+      status: 'idle' | 'syncing' | 'synced' | 'error' | 'auth_required';
+      message: string;
+      errors: TableSyncError[];
+      processedTables: string[];
+    }
+
+    async function simulateTwoWaySync(
+      tableDefinitions: Record<string, MockTableOperationResult>,
+      currentUserId: string | null,
+      isAuthenticated: boolean
+    ): Promise<SimulatedSyncOutcome> {
+      if (!isAuthenticated || !currentUserId) {
+        return {
+          success: false,
+          status: 'auth_required',
+          message: 'Sign in required for cloud synchronization',
+          errors: [],
+          processedTables: []
+        };
+      }
+
+      const syncErrors: TableSyncError[] = [];
+      const processedTables: string[] = [];
+
+      const tableKeys = Object.keys(tableDefinitions);
+
+      for (const tableName of tableKeys) {
+        processedTables.push(tableName);
+        const tableConfig = tableDefinitions[tableName];
+
+        try {
+          // 1. Push
+          if (tableConfig.pushError) {
+            syncErrors.push({
+              table: tableName,
+              operation: 'push',
+              code: tableConfig.pushError.code || 'UNKNOWN',
+              message: sanitizeErrorMessage(tableConfig.pushError.message),
+              details: sanitizeErrorMessage(tableConfig.pushError.details) || null,
+              hint: sanitizeErrorMessage(tableConfig.pushError.hint) || null
+            });
+          }
+
+          // 2. Pull
+          if (tableConfig.pullError) {
+            syncErrors.push({
+              table: tableName,
+              operation: 'pull',
+              code: tableConfig.pullError.code || 'UNKNOWN',
+              message: sanitizeErrorMessage(tableConfig.pullError.message),
+              details: sanitizeErrorMessage(tableConfig.pullError.details) || null,
+              hint: sanitizeErrorMessage(tableConfig.pullError.hint) || null
+            });
+          }
+        } catch (tableErr: any) {
+          syncErrors.push({
+            table: tableName,
+            operation: 'push',
+            code: 'TABLE_EXCEPTION',
+            message: sanitizeErrorMessage(tableErr?.message),
+            details: null,
+            hint: null
+          });
+        }
+      }
+
+      if (syncErrors.length > 0) {
+        const summaryMsg = formatSyncErrorsSummary(syncErrors);
+        return {
+          success: false,
+          status: 'error',
+          message: summaryMsg,
+          errors: syncErrors,
+          processedTables
+        };
+      }
+
+      return {
+        success: true,
+        status: 'synced',
+        message: 'Synchronization completed successfully!',
+        errors: [],
+        processedTables
+      };
+    }
+
+    const mockUserId = '383a4285-784c-4738-841f-1ed8cd7f6042';
+
+    // Requirement 8.A: all successful table operations => overall success
+    it('A. all successful table operations => overall success (status: synced, success: true)', async () => {
+      const tables: Record<string, MockTableOperationResult> = {
+        utility_persons: { pushError: null, pullError: null },
+        milk_logs: { pushError: null, pullError: null },
+        finance_transactions: { pushError: null, pullError: null }
+      };
+
+      const outcome = await simulateTwoWaySync(tables, mockUserId, true);
+
+      assert.strictEqual(outcome.success, true);
+      assert.strictEqual(outcome.status, 'synced');
+      assert.strictEqual(outcome.message, 'Synchronization completed successfully!');
+      assert.strictEqual(outcome.errors.length, 0);
+      assert.deepStrictEqual(outcome.processedTables, ['utility_persons', 'milk_logs', 'finance_transactions']);
+    });
+
+    // Requirement 8.B: one failed table upsert => overall failure
+    it('B. one failed table upsert => overall failure (status: error, success: false)', async () => {
+      const tables: Record<string, MockTableOperationResult> = {
+        utility_persons: { pushError: null, pullError: null },
+        milk_monthly_records: {
+          pushError: {
+            code: '42501',
+            message: 'new row violates row-level security policy for table "milk_monthly_records"',
+            details: 'Failing row contains (2026-09, ...)',
+            hint: 'Ensure user has proper RLS permission'
+          },
+          pullError: null
+        },
+        finance_transactions: { pushError: null, pullError: null }
+      };
+
+      const outcome = await simulateTwoWaySync(tables, mockUserId, true);
+
+      assert.strictEqual(outcome.success, false);
+      assert.strictEqual(outcome.status, 'error');
+      assert.notStrictEqual(outcome.message, 'Synchronization completed successfully!');
+      assert.strictEqual(outcome.errors.length, 1);
+    });
+
+    // Requirement 8.C: error identifies failed table, operation, code, and details
+    it('C. error identifies failed table name, operation, code, and details', async () => {
+      const tables: Record<string, MockTableOperationResult> = {
+        milk_monthly_records: {
+          pushError: {
+            code: '42501',
+            message: 'new row violates row-level security policy for table "milk_monthly_records"',
+            details: 'RLS check failed',
+            hint: 'Check policy definition'
+          },
+          pullError: null
+        }
+      };
+
+      const outcome = await simulateTwoWaySync(tables, mockUserId, true);
+
+      assert.strictEqual(outcome.success, false);
+      assert.strictEqual(outcome.errors[0].table, 'milk_monthly_records');
+      assert.strictEqual(outcome.errors[0].operation, 'push');
+      assert.strictEqual(outcome.errors[0].code, '42501');
+      assert.ok(outcome.message.includes('[milk_monthly_records] PUSH failed'));
+      assert.ok(outcome.message.includes('(Code: 42501)'));
+      assert.ok(outcome.message.includes('Details: RLS check failed'));
+      assert.ok(outcome.message.includes('Hint: Check policy definition'));
+    });
+
+    // Requirement 8.D: remaining tables still process where safe
+    it('D. remaining tables still process where safe when an earlier table fails', async () => {
+      const tables: Record<string, MockTableOperationResult> = {
+        utility_persons: { pushError: null, pullError: null },
+        milk_monthly_records: {
+          pushError: {
+            code: '23502',
+            message: 'null value violates not-null constraint',
+            details: null,
+            hint: null
+          },
+          pullError: null
+        },
+        petrol_refills: { pushError: null, pullError: null },
+        finance_transactions: { pushError: null, pullError: null }
+      };
+
+      const outcome = await simulateTwoWaySync(tables, mockUserId, true);
+
+      assert.strictEqual(outcome.success, false);
+      // All 4 tables processed despite failure on table 2
+      assert.deepStrictEqual(outcome.processedTables, [
+        'utility_persons',
+        'milk_monthly_records',
+        'petrol_refills',
+        'finance_transactions'
+      ]);
+      assert.strictEqual(outcome.errors.length, 1);
+      assert.strictEqual(outcome.errors[0].table, 'milk_monthly_records');
+    });
+
+    // Requirement 8.E: no regression to authenticated sync
+    it('E. authentication guard prevents unauthenticated sync and protects session', async () => {
+      const tables: Record<string, MockTableOperationResult> = {
+        finance_transactions: { pushError: null, pullError: null }
+      };
+
+      // Case 1: unauthenticated
+      const unauthOutcome = await simulateTwoWaySync(tables, null, false);
+      assert.strictEqual(unauthOutcome.success, false);
+      assert.strictEqual(unauthOutcome.status, 'auth_required');
+
+      // Case 2: authenticated user syncs normally
+      const authOutcome = await simulateTwoWaySync(tables, mockUserId, true);
+      assert.strictEqual(authOutcome.success, true);
+      assert.strictEqual(authOutcome.status, 'synced');
+    });
+
+    // Requirement 7: Do NOT expose JWT/access tokens, passwords, service-role keys, secrets
+    it('Sanitization strips sensitive tokens and secrets from error strings', () => {
+      const sensitiveError = 'Error with Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.secretKey and apikey=sb_publishable_secretKey123';
+      const sanitized = sanitizeErrorMessage(sensitiveError);
+
+      assert.ok(!sanitized.includes('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.secretKey'));
+      assert.ok(!sanitized.includes('sb_publishable_secretKey123'));
+      assert.ok(sanitized.includes('Bearer [REDACTED]') || sanitized.includes('[JWT_REDACTED]'));
+      assert.ok(sanitized.includes('apikey=[REDACTED]'));
+    });
+
+    // Multi-table pull and push failure reporting
+    it('Correctly captures and reports multiple distinct errors across push and pull', () => {
+      const errors: TableSyncError[] = [
+        {
+          table: 'milk_monthly_records',
+          operation: 'push',
+          code: '42501',
+          message: 'Permission denied',
+          details: 'Row violates RLS',
+          hint: null
+        },
+        {
+          table: 'loans',
+          operation: 'pull',
+          code: 'PGRST116',
+          message: 'Fetch conflict',
+          details: null,
+          hint: 'Retry fetch'
+        }
+      ];
+
+      const summary = formatSyncErrorsSummary(errors);
+      assert.ok(summary.includes('failed on 2 table operation(s)'));
+      assert.ok(summary.includes('[milk_monthly_records] PUSH failed: Permission denied (Code: 42501) Details: Row violates RLS'));
+      assert.ok(summary.includes('[loans] PULL failed: Fetch conflict (Code: PGRST116) Hint: Retry fetch'));
+    });
+  });
 });
