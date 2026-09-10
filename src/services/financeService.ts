@@ -7,6 +7,8 @@ import {
   FinancialInsight, 
   FinancialHealthScore 
 } from '../types';
+import { addMoney, subtractMoney, normalizeMoney } from '../utils/money';
+import { addDaysLocalDate, addMonthsLocalDate, getTodayLocalDateStr } from '../utils/dateTime';
 
 /**
  * Calculates current balance for all accounts based on their opening balance
@@ -21,35 +23,31 @@ export function calculateAccountBalances(
 
   // Initialize with opening balance
   accounts.forEach(acc => {
-    balanceMap.set(acc.id, acc.openingBalance || 0);
+    balanceMap.set(acc.id, normalizeMoney(acc.openingBalance || 0));
   });
 
   // Apply all completed transactions
   transactions.forEach(tx => {
     if (tx.status === 'cancelled') return;
 
-    const amount = Number(tx.amount) || 0;
+    const amount = normalizeMoney(tx.amount || 0);
+    if (amount <= 0) return;
 
     if (tx.transactionType === 'income') {
       const current = balanceMap.get(tx.accountId) ?? 0;
-      balanceMap.set(tx.accountId, current + amount);
+      balanceMap.set(tx.accountId, addMoney(current, amount));
     } else if (tx.transactionType === 'expense') {
       const current = balanceMap.get(tx.accountId) ?? 0;
-      if (accounts.find(a => a.id === tx.accountId)?.accountType === 'credit_card') {
-        // For credit card, an expense increases outstanding balance (or decreases negative balance)
-        balanceMap.set(tx.accountId, current - amount);
-      } else {
-        balanceMap.set(tx.accountId, current - amount);
-      }
+      balanceMap.set(tx.accountId, subtractMoney(current, amount));
     } else if (tx.transactionType === 'transfer') {
       // Source account loses money
       const sourceBal = balanceMap.get(tx.accountId) ?? 0;
-      balanceMap.set(tx.accountId, sourceBal - amount);
+      balanceMap.set(tx.accountId, subtractMoney(sourceBal, amount));
 
       // Destination account gains money
       if (tx.transferToAccountId) {
         const destBal = balanceMap.get(tx.transferToAccountId) ?? 0;
-        balanceMap.set(tx.transferToAccountId, destBal + amount);
+        balanceMap.set(tx.transferToAccountId, addMoney(destBal, amount));
       }
     }
   });
@@ -529,7 +527,7 @@ export function generateAIFinancialInsights(
  */
 export function getDueRecurringTransactions(
   recurringRules: FinanceRecurringTransaction[],
-  referenceDate = new Date().toISOString().split('T')[0]
+  referenceDate = getTodayLocalDateStr()
 ): FinanceRecurringTransaction[] {
   return recurringRules.filter(rule => {
     if (!rule.isActive) return false;
@@ -538,20 +536,19 @@ export function getDueRecurringTransactions(
 }
 
 /**
- * Calculates next run date based on frequency
+ * Calculates next run date based on frequency (Timezone safe for Pakistan)
  */
 export function computeNextRunDate(currentDateStr: string, frequency: 'daily' | 'weekly' | 'monthly' | 'yearly'): string {
-  const date = new Date(currentDateStr);
   if (frequency === 'daily') {
-    date.setDate(date.getDate() + 1);
+    return addDaysLocalDate(currentDateStr, 1);
   } else if (frequency === 'weekly') {
-    date.setDate(date.getDate() + 7);
+    return addDaysLocalDate(currentDateStr, 7);
   } else if (frequency === 'monthly') {
-    date.setMonth(date.getMonth() + 1);
+    return addMonthsLocalDate(currentDateStr, 1);
   } else if (frequency === 'yearly') {
-    date.setFullYear(date.getFullYear() + 1);
+    return addMonthsLocalDate(currentDateStr, 12);
   }
-  return date.toISOString().split('T')[0];
+  return currentDateStr;
 }
 
 /**

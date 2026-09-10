@@ -385,3 +385,75 @@ EXCEPTION
     WHEN duplicate_object THEN null;
     WHEN others THEN null;
 END $$;
+
+-- ==============================================================================
+-- 19. PRODUCTION AUTHENTICATED RLS MIGRATION (MULTI-TENANT / STRICT ACCESS)
+-- Refer to docs/AUTH_RLS_MIGRATION.md for the complete zero-data-loss procedure.
+-- ==============================================================================
+/*
+-- STEP 1: Add user_id column and foreign key to all tables
+DO $$
+DECLARE
+    tbl text;
+    tbl_list text[] := ARRAY[
+        'utility_persons', 'utility_bills', 'utility_payments',
+        'milk_consumers', 'milk_logs', 'milk_monthly_records', 'petrol_refills',
+        'rent_portions', 'rent_records', 'loans', 'settings',
+        'finance_accounts', 'finance_categories', 'finance_transactions',
+        'finance_budgets', 'finance_recurring_transactions',
+        'finance_goals', 'finance_voice_entries'
+    ];
+BEGIN
+    FOREACH tbl IN ARRAY tbl_list LOOP
+        EXECUTE format('ALTER TABLE %I ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id)', tbl);
+        EXECUTE format('CREATE INDEX IF NOT EXISTS idx_%I_user_id ON %I(user_id)', tbl, tbl);
+    END LOOP;
+END $$;
+
+-- STEP 2: Assign existing unowned records to Tahir's authenticated UUID
+-- Replace '<TAHIR_USER_UUID>' with your actual user UUID from auth.users
+DO $$
+DECLARE
+    target_uuid UUID := '<TAHIR_USER_UUID>'::uuid;
+    tbl text;
+    tbl_list text[] := ARRAY[
+        'utility_persons', 'utility_bills', 'utility_payments',
+        'milk_consumers', 'milk_logs', 'milk_monthly_records', 'petrol_refills',
+        'rent_portions', 'rent_records', 'loans', 'settings',
+        'finance_accounts', 'finance_categories', 'finance_transactions',
+        'finance_budgets', 'finance_recurring_transactions',
+        'finance_goals', 'finance_voice_entries'
+    ];
+BEGIN
+    FOREACH tbl IN ARRAY tbl_list LOOP
+        EXECUTE format('UPDATE %I SET user_id = %L WHERE user_id IS NULL', tbl, target_uuid);
+    END LOOP;
+END $$;
+
+-- STEP 3: Replace permissive policies with strict auth.uid() = user_id policies
+DO $$
+DECLARE
+    tbl text;
+    tbl_list text[] := ARRAY[
+        'utility_persons', 'utility_bills', 'utility_payments',
+        'milk_consumers', 'milk_logs', 'milk_monthly_records', 'petrol_refills',
+        'rent_portions', 'rent_records', 'loans', 'settings',
+        'finance_accounts', 'finance_categories', 'finance_transactions',
+        'finance_budgets', 'finance_recurring_transactions',
+        'finance_goals', 'finance_voice_entries'
+    ];
+BEGIN
+    FOREACH tbl IN ARRAY tbl_list LOOP
+        -- Drop legacy permissive policies
+        EXECUTE format('DROP POLICY IF EXISTS "Allow all access to %s" ON %I', tbl, tbl);
+        EXECUTE format('DROP POLICY IF EXISTS "Allow all for anon" ON %I', tbl, tbl);
+        
+        -- Create secure tenant-isolated policies
+        EXECUTE format('CREATE POLICY "Users can select own %s" ON %I FOR SELECT TO authenticated USING (auth.uid() = user_id)', tbl, tbl);
+        EXECUTE format('CREATE POLICY "Users can insert own %s" ON %I FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id)', tbl, tbl);
+        EXECUTE format('CREATE POLICY "Users can update own %s" ON %I FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)', tbl, tbl);
+        EXECUTE format('CREATE POLICY "Users can delete own %s" ON %I FOR DELETE TO authenticated USING (auth.uid() = user_id)', tbl, tbl);
+    END LOOP;
+END $$;
+*/
+

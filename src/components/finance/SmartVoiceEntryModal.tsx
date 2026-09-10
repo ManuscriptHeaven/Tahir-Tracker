@@ -133,6 +133,12 @@ export const SmartVoiceEntryModal: React.FC<SmartVoiceEntryModalProps> = ({
   const handleConfirmAndSave = async () => {
     if (parsedTransactions.length === 0) return;
 
+    const invalidTx = parsedTransactions.find(t => !t.amount || t.amount <= 0);
+    if (invalidTx) {
+      alert('Transaction amount must be greater than 0. Please tap the amount field to specify a valid value.');
+      return;
+    }
+
     setIsSaving(true);
     const now = new Date().toISOString();
 

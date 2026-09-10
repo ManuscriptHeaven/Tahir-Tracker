@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
 import { RentPortion, RentMonthlyRecord } from '../../types';
+import { getPortionFinancialSummary } from '../../utils/rentCalculations';
+import { getTodayLocalDateStr } from '../../utils/dateTime';
 import { 
   formatCurrency, 
   formatDate, 
@@ -58,7 +60,7 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
   } | null>(null);
   const [arrearsInput, setArrearsInput] = useState('');
   const [payAmountInput, setPayAmountInput] = useState('');
-  const [payDateInput, setPayDateInput] = useState(new Date().toISOString().split('T')[0]);
+  const [payDateInput, setPayDateInput] = useState(getTodayLocalDateStr());
   const [payMethodInput, setPayMethodInput] = useState('Cash');
   const [payNotesInput, setPayNotesInput] = useState('');
 
@@ -71,92 +73,16 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
   const currentYearMonth = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}`;
   const currentDayOfMonth = today.getDate();
 
-  // Helper to calculate previous months unpaid arrears for a portion
-  const calculatePreviousArrears = (portion: RentPortion, targetMonthYear: string): number => {
-    // Start with portion's initial/opening arrears
-    let arrears = portion.initialArrears || 0;
-
-    // Get all records for this portion prior to targetMonthYear sorted chronologically
-    const previousRecords = allRecords
-      .filter(r => r.portionId === portion.id && r.monthYear < targetMonthYear)
-      .sort((a, b) => a.monthYear.localeCompare(b.monthYear));
-
-    const recordedMonths = new Set(previousRecords.map(r => r.monthYear));
-
-    // Sum arrears from recorded previous months
-    previousRecords.forEach(r => {
-      const monthArrears = r.arrearsAmount !== undefined ? r.arrearsAmount : 0;
-      const monthDue = r.expectedAmount + monthArrears;
-      const rem = Math.max(0, monthDue - r.paidAmount);
-      // Update cumulative unpaid
-      arrears = rem;
-    });
-
-    // Check if there are unrecorded past months between portion creation and targetMonthYear
-    if (portion.createdAt) {
-      try {
-        const createdDate = new Date(portion.createdAt);
-        const startY = createdDate.getFullYear();
-        const startM = createdDate.getMonth() + 1;
-
-        const [targetY, targetM] = targetMonthYear.split('-').map(Number);
-
-        let curY = startY;
-        let curM = startM;
-
-        while (curY < targetY || (curY === targetY && curM < targetM)) {
-          const mStr = `${curY}-${curM.toString().padStart(2, '0')}`;
-          if (!recordedMonths.has(mStr)) {
-            arrears += portion.expectedRent;
-          }
-          curM++;
-          if (curM > 12) {
-            curM = 1;
-            curY++;
-          }
-        }
-      } catch (err) {
-        console.error('Error calculating unrecorded arrears:', err);
-      }
-    }
-
-    return arrears;
-  };
-
   // Helper to compute live status of a portion record with arrears
   const getPortionFinancials = (portion: RentPortion, rec?: RentMonthlyRecord) => {
-    const previousArrears = rec?.arrearsAmount !== undefined 
-      ? rec.arrearsAmount 
-      : calculatePreviousArrears(portion, selectedMonth);
-    const currentExpected = rec ? rec.expectedAmount : portion.expectedRent;
-    const totalDue = currentExpected + previousArrears;
-    const paid = rec ? rec.paidAmount : 0;
-    const netRemaining = Math.max(0, totalDue - paid);
-
-    let status: 'paid' | 'pending' | 'partially_paid' | 'overdue' = 'pending';
-
-    if (paid >= totalDue && totalDue > 0) {
-      status = 'paid';
-    } else if (paid > 0) {
-      status = 'partially_paid';
-    } else {
-      const isPastMonth = selectedMonth < currentYearMonth;
-      const isCurrentMonthPastDue = selectedMonth === currentYearMonth && currentDayOfMonth > portion.dueDay;
-      if (isPastMonth || isCurrentMonthPastDue || previousArrears > 0) {
-        status = 'overdue';
-      } else {
-        status = 'pending';
-      }
-    }
-
-    return {
-      status,
-      paid,
-      currentExpected,
-      previousArrears,
-      totalDue,
-      netRemaining
-    };
+    return getPortionFinancialSummary(
+      portion,
+      rec,
+      allRecords.filter(r => r.portionId === portion.id),
+      selectedMonth,
+      currentYearMonth,
+      currentDayOfMonth
+    );
   };
 
   // Summary calculations
@@ -249,7 +175,7 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
     });
     setArrearsInput(fin.previousArrears.toString());
     setPayAmountInput(record ? record.paidAmount.toString() : fin.totalDue.toString());
-    setPayDateInput(record?.paymentDate || new Date().toISOString().split('T')[0]);
+    setPayDateInput(record?.paymentDate || getTodayLocalDateStr());
     setPayMethodInput(record?.paymentMethod || 'Cash');
     setPayNotesInput(record?.notes || '');
   };

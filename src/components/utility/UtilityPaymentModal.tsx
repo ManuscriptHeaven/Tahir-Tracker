@@ -3,6 +3,8 @@ import { UtilityBill, UtilityPayment, UtilityPerson } from '../../types';
 import { db } from '../../db/db';
 import { X, Plus, Trash2, Edit2, Check, CreditCard, ArrowDownRight, ArrowUpRight, CheckCircle2 } from 'lucide-react';
 import { formatCurrency, formatDate, getMonthYearFormatted } from '../../utils/formatters';
+import { getTodayLocalDateStr } from '../../utils/dateTime';
+import { addMoney, subtractMoney } from '../../utils/money';
 
 interface UtilityPaymentModalProps {
   isOpen: boolean;
@@ -20,21 +22,21 @@ export const UtilityPaymentModal: React.FC<UtilityPaymentModalProps> = ({
   payments
 }) => {
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
-  const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [paymentDate, setPaymentDate] = useState<string>(getTodayLocalDateStr());
   const [amount, setAmount] = useState<number | ''>('');
   const [note, setNote] = useState<string>('');
   const [isAdding, setIsAdding] = useState<boolean>(false);
 
   if (!isOpen || !bill) return null;
 
-  const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+  const totalPaid = payments.reduce((sum, p) => addMoney(sum, p.amount), 0);
   const totalBillRounded = Math.round(bill.totalBill);
-  const diff = totalBillRounded - totalPaid;
+  const diff = subtractMoney(totalBillRounded, totalPaid);
   const personName = person?.name || 'Saleem';
   const monthFormatted = getMonthYearFormatted(bill.monthYear);
 
   const resetForm = () => {
-    setPaymentDate(new Date().toISOString().split('T')[0]);
+    setPaymentDate(getTodayLocalDateStr());
     setAmount('');
     setNote('');
     setEditingPaymentId(null);
@@ -42,7 +44,7 @@ export const UtilityPaymentModal: React.FC<UtilityPaymentModalProps> = ({
   };
 
   const handleStartAdd = () => {
-    setPaymentDate(new Date().toISOString().split('T')[0]);
+    setPaymentDate(getTodayLocalDateStr());
     setAmount(diff > 0 ? diff : '');
     setNote('Extra payment');
     setEditingPaymentId(null);

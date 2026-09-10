@@ -7,6 +7,8 @@ import {
   formatNumber, 
   getDaysInMonth 
 } from '../../utils/formatters';
+import { getTodayLocalDateStr } from '../../utils/dateTime';
+import { addMoney, subtractMoney, multiplyMoney } from '../../utils/money';
 import { 
   Home, 
   Milk, 
@@ -113,26 +115,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
       }
     });
   });
-  const totalMilkCost = totalMilkKg * milkRate;
+  const totalMilkCost = multiplyMoney(totalMilkKg, milkRate);
 
   // 3. PETROL STATS
   const monthlyPetrol = petrolRefills.filter(r => r.date.startsWith(selectedMonth));
-  const totalPetrolCost = monthlyPetrol.reduce((sum, r) => sum + (r.totalCost || 0), 0);
+  const totalPetrolCost = monthlyPetrol.reduce((sum, r) => addMoney(sum, r.totalCost || 0), 0);
   const totalPetrolKm = monthlyPetrol.reduce((sum, r) => sum + (r.distanceTravelled || 0), 0);
   const totalPetrolLitres = monthlyPetrol.reduce((sum, r) => sum + (r.litres || 0), 0);
   const avgMileage = totalPetrolLitres > 0 && totalPetrolKm > 0 ? totalPetrolKm / totalPetrolLitres : 0;
 
   // 4. LOAN STATS
-  const totalGiven = loans.filter(l => l.type === 'given').reduce((sum, l) => sum + l.principalAmount, 0);
+  const totalGiven = loans.filter(l => l.type === 'given').reduce((sum, l) => addMoney(sum, l.principalAmount), 0);
   const totalReceived = loans.filter(l => l.type === 'given').reduce((sum, l) => {
-    const paid = (l.payments || []).reduce((pSum, p) => pSum + p.amount, 0);
-    return sum + paid;
+    const paid = (l.payments || []).reduce((pSum, p) => addMoney(pSum, p.amount), 0);
+    return addMoney(sum, paid);
   }, 0);
-  const outstandingLoans = Math.max(0, totalGiven - totalReceived);
+  const outstandingLoans = Math.max(0, subtractMoney(totalGiven, totalReceived));
 
   // Quick Action: Mark today's milk delivered
   const handleMarkMilkToday = async () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayLocalDateStr();
     for (const c of milkConsumers) {
       const key = `${today}_${c.id}`;
       await db.milk_logs.put({

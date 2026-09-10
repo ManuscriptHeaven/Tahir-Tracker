@@ -3,6 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
 import { LoanTransaction, LoanPayment, PersonLoanGroup } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import { addMoney, subtractMoney } from '../../utils/money';
+import { getTodayLocalDateStr } from '../../utils/dateTime';
 import { 
   Plus, 
   HandCoins, 
@@ -37,23 +39,23 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
   const [personPhone, setPersonPhone] = useState('');
   const [loanType, setLoanType] = useState<'given' | 'taken'>('given');
   const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(getTodayLocalDateStr());
   const [dueDate, setDueDate] = useState('');
   const [notes, setNotes] = useState('');
 
   // Payment form state
   const [paymentAmount, setPaymentAmount] = useState('');
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [paymentDate, setPaymentDate] = useState(getTodayLocalDateStr());
   const [paymentNote, setPaymentNote] = useState('');
 
   // Helper calculations
   const calculateTotalPaid = (loan: LoanTransaction) => {
-    return (loan.payments || []).reduce((sum, p) => sum + p.amount, 0);
+    return (loan.payments || []).reduce((sum, p) => addMoney(sum, p.amount), 0);
   };
 
   const calculateBalance = (loan: LoanTransaction) => {
     const paid = calculateTotalPaid(loan);
-    return Math.max(0, loan.principalAmount - paid);
+    return Math.max(0, subtractMoney(loan.principalAmount, paid));
   };
 
   // Group all loans by Person Name
@@ -88,19 +90,19 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
     const rem = calculateBalance(loan);
 
     if (loan.type === 'given') {
-      group.totalGiven += loan.principalAmount;
-      group.totalGivenReceived += paid;
-      group.totalGivenRemaining += rem;
+      group.totalGiven = addMoney(group.totalGiven, loan.principalAmount);
+      group.totalGivenReceived = addMoney(group.totalGivenReceived, paid);
+      group.totalGivenRemaining = addMoney(group.totalGivenRemaining, rem);
     } else {
-      group.totalTaken += loan.principalAmount;
-      group.totalTakenRepaid += paid;
-      group.totalTakenRemaining += rem;
+      group.totalTaken = addMoney(group.totalTaken, loan.principalAmount);
+      group.totalTakenRepaid = addMoney(group.totalTakenRepaid, paid);
+      group.totalTakenRemaining = addMoney(group.totalTakenRemaining, rem);
     }
   });
 
   // Calculate Net Balances for each person
   const personGroups: PersonLoanGroup[] = Array.from(personMap.values()).map((g) => {
-    g.netBalance = g.totalGivenRemaining - g.totalTakenRemaining;
+    g.netBalance = subtractMoney(g.totalGivenRemaining, g.totalTakenRemaining);
     return g;
   });
 
@@ -110,23 +112,23 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
   // Overall Statistics
   const totalGivenOverall = loans
     .filter((l) => l.type === 'given')
-    .reduce((sum, l) => sum + l.principalAmount, 0);
+    .reduce((sum, l) => addMoney(sum, l.principalAmount), 0);
 
   const totalReceivedOverall = loans
     .filter((l) => l.type === 'given')
-    .reduce((sum, l) => sum + calculateTotalPaid(l), 0);
+    .reduce((sum, l) => addMoney(sum, calculateTotalPaid(l)), 0);
 
-  const outstandingGivenOverall = totalGivenOverall - totalReceivedOverall;
+  const outstandingGivenOverall = subtractMoney(totalGivenOverall, totalReceivedOverall);
 
   const totalTakenOverall = loans
     .filter((l) => l.type === 'taken')
-    .reduce((sum, l) => sum + l.principalAmount, 0);
+    .reduce((sum, l) => addMoney(sum, l.principalAmount), 0);
 
   const totalRepaidOverall = loans
     .filter((l) => l.type === 'taken')
-    .reduce((sum, l) => sum + calculateTotalPaid(l), 0);
+    .reduce((sum, l) => addMoney(sum, calculateTotalPaid(l)), 0);
 
-  const outstandingTakenOverall = totalTakenOverall - totalRepaidOverall;
+  const outstandingTakenOverall = subtractMoney(totalTakenOverall, totalRepaidOverall);
 
   // Filtered Person Groups
   const filteredPersonGroups = personGroups.filter((group) => {
@@ -160,7 +162,7 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
       personPhone: personPhone.trim() || undefined,
       type: loanType,
       principalAmount: principal,
-      date: date || new Date().toISOString().split('T')[0],
+      date: date || getTodayLocalDateStr(),
       dueDate: dueDate || undefined,
       notes: notes.trim() || undefined,
       status: 'active',
@@ -202,7 +204,7 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
     const newPayment: LoanPayment = {
       id: `pay_${Date.now()}`,
       amount: pAmt,
-      date: paymentDate || new Date().toISOString().split('T')[0],
+      date: paymentDate || getTodayLocalDateStr(),
       note: paymentNote.trim() || undefined,
       createdAt: new Date().toISOString()
     };

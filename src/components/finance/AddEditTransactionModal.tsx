@@ -13,6 +13,7 @@ import {
 import { db } from '../../db/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { FinanceTransaction, FinanceTransactionType } from '../../types';
+import { getTodayLocalDateStr } from '../../utils/dateTime';
 
 interface AddEditTransactionModalProps {
   isOpen: boolean;
@@ -34,7 +35,7 @@ export const AddEditTransactionModal: React.FC<AddEditTransactionModalProps> = (
   const [categoryId, setCategoryId] = useState<string>('');
   const [accountId, setAccountId] = useState<string>('');
   const [transferToAccountId, setTransferToAccountId] = useState<string>('');
-  const [transactionDate, setTransactionDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [transactionDate, setTransactionDate] = useState<string>(getTodayLocalDateStr());
   const [description, setDescription] = useState<string>('');
   const [attachmentNote, setAttachmentNote] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
@@ -59,7 +60,7 @@ export const AddEditTransactionModal: React.FC<AddEditTransactionModalProps> = (
     } else {
       setType(defaultType);
       setAmount('');
-      setTransactionDate(new Date().toISOString().split('T')[0]);
+      setTransactionDate(getTodayLocalDateStr());
       setDescription('');
       setAttachmentNote('');
 

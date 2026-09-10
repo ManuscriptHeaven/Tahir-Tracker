@@ -8,6 +8,7 @@ import {
   getDaysInMonth, 
   getMonthYearFormatted 
 } from '../../utils/formatters';
+import { getTodayLocalDateStr } from '../../utils/dateTime';
 import { 
   Milk, 
   Plus, 
@@ -48,12 +49,9 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
   // Monthly records query for selectedMonth and previous month
   const monthlyRecords = useLiveQuery(() => db.milk_monthly_records.toArray()) || [];
   const currentMonthRecord = monthlyRecords.find(r => r.monthYear === selectedMonth);
-
-  // Helper to find previous month record for automatic arrears carryover
   const [curY, curM] = selectedMonth.split('-').map(Number);
   const prevDate = new Date(curY, curM - 2, 1);
   const prevMonthStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
-  const prevMonthRecord = monthlyRecords.find(r => r.monthYear === prevMonthStr);
 
   // Local states
   const [isConsumersModalOpen, setIsConsumersModalOpen] = useState(false);
@@ -66,7 +64,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
     paidAmount: '',
     previousRemaining: '0',
     remainingAmount: '',
-    paymentDate: new Date().toISOString().split('T')[0],
+    paymentDate: getTodayLocalDateStr(),
     paymentMethod: 'Cash' as 'Cash' | 'Easypaisa' | 'JazzCash' | 'Bank Transfer',
     notes: ''
   });
@@ -162,7 +160,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
 
   // Mark today supplied
   const handleMarkTodayAllSupplied = async () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayLocalDateStr();
     for (const c of consumers) {
       const key = `${today}_${c.id}`;
       await db.milk_logs.put({
@@ -322,10 +320,14 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
 
   const totalMonthlyAmount = totalSuppliedKg * ratePerKg;
 
-  // Previous remaining balance (defaults to previous month's remaining if not explicitly set in current record)
+  // Previous remaining balance: searches for latest prior month record chronologically
+  const latestPriorRecord = monthlyRecords
+    .filter(r => r.monthYear < selectedMonth)
+    .sort((a, b) => b.monthYear.localeCompare(a.monthYear))[0];
+
   const previousRemaining = currentMonthRecord?.previousRemaining !== undefined
     ? Number(currentMonthRecord.previousRemaining)
-    : (prevMonthRecord ? Number(prevMonthRecord.remainingAmount || 0) : 0);
+    : (latestPriorRecord ? Number(latestPriorRecord.remainingAmount || 0) : 0);
 
   const totalPayable = totalMonthlyAmount + previousRemaining;
   const paidAmount = currentMonthRecord ? Number(currentMonthRecord.paidAmount || 0) : 0;
@@ -346,7 +348,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
       paidAmount: currentMonthRecord ? String(currentMonthRecord.paidAmount) : '',
       previousRemaining: String(previousRemaining),
       remainingAmount: String(remainingAmount),
-      paymentDate: currentMonthRecord?.paymentDate || new Date().toISOString().split('T')[0],
+      paymentDate: currentMonthRecord?.paymentDate || getTodayLocalDateStr(),
       paymentMethod: (currentMonthRecord?.paymentMethod as any) || 'Cash',
       notes: currentMonthRecord?.notes || ''
     });
@@ -422,7 +424,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
       paidAmount: totalPayable,
       remainingAmount: 0,
       status: 'paid',
-      paymentDate: new Date().toISOString().split('T')[0],
+      paymentDate: getTodayLocalDateStr(),
       paymentMethod: currentMonthRecord?.paymentMethod || 'Cash',
       notes: currentMonthRecord?.notes || 'Paid in full',
       updatedAt: new Date().toISOString()
@@ -437,7 +439,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
   };
 
   // Today's date helper
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getTodayLocalDateStr();
   const isTodayInSelectedMonth = todayStr.startsWith(selectedMonth);
 
   return (

@@ -1,6 +1,6 @@
 export type NavTab = 'dashboard' | 'finance' | 'utility' | 'loans' | 'milk' | 'petrol' | 'rent' | 'reports' | 'settings';
 
-export * from './finance';
+export * from './finance.ts';
 
 export interface UtilityPerson {
   id: string;
@@ -159,4 +159,30 @@ export interface AppSettings {
   rentDueDayDefault: number; // Default 10
   theme: 'light' | 'dark' | 'system';
   lastBackupDate?: string;
+  legacyCleanupDone?: boolean;
 }
+
+export interface SyncQueueItem {
+  id: string;
+  tableName: string;
+  action: 'upsert' | 'delete';
+  recordId: string;
+  payload?: any;
+  timestamp: string;
+  retryCount: number;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  created_at?: string;
+  last_sign_in_at?: string;
+}
+
+export interface AuthSessionState {
+  user: AuthUser | null;
+  loading: boolean;
+  error: string | null;
+  isAuthenticated: boolean;
+}
+

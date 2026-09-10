@@ -12,6 +12,7 @@ import {
 import { FinanceRecurringTransaction, FinanceRecurringFrequency } from '../../types';
 import { getDueRecurringTransactions, computeNextRunDate } from '../../services/financeService';
 import { formatCurrency } from '../../utils/formatters';
+import { getTodayLocalDateStr } from '../../utils/dateTime';
 
 export const RecurringView: React.FC = () => {
   const recurringRules = useLiveQuery(() => db.finance_recurring_transactions.toArray()) || [];
@@ -27,11 +28,11 @@ export const RecurringView: React.FC = () => {
   const [categoryId, setCategoryId] = useState('');
   const [accountId, setAccountId] = useState('');
   const [frequency, setFrequency] = useState<FinanceRecurringFrequency>('monthly');
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [nextRunDate, setNextRunDate] = useState(new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(getTodayLocalDateStr());
+  const [nextRunDate, setNextRunDate] = useState(getTodayLocalDateStr());
   const [autoProcess, setAutoProcess] = useState(false);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getTodayLocalDateStr();
   const dueTransactions = getDueRecurringTransactions(recurringRules, todayStr);
 
   const handleOpenAdd = () => {

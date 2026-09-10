@@ -7,7 +7,8 @@ import {
   Cloud, 
   CloudOff, 
   RefreshCw, 
-  Download
+  Download,
+  Lock
 } from 'lucide-react';
 import { getMonthYearFormatted } from '../../utils/formatters';
 import { subscribeSyncStatus, syncWithSupabase, SyncStatus } from '../../services/syncService';
@@ -20,6 +21,7 @@ interface NavbarProps {
   onOpenAI?: () => void;
   installPrompt?: any;
   onInstallPWA?: () => void;
+  onOpenLogin?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -29,7 +31,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   setSelectedMonth,
   onOpenAI,
   installPrompt,
-  onInstallPWA
+  onInstallPWA,
+  onOpenLogin
 }) => {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({
     state: 'unconfigured',
@@ -59,6 +62,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   const handleManualSync = async () => {
     if (syncStatus.state === 'unconfigured') {
       setActiveTab('settings');
+    } else if (syncStatus.state === 'auth_required') {
+      if (onOpenLogin) {
+        onOpenLogin();
+      } else {
+        setActiveTab('settings');
+      }
     } else {
       await syncWithSupabase();
     }
@@ -188,6 +197,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
                   : syncStatus.state === 'offline'
                   ? 'bg-amber-50 text-amber-700 border-amber-200'
+                  : syncStatus.state === 'auth_required'
+                  ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 shadow-xs'
                   : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
               }`}
               title={syncStatus.message || 'Realtime Supabase Sync Status'}
@@ -215,6 +226,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <>
                   <WifiOff className="w-3.5 h-3.5 text-amber-600" />
                   <span className="hidden md:inline">Offline</span>
+                </>
+              ) : syncStatus.state === 'auth_required' ? (
+                <>
+                  <Lock className="w-3.5 h-3.5 text-amber-600" />
+                  <span className="hidden md:inline font-bold text-amber-800">Sign In to Sync</span>
                 </>
               ) : syncStatus.state === 'error' ? (
                 <>

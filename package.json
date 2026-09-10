@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "build:rent": "tsc && vite build --mode rent",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --experimental-strip-types --test tests/**/*.test.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",

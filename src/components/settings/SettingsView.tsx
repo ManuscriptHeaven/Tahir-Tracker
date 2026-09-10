@@ -4,6 +4,7 @@ import {
   db, 
   exportDatabaseToJson, 
   importDatabaseFromJson, 
+  validateBackupJson,
   resetDatabaseToDefaults,
   cleanupLegacyDummyData
 } from '../../db/db';
@@ -13,6 +14,7 @@ import {
   testSupabaseConnection, 
   isSupabaseConfigured 
 } from '../../lib/supabase';
+import { getTodayLocalDateStr } from '../../utils/dateTime';
 import { 
   syncWithSupabase, 
   subscribeSyncStatus, 
@@ -36,10 +38,18 @@ import {
   Copy,
   Check,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  Lock,
+  LogIn,
+  LogOut,
+  User as UserIcon
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { LoginModal } from '../auth/LoginModal';
 
 export const SettingsView: React.FC = () => {
+  const { user, isAuthenticated, signOut } = useAuth();
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const settingsList = useLiveQuery(() => db.settings.toArray());
   const currentSettings = settingsList?.[0];
 
@@ -134,28 +144,15 @@ export const SettingsView: React.FC = () => {
   // Handle Copy Schema SQL
   const handleCopySchemaSql = async () => {
     try {
-      const response = await fetch('/supabase_schema.sql');
-      let sql = '';
-      if (response.ok) {
-        sql = await response.text();
-      } else {
-        sql = `-- Run this in Supabase SQL Editor:
-CREATE TABLE IF NOT EXISTS utility_persons (id TEXT PRIMARY KEY, name TEXT, monthly_expected_contribution NUMERIC, currency TEXT, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ);
-CREATE TABLE IF NOT EXISTS utility_bills (id TEXT PRIMARY KEY, person_id TEXT, month INT, year INT, month_year TEXT, electricity NUMERIC, gas NUMERIC, water NUMERIC, saleem_water_gas_share NUMERIC, total_bill NUMERIC, expected_contribution NUMERIC, notes TEXT, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ);
-CREATE TABLE IF NOT EXISTS utility_payments (id TEXT PRIMARY KEY, utility_bill_id TEXT, person_id TEXT, payment_date TEXT, amount NUMERIC, note TEXT, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ);
-CREATE TABLE IF NOT EXISTS milk_consumers (id TEXT PRIMARY KEY, name TEXT, default_daily_kg NUMERIC, active BOOLEAN, created_at TIMESTAMPTZ);
-CREATE TABLE IF NOT EXISTS milk_logs (id TEXT PRIMARY KEY, date TEXT, consumer_id TEXT, consumer_name TEXT, status TEXT, actual_kg NUMERIC, rate_per_kg NUMERIC, notes TEXT);
-CREATE TABLE IF NOT EXISTS petrol_refills (id TEXT PRIMARY KEY, date TEXT, odometer_reading NUMERIC, litres NUMERIC, price_per_litre NUMERIC, total_cost NUMERIC, distance_travelled NUMERIC, mileage_kmpl NUMERIC, cost_per_km NUMERIC, notes TEXT, created_at TIMESTAMPTZ);
-CREATE TABLE IF NOT EXISTS rent_portions (id TEXT PRIMARY KEY, portion_name TEXT, tenant_name TEXT, tenant_phone TEXT, expected_rent NUMERIC, due_day INT, initial_arrears NUMERIC, active BOOLEAN, created_at TIMESTAMPTZ);
-CREATE TABLE IF NOT EXISTS rent_records (id TEXT PRIMARY KEY, portion_id TEXT, portion_name TEXT, tenant_name TEXT, month_year TEXT, expected_amount NUMERIC, arrears_amount NUMERIC, paid_amount NUMERIC, status TEXT, payment_date TEXT, payment_method TEXT, notes TEXT, updated_at TIMESTAMPTZ);
-CREATE TABLE IF NOT EXISTS loans (id TEXT PRIMARY KEY, person_name TEXT, person_phone TEXT, type TEXT, principal_amount NUMERIC, date TEXT, due_date TEXT, notes TEXT, status TEXT, payments JSONB, created_at TIMESTAMPTZ);
-CREATE TABLE IF NOT EXISTS settings (id INT PRIMARY KEY DEFAULT 1, currency TEXT, milk_default_rate NUMERIC, rent_due_day_default INT, theme TEXT, last_backup_date TIMESTAMPTZ);`;
-      }
+      const sql = `-- Refer to supabase_schema.sql in the project root for complete schema and RLS policies.
+-- Documentation: docs/AUTH_RLS_MIGRATION.md
+-- To review or execute the full schema, open supabase_schema.sql directly.`;
       await navigator.clipboard.writeText(sql);
       setCopiedSchema(true);
       setTimeout(() => setCopiedSchema(false), 3000);
+      alert('Refer to supabase_schema.sql in your workspace root for the complete production SQL schema and RLS policies.');
     } catch (err) {
-      alert('Could not copy automatically. Please open supabase_schema.sql in the project root.');
+      alert('Please open supabase_schema.sql in the project root.');
     }
   };
 
@@ -163,7 +160,7 @@ CREATE TABLE IF NOT EXISTS settings (id INT PRIMARY KEY DEFAULT 1, currency TEXT
   const handleExportBackup = async () => {
     try {
       const json = await exportDatabaseToJson();
-      const dateStr = new Date().toISOString().split('T')[0];
+      const dateStr = getTodayLocalDateStr();
       download(json, `Tahir_Tracker_Backup_${dateStr}.json`, 'application/json');
     } catch (err) {
       alert('Failed to export backup data.');
@@ -175,18 +172,35 @@ CREATE TABLE IF NOT EXISTS settings (id INT PRIMARY KEY DEFAULT 1, currency TEXT
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!confirm('Importing this backup will overwrite existing local data. Do you want to proceed?')) {
-      e.target.value = '';
-      return;
-    }
-
     try {
       const text = await file.text();
+      const parsed = JSON.parse(text);
+      const validation = validateBackupJson(parsed);
+      if (!validation.isValid) {
+        alert(`Cannot restore backup: ${validation.error}`);
+        e.target.value = '';
+        return;
+      }
+
+      const summaryDetails = Object.entries(validation.summary || {})
+        .filter(([_, cnt]) => cnt > 0)
+        .map(([tbl, cnt]) => `• ${tbl.replace(/_/g, ' ')}: ${cnt}`)
+        .join('\n');
+
+      const confirmed = confirm(
+        `✅ Backup file verified successfully!\n\nFound records:\n${summaryDetails || 'Empty tables'}\n\nRestoring will replace current local database records. Do you want to proceed?`
+      );
+
+      if (!confirmed) {
+        e.target.value = '';
+        return;
+      }
+
       await importDatabaseFromJson(text);
       alert('Database restored successfully from backup!');
       window.location.reload();
-    } catch (err) {
-      alert('Invalid backup JSON file. Restore failed.');
+    } catch (err: any) {
+      alert(`Invalid backup JSON file. Restore failed: ${err.message || 'Parse error'}`);
     }
     e.target.value = '';
   };
@@ -221,6 +235,75 @@ CREATE TABLE IF NOT EXISTS settings (id INT PRIMARY KEY DEFAULT 1, currency TEXT
         <p className="text-xs sm:text-sm text-slate-500">
           Connect Supabase database, manage offline sync, and configure default preferences
         </p>
+      </div>
+
+      {/* 0. SUPABASE AUTHENTICATION & ACCOUNT */}
+      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+              <Lock className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 text-base">Account & Cloud Authentication</h3>
+              <p className="text-xs text-slate-500">Secure owner session required for cloud sync</p>
+            </div>
+          </div>
+
+          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+            isAuthenticated ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+          }`}>
+            {isAuthenticated ? 'Authenticated' : 'Sign In Required'}
+          </span>
+        </div>
+
+        {isAuthenticated && user ? (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <UserIcon className="w-4 h-4 text-emerald-600" />
+                <span className="text-xs font-bold text-slate-800">{user.email}</span>
+              </div>
+              <p className="text-[11px] text-slate-500 font-mono">
+                User ID: {user.id}
+              </p>
+              <p className="text-[11px] text-emerald-700 font-semibold">
+                ✓ Cloud synchronization is active and user-scoped.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={async () => {
+                await signOut();
+              }}
+              className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all self-start sm:self-auto cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out</span>
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-amber-50/60 border border-amber-200/70">
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-amber-900">
+                Not signed in to Supabase Cloud
+              </p>
+              <p className="text-[11px] text-amber-800 leading-relaxed">
+                Your local Dexie database remains fully functional offline. To enable cloud synchronization and multi-device backups, please sign in.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsLoginModalOpen(true)}
+              className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-emerald-600/20 shrink-0 cursor-pointer self-start sm:self-auto"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Sign In to Cloud Sync</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 1. SUPABASE CLOUD DATABASE CONFIGURATION */}
@@ -483,6 +566,12 @@ CREATE TABLE IF NOT EXISTS settings (id INT PRIMARY KEY DEFAULT 1, currency TEXT
           <p className="text-emerald-900 font-bold">✓ Works 100% offline and auto-syncs with Supabase cloud when internet is available!</p>
         </div>
       </div>
+
+      {/* Supabase Authentication Modal */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+      />
     </div>
   );
 };

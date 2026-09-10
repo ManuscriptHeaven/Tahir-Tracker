@@ -2,6 +2,7 @@ import { db } from '../db/db';
 import { AIProposal } from '../types/ai';
 import { UtilityBill, UtilityPayment, MilkDailyLog, LoanTransaction, PetrolRefill, RentMonthlyRecord } from '../types';
 import { calculateGasWaterShare, calculateSaleemTotalBill } from '../utils/utilityCalculations';
+import { getTodayLocalDateStr } from '../utils/dateTime';
 
 export interface ExecutionResult {
   success: boolean;
@@ -21,16 +22,24 @@ export async function executeAIProposal(proposal: AIProposal): Promise<Execution
       case 'add_finance_transaction': {
         const { transactionType, amount, categoryId, categoryName, accountId, accountName, transactionDate, description, source, rawVoiceTranscript, confidenceScore } = payload;
         
+        const validAmount = Number(amount) || 0;
+        if (validAmount <= 0) {
+          return {
+            success: false,
+            message: 'Raqam (amount) darust nahi hai. Baraye meherbani 0 se bari raqam enter karein.'
+          };
+        }
+
         const newTx = {
           id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
           transactionType: transactionType || 'expense',
-          amount: Number(amount) || 0,
+          amount: validAmount,
           currency: 'PKR',
           categoryId: categoryId || 'cat_food',
           categoryName: categoryName || 'Food & Dining',
           accountId: accountId || 'acc_cash',
           accountName: accountName || 'Cash Wallet',
-          transactionDate: transactionDate || new Date().toISOString().split('T')[0],
+          transactionDate: transactionDate || getTodayLocalDateStr(),
           description: description || 'Voice entry',
           source: source || 'voice',
           status: 'completed' as const,
@@ -44,7 +53,7 @@ export async function executeAIProposal(proposal: AIProposal): Promise<Execution
 
         return {
           success: true,
-          message: `✅ ${Number(amount).toLocaleString()} PKR ka ${transactionType === 'income' ? 'Income' : 'Expense'} (${categoryName || 'General'}) kamyabi se save ho gaya hai!`
+          message: `✅ ${validAmount.toLocaleString()} PKR ka ${transactionType === 'income' ? 'Income' : 'Expense'} (${categoryName || 'General'}) kamyabi se save ho gaya hai!`
         };
       }
 
@@ -54,16 +63,24 @@ export async function executeAIProposal(proposal: AIProposal): Promise<Execution
       case 'transfer_finance_funds': {
         const { amount, accountId, accountName, transferToAccountId, transferToAccountName, transactionDate, description } = payload;
 
+        const validAmount = Number(amount) || 0;
+        if (validAmount <= 0) {
+          return {
+            success: false,
+            message: 'Transfer amount must be greater than 0 PKR.'
+          };
+        }
+
         const newTransfer = {
           id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
           transactionType: 'transfer' as const,
-          amount: Number(amount) || 0,
+          amount: validAmount,
           currency: 'PKR',
           accountId: accountId || 'acc_cash',
           accountName: accountName || 'Cash Wallet',
           transferToAccountId: transferToAccountId || 'acc_hbl',
           transferToAccountName: transferToAccountName || 'HBL Account',
-          transactionDate: transactionDate || new Date().toISOString().split('T')[0],
+          transactionDate: transactionDate || getTodayLocalDateStr(),
           description: description || `Transfer to ${transferToAccountName || 'Bank'}`,
           source: 'voice' as const,
           status: 'completed' as const,
@@ -118,7 +135,7 @@ export async function executeAIProposal(proposal: AIProposal): Promise<Execution
           id: `pay_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
           utilityBillId: existingBill.id,
           personId,
-          paymentDate: paymentDate || new Date().toISOString().split('T')[0],
+          paymentDate: paymentDate || getTodayLocalDateStr(),
           amount: Number(amount),
           note: note || 'Recorded via AI Voice Assistant',
           createdAt: now,
@@ -233,7 +250,7 @@ export async function executeAIProposal(proposal: AIProposal): Promise<Execution
           personName,
           type,
           principalAmount: Number(principalAmount),
-          date: date || new Date().toISOString().split('T')[0],
+          date: date || getTodayLocalDateStr(),
           status: 'active',
           payments: [],
           notes: notes || 'Voice Entry',
@@ -262,7 +279,7 @@ export async function executeAIProposal(proposal: AIProposal): Promise<Execution
             {
               id: `pay_${Date.now()}`,
               amount: Number(amount),
-              date: date || new Date().toISOString().split('T')[0],
+              date: date || getTodayLocalDateStr(),
               note: note || 'Repayment via AI',
               createdAt: now
             }
@@ -287,13 +304,13 @@ export async function executeAIProposal(proposal: AIProposal): Promise<Execution
             personName,
             type: 'given',
             principalAmount: Number(amount),
-            date: date || new Date().toISOString().split('T')[0],
+            date: date || getTodayLocalDateStr(),
             status: 'completed',
             payments: [
               {
                 id: `pay_${Date.now()}`,
                 amount: Number(amount),
-                date: date || new Date().toISOString().split('T')[0],
+                date: date || getTodayLocalDateStr(),
                 note: note || 'Direct payment',
                 createdAt: now
               }
@@ -334,7 +351,7 @@ export async function executeAIProposal(proposal: AIProposal): Promise<Execution
 
         const newRefill: PetrolRefill = {
           id: `pet_${Date.now()}`,
-          date: date || new Date().toISOString().split('T')[0],
+          date: date || getTodayLocalDateStr(),
           odometerReading: Number(odometerReading),
           litres: Number(litres),
           pricePerLitre: Number(pricePerLitre) || 270,
@@ -370,7 +387,7 @@ export async function executeAIProposal(proposal: AIProposal): Promise<Execution
           expectedAmount: Number(expectedAmount) || 10000,
           paidAmount: Number(paidAmount),
           status: status || 'paid',
-          paymentDate: paymentDate || new Date().toISOString().split('T')[0],
+          paymentDate: paymentDate || getTodayLocalDateStr(),
           paymentMethod: 'Cash',
           notes: notes || 'Recorded via AI Voice Assistant',
           updatedAt: now

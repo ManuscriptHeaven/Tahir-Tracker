@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { FinanceTransaction, FinanceTransactionType } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
+import { getTodayLocalDateStr, addDaysLocalDate } from '../../utils/dateTime';
 import { SmartQuickEntryBar } from './SmartQuickEntryBar';
 
 interface TransactionsViewProps {
@@ -80,10 +81,8 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
 
   // Group transactions by date relative labels (TODAY, YESTERDAY, specific date)
   const groupedTransactions = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const yesterdayDate = new Date();
-    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-    const yesterday = yesterdayDate.toISOString().split('T')[0];
+    const today = getTodayLocalDateStr();
+    const yesterday = addDaysLocalDate(today, -1);
 
     const groups: { label: string; date: string; transactions: FinanceTransaction[] }[] = [];
     const map = new Map<string, FinanceTransaction[]>();

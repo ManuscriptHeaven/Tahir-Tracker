@@ -24,7 +24,11 @@ import { SettingsView } from './components/settings/SettingsView';
 import { AIAssistantModal } from './components/ai/AIAssistantModal';
 import { AIFloatingButton } from './components/ai/AIFloatingButton';
 
-export const App: React.FC = () => {
+// Authentication
+import { AuthProvider } from './context/AuthContext';
+import { LoginModal } from './components/auth/LoginModal';
+
+export const AppContent: React.FC = () => {
   const isRentMode = (import.meta as any).env?.VITE_APP_MODE === 'rent';
   const [activeTab, setActiveTab] = useState<NavTab>(isRentMode ? 'rent' : 'dashboard');
   // Default to 2026-09 (current month matching spec)
@@ -33,6 +37,7 @@ export const App: React.FC = () => {
   const [isDbReady, setIsDbReady] = useState(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<any>(null);
 
   useEffect(() => {
@@ -113,6 +118,7 @@ export const App: React.FC = () => {
         onOpenAI={!isRentMode ? () => setIsAIAssistantOpen(true) : undefined}
         installPrompt={deferredInstallPrompt}
         onInstallPWA={handleInstallPWA}
+        onOpenLogin={() => setIsLoginModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -240,7 +246,22 @@ export const App: React.FC = () => {
         setActiveTab={setActiveTab}
         onOpenQuickAdd={() => setIsQuickAddOpen(true)}
       />
+
+      {/* Supabase Authentication Modal */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        isRentMode={isRentMode}
+      />
     </div>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 };
 

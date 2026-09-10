@@ -10,6 +10,8 @@ import {
   getMonthYearFormatted 
 } from '../../utils/formatters';
 import { exportElementAsJpg } from '../../utils/exportImage';
+import { addMoney, subtractMoney, multiplyMoney } from '../../utils/money';
+import { calculateChronologicalRentArrears } from '../../utils/rentCalculations';
 import { 
   Printer, 
   Download, 
@@ -77,12 +79,12 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   };
 
   // 1. LOANS CALCULATIONS (Grouped by Person for Clean Ledger Report)
-  const totalGiven = loans.filter(l => l.type === 'given').reduce((sum, l) => sum + l.principalAmount, 0);
+  const totalGiven = loans.filter(l => l.type === 'given').reduce((sum, l) => addMoney(sum, l.principalAmount), 0);
   const totalReceived = loans.filter(l => l.type === 'given').reduce((sum, l) => {
-    const paid = (l.payments || []).reduce((pSum, p) => pSum + p.amount, 0);
-    return sum + paid;
+    const paid = (l.payments || []).reduce((pSum, p) => addMoney(pSum, p.amount), 0);
+    return addMoney(sum, paid);
   }, 0);
-  const outstandingLoans = Math.max(0, totalGiven - totalReceived);
+  const outstandingLoans = Math.max(0, subtractMoney(totalGiven, totalReceived));
 
   // 2. MILK CALCULATIONS
   const milkLogMap = new Map<string, typeof milkLogs[0]>();
@@ -121,67 +123,21 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   });
 
   Object.keys(milkPersonStats).forEach(id => {
-    milkPersonStats[id].cost = milkPersonStats[id].suppliedKg * milkRate;
+    milkPersonStats[id].cost = multiplyMoney(milkPersonStats[id].suppliedKg, milkRate);
   });
-  const totalMilkCost = totalSuppliedKg * milkRate;
+  const totalMilkCost = multiplyMoney(totalSuppliedKg, milkRate);
 
   // 3. PETROL CALCULATIONS
   const monthlyPetrolRefills = petrolRefills.filter(r => r.date.startsWith(selectedMonth));
   const totalPetrolKm = monthlyPetrolRefills.reduce((sum, r) => sum + (r.distanceTravelled || 0), 0);
   const totalPetrolLitres = monthlyPetrolRefills.reduce((sum, r) => sum + (r.litres || 0), 0);
-  const totalPetrolCost = monthlyPetrolRefills.reduce((sum, r) => sum + (r.totalCost || 0), 0);
+  const totalPetrolCost = monthlyPetrolRefills.reduce((sum, r) => addMoney(sum, r.totalCost || 0), 0);
   const averageMileage = totalPetrolLitres > 0 && totalPetrolKm > 0 ? totalPetrolKm / totalPetrolLitres : 0;
   const costPerKm = totalPetrolKm > 0 ? totalPetrolCost / totalPetrolKm : 0;
 
   // 4. RENT CALCULATIONS WITH PREVIOUS ARREARS
   const rentRecordMap = new Map<string, typeof rentRecords[0]>();
   rentRecords.forEach(r => rentRecordMap.set(r.portionId, r));
-
-  // Helper to calculate previous arrears for a portion
-  const calculatePreviousArrears = (portionId: string, creationDateStr?: string, portionInitialArrears?: number): number => {
-    let arrears = portionInitialArrears || 0;
-    const previousRecords = rentRecords
-      .filter(r => r.portionId === portionId && r.monthYear < selectedMonth)
-      .sort((a, b) => a.monthYear.localeCompare(b.monthYear));
-
-    const recordedMonths = new Set(previousRecords.map(r => r.monthYear));
-
-    previousRecords.forEach(r => {
-      const monthArrears = r.arrearsAmount !== undefined ? r.arrearsAmount : 0;
-      const monthDue = r.expectedAmount + monthArrears;
-      const rem = Math.max(0, monthDue - r.paidAmount);
-      arrears = rem;
-    });
-
-    if (creationDateStr) {
-      try {
-        const createdDate = new Date(creationDateStr);
-        const startY = createdDate.getFullYear();
-        const startM = createdDate.getMonth() + 1;
-        const [targetY, targetM] = selectedMonth.split('-').map(Number);
-
-        let curY = startY;
-        let curM = startM;
-
-        while (curY < targetY || (curY === targetY && curM < targetM)) {
-          const mStr = `${curY}-${curM.toString().padStart(2, '0')}`;
-          if (!recordedMonths.has(mStr)) {
-            const p = rentPortions.find(p => p.id === portionId);
-            if (p) arrears += p.expectedRent;
-          }
-          curM++;
-          if (curM > 12) {
-            curM = 1;
-            curY++;
-          }
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    }
-
-    return arrears;
-  };
 
   let totalRentCurrentExpected = 0;
   let totalRentArrears = 0;
@@ -192,15 +148,19 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     const expected = rec ? rec.expectedAmount : portion.expectedRent;
     const arrears = rec?.arrearsAmount !== undefined 
       ? rec.arrearsAmount 
-      : calculatePreviousArrears(portion.id, portion.createdAt, portion.initialArrears);
-    const totalDue = expected + arrears;
+      : calculateChronologicalRentArrears(
+          portion,
+          rentRecords.filter(r => r.portionId === portion.id),
+          selectedMonth
+        );
+    const totalDue = addMoney(expected, arrears);
     const paid = rec ? rec.paidAmount : 0;
-    const balance = Math.max(0, totalDue - paid);
+    const balance = Math.max(0, subtractMoney(totalDue, paid));
     const status = paid >= totalDue && totalDue > 0 ? 'PAID' : paid > 0 ? 'PARTIAL' : 'PENDING';
 
-    totalRentCurrentExpected += expected;
-    totalRentArrears += arrears;
-    totalRentCollected += paid;
+    totalRentCurrentExpected = addMoney(totalRentCurrentExpected, expected);
+    totalRentArrears = addMoney(totalRentArrears, arrears);
+    totalRentCollected = addMoney(totalRentCollected, paid);
 
     return {
       portion,
@@ -213,8 +173,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     };
   });
 
-  const totalRentOverallPayable = totalRentCurrentExpected + totalRentArrears;
-  const totalRentOutstanding = Math.max(0, totalRentOverallPayable - totalRentCollected);
+  const totalRentOverallPayable = addMoney(totalRentCurrentExpected, totalRentArrears);
+  const totalRentOutstanding = Math.max(0, subtractMoney(totalRentOverallPayable, totalRentCollected));
 
   // Handle Export JPG
   const handleSaveJpg = async () => {

@@ -1,4 +1,5 @@
-import { UtilityBill, UtilityPayment } from '../types';
+import type { UtilityBill, UtilityPayment } from '../types/index.ts';
+import { addMoney, subtractMoney, divideMoney, normalizeMoney } from './money.ts';
 
 /**
  * UTILITY BILL CALCULATION — EXACT FORMULA
@@ -14,7 +15,7 @@ import { UtilityBill, UtilityPayment } from '../types';
 export function calculateGasWaterShare(gas: number, water: number): number {
   const g = Math.max(0, gas || 0);
   const w = Math.max(0, water || 0);
-  return (g + w) / 3;
+  return divideMoney(addMoney(g, w), 3);
 }
 
 /**
@@ -24,7 +25,7 @@ export function calculateGasWaterShare(gas: number, water: number): number {
 export function calculateSaleemTotalBill(electricity: number, gas: number, water: number): number {
   const e = Math.max(0, electricity || 0);
   const share = calculateGasWaterShare(gas, water);
-  return e + share;
+  return addMoney(e, share);
 }
 
 /**
@@ -116,8 +117,8 @@ export function calculateUtilityNetBalance(
   const paymentsByBillMap = new Map<string, number>();
   payments.forEach(p => {
     const current = paymentsByBillMap.get(p.utilityBillId) || 0;
-    paymentsByBillMap.set(p.utilityBillId, current + p.amount);
-    totalReceivedAmount += p.amount;
+    paymentsByBillMap.set(p.utilityBillId, addMoney(current, p.amount));
+    totalReceivedAmount = addMoney(totalReceivedAmount, p.amount);
   });
 
   bills.forEach(bill => {
@@ -126,21 +127,21 @@ export function calculateUtilityNetBalance(
     const expected = bill.expectedContribution ?? 9500;
     const paidForBill = paymentsByBillMap.get(bill.id) || 0;
     const roundedSaleemBill = Math.round(saleemBill);
-    const diff = roundedSaleemBill - paidForBill;
+    const diff = subtractMoney(roundedSaleemBill, paidForBill);
 
-    totalSaleemShare += waterGasShare;
-    totalSaleemTotalBills += roundedSaleemBill;
-    totalExpectedContribution += expected;
+    totalSaleemShare = addMoney(totalSaleemShare, waterGasShare);
+    totalSaleemTotalBills = addMoney(totalSaleemTotalBills, roundedSaleemBill);
+    totalExpectedContribution = addMoney(totalExpectedContribution, expected);
 
     if (diff > 0) {
-      totalSaleemOwesTahir += diff;
+      totalSaleemOwesTahir = addMoney(totalSaleemOwesTahir, diff);
     } else if (diff < 0) {
-      totalTahirOwesSaleem += Math.abs(diff);
+      totalTahirOwesSaleem = addMoney(totalTahirOwesSaleem, Math.abs(diff));
     }
   });
 
   // Overall Net comparison between Total Saleem Bills and Total Received
-  const overallDiff = totalSaleemTotalBills - totalReceivedAmount;
+  const overallDiff = subtractMoney(totalSaleemTotalBills, totalReceivedAmount);
   let netStatus: 'saleem_owes_tahir' | 'tahir_owes_saleem' | 'settled' = 'settled';
   if (overallDiff > 0) {
     netStatus = 'saleem_owes_tahir';
@@ -149,13 +150,13 @@ export function calculateUtilityNetBalance(
   }
 
   return {
-    totalSaleemTotalBills,
-    totalSaleemShare,
-    totalExpectedContribution,
-    totalReceivedAmount,
-    totalSaleemOwesTahir,
-    totalTahirOwesSaleem,
-    netDifference: Math.abs(overallDiff),
+    totalSaleemTotalBills: normalizeMoney(totalSaleemTotalBills),
+    totalSaleemShare: normalizeMoney(totalSaleemShare),
+    totalExpectedContribution: normalizeMoney(totalExpectedContribution),
+    totalReceivedAmount: normalizeMoney(totalReceivedAmount),
+    totalSaleemOwesTahir: normalizeMoney(totalSaleemOwesTahir),
+    totalTahirOwesSaleem: normalizeMoney(totalTahirOwesSaleem),
+    netDifference: normalizeMoney(Math.abs(overallDiff)),
     netStatus
   };
 }

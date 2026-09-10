@@ -8,6 +8,8 @@ import {
   formatNumber, 
   getMonthYearFormatted 
 } from '../../utils/formatters';
+import { getTodayLocalDateStr } from '../../utils/dateTime';
+import { addMoney, multiplyMoney } from '../../utils/money';
 import { 
   Fuel, 
   Plus, 
@@ -40,7 +42,7 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingRefill, setEditingRefill] = useState<PetrolRefill | null>(null);
 
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(getTodayLocalDateStr());
   const [odometerReading, setOdometerReading] = useState('');
   const [litres, setLitres] = useState('');
   const [pricePerLitre, setPricePerLitre] = useState('270');
@@ -53,7 +55,7 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
   // Monthly Aggregated Stats
   const totalKm = monthlyRefills.reduce((sum, r) => sum + (r.distanceTravelled || 0), 0);
   const totalLitres = monthlyRefills.reduce((sum, r) => sum + (r.litres || 0), 0);
-  const totalCost = monthlyRefills.reduce((sum, r) => sum + (r.totalCost || 0), 0);
+  const totalCost = monthlyRefills.reduce((sum, r) => addMoney(sum, r.totalCost || 0), 0);
   
   const averageMileage = totalLitres > 0 && totalKm > 0 ? totalKm / totalLitres : 0;
   const costPerKm = totalKm > 0 ? totalCost / totalKm : 0;
@@ -96,7 +98,7 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
       return;
     }
 
-    const calculatedTotalCost = Math.round(qtyLitres * priceLtr);
+    const calculatedTotalCost = multiplyMoney(qtyLitres, priceLtr);
 
     if (editingRefill) {
       await db.petrol_refills.update(editingRefill.id, {

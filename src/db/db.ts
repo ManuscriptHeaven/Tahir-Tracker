@@ -1,5 +1,5 @@
-import Dexie, { Table } from 'dexie';
-import {
+import Dexie, { type Table } from 'dexie';
+import type {
   LoanTransaction,
   MilkConsumer,
   MilkDailyLog,
@@ -18,7 +18,7 @@ import {
   FinanceRecurringTransaction,
   FinanceGoal,
   FinanceVoiceEntry
-} from '../types';
+} from '../types/index.ts';
 
 export class TahirTrackerDB extends Dexie {
   loans!: Table<LoanTransaction, string>;
@@ -41,6 +41,9 @@ export class TahirTrackerDB extends Dexie {
   finance_recurring_transactions!: Table<FinanceRecurringTransaction, string>;
   finance_goals!: Table<FinanceGoal, string>;
   finance_voice_entries!: Table<FinanceVoiceEntry, string>;
+
+  // Offline Sync Queue Table (Version 5)
+  sync_queue!: Table<any, string>;
 
   constructor() {
     super('TahirTrackerDB');
@@ -73,6 +76,10 @@ export class TahirTrackerDB extends Dexie {
     this.version(4).stores({
       milk_monthly_records: 'id, monthYear, status, updatedAt'
     });
+
+    this.version(5).stores({
+      sync_queue: 'id, tableName, action, recordId, timestamp'
+    });
   }
 }
 
@@ -102,9 +109,15 @@ export const LEGACY_DUMMY_IDS = {
   finance_voice_entries: ['ve_01', 've_02', 've_03']
 };
 
-// Purge any legacy sample/dummy data from previous installations
+// Purge any legacy sample/dummy data from previous installations (runs once per install)
 export async function cleanupLegacyDummyData(): Promise<void> {
   try {
+    const settings = await db.settings.toArray();
+    const curSettings = settings[0];
+    if (curSettings?.legacyCleanupDone) {
+      return; // Already executed once, never run destructive deletions again
+    }
+
     await db.petrol_refills.bulkDelete(LEGACY_DUMMY_IDS.petrol_refills);
     await db.loans.bulkDelete(LEGACY_DUMMY_IDS.loans);
     await db.milk_logs.bulkDelete(LEGACY_DUMMY_IDS.milk_logs);
@@ -127,17 +140,9 @@ export async function cleanupLegacyDummyData(): Promise<void> {
     await db.finance_budgets.bulkDelete(LEGACY_DUMMY_IDS.finance_budgets);
     await db.finance_voice_entries.bulkDelete(LEGACY_DUMMY_IDS.finance_voice_entries);
 
-    // Reset fake opening balances on default accounts if they were set to the old dummy numbers
-    const accounts = await db.finance_accounts.toArray();
-    for (const acc of accounts) {
-      if (
-        (acc.id === 'acc_cash' && acc.openingBalance === 25000) ||
-        (acc.id === 'acc_hbl' && acc.openingBalance === 350000) ||
-        (acc.id === 'acc_easypaisa' && acc.openingBalance === 15000) ||
-        (acc.id === 'acc_savings' && acc.openingBalance === 500000)
-      ) {
-        await db.finance_accounts.update(acc.id, { openingBalance: 0 });
-      }
+    // Mark cleanup as completed so user accounts and data are never touched again
+    if (curSettings?.id) {
+      await db.settings.update(curSettings.id, { legacyCleanupDone: true });
     }
   } catch (err) {
     console.error('Failed to cleanup legacy dummy data:', err);
@@ -308,12 +313,63 @@ export async function initializeDefaultData() {
   }
 }
 
-// Full DB JSON Export (Supports Household + Finance)
+// Validates structure and integrity of backup JSON before import
+export function validateBackupJson(data: any): { isValid: boolean; error?: string; summary?: Record<string, number> } {
+  if (!data || typeof data !== 'object') {
+    return { isValid: false, error: 'Backup data is not a valid JSON object.' };
+  }
+
+  // Version compatibility check
+  if (data.version !== undefined && (typeof data.version !== 'number' || data.version > 5 || data.version < 1)) {
+    return { isValid: false, error: `Unsupported backup schema version: ${data.version}. Current version is 5.` };
+  }
+
+  // Check that at least some valid Tahir Tracker table arrays exist
+  const knownTables = [
+    'loans', 'milk_consumers', 'milk_logs', 'milk_monthly_records',
+    'petrol_refills', 'rent_portions', 'rent_records', 'settings',
+    'utility_persons', 'utility_bills', 'utility_payments',
+    'finance_accounts', 'finance_categories', 'finance_transactions',
+    'finance_budgets', 'finance_recurring_transactions', 'finance_goals',
+    'finance_voice_entries'
+  ];
+
+  const presentTables = knownTables.filter(t => Array.isArray(data[t]));
+  if (presentTables.length === 0) {
+    return { isValid: false, error: 'Backup JSON does not contain recognizable Tahir Tracker tables.' };
+  }
+
+  // Check for duplicate primary keys in each table to avoid unique constraint violations
+  for (const t of presentTables) {
+    const idSet = new Set<string>();
+    for (const item of data[t]) {
+      if (item && item.id) {
+        if (idSet.has(item.id)) {
+          return { isValid: false, error: `Duplicate primary key '${item.id}' found in table '${t}'.` };
+        }
+        idSet.add(item.id);
+      }
+    }
+  }
+
+  const summary: Record<string, number> = {};
+  for (const t of presentTables) {
+    summary[t] = data[t].length;
+  }
+
+  return { isValid: true, summary };
+}
+
+// Full DB JSON Export (Exports all 17 domain tables; sync_queue is safely excluded)
 export async function exportDatabaseToJson(): Promise<string> {
   const data = {
+    appName: 'Tahir Tracker',
+    version: 5,
+    exportedAt: new Date().toISOString(),
     loans: await db.loans.toArray(),
     milk_consumers: await db.milk_consumers.toArray(),
     milk_logs: await db.milk_logs.toArray(),
+    milk_monthly_records: await db.milk_monthly_records.toArray(),
     petrol_refills: await db.petrol_refills.toArray(),
     rent_portions: await db.rent_portions.toArray(),
     rent_records: await db.rent_records.toArray(),
@@ -328,23 +384,32 @@ export async function exportDatabaseToJson(): Promise<string> {
     finance_budgets: await db.finance_budgets.toArray(),
     finance_recurring_transactions: await db.finance_recurring_transactions.toArray(),
     finance_goals: await db.finance_goals.toArray(),
-    finance_voice_entries: await db.finance_voice_entries.toArray(),
-    exportedAt: new Date().toISOString(),
-    version: 3
+    finance_voice_entries: await db.finance_voice_entries.toArray()
   };
   return JSON.stringify(data, null, 2);
 }
 
-// Full DB JSON Import
+// Full DB JSON Import with Pre-Validation
 export async function importDatabaseFromJson(jsonString: string): Promise<boolean> {
+  let data: any;
   try {
-    const data = JSON.parse(jsonString);
-    if (!data || typeof data !== 'object') throw new Error('Invalid JSON');
+    data = JSON.parse(jsonString);
+  } catch (err: any) {
+    throw new Error(`Invalid JSON file format: ${err?.message || 'Parse error'}`);
+  }
 
+  // Pre-validate before touching any local tables
+  const validation = validateBackupJson(data);
+  if (!validation.isValid) {
+    throw new Error(validation.error || 'Invalid backup data.');
+  }
+
+  try {
     await db.transaction('rw', [
       db.loans,
       db.milk_consumers,
       db.milk_logs,
+      db.milk_monthly_records,
       db.petrol_refills,
       db.rent_portions,
       db.rent_records,
@@ -358,7 +423,8 @@ export async function importDatabaseFromJson(jsonString: string): Promise<boolea
       db.finance_budgets,
       db.finance_recurring_transactions,
       db.finance_goals,
-      db.finance_voice_entries
+      db.finance_voice_entries,
+      db.sync_queue
     ], async () => {
       if (Array.isArray(data.loans)) {
         await db.loans.clear();
@@ -371,6 +437,10 @@ export async function importDatabaseFromJson(jsonString: string): Promise<boolea
       if (Array.isArray(data.milk_logs)) {
         await db.milk_logs.clear();
         await db.milk_logs.bulkAdd(data.milk_logs);
+      }
+      if (Array.isArray(data.milk_monthly_records)) {
+        await db.milk_monthly_records.clear();
+        await db.milk_monthly_records.bulkAdd(data.milk_monthly_records);
       }
       if (Array.isArray(data.petrol_refills)) {
         await db.petrol_refills.clear();
@@ -429,11 +499,14 @@ export async function importDatabaseFromJson(jsonString: string): Promise<boolea
         await db.finance_voice_entries.clear();
         await db.finance_voice_entries.bulkAdd(data.finance_voice_entries);
       }
+      // Stale sync queues from backups must NEVER be replayed to cloud.
+      // Always purge the local queue upon restoring an authoritative snapshot.
+      await db.sync_queue.clear();
     });
     return true;
-  } catch (err) {
+  } catch (err: any) {
     console.error('Import failed:', err);
-    throw err;
+    throw new Error(`Database restore error: ${err?.message || 'Transaction aborted'}`);
   }
 }
 
@@ -442,6 +515,7 @@ export async function resetDatabaseToDefaults(): Promise<void> {
   await db.loans.clear();
   await db.milk_consumers.clear();
   await db.milk_logs.clear();
+  await db.milk_monthly_records.clear();
   await db.petrol_refills.clear();
   await db.rent_portions.clear();
   await db.rent_records.clear();
@@ -456,5 +530,6 @@ export async function resetDatabaseToDefaults(): Promise<void> {
   await db.finance_recurring_transactions.clear();
   await db.finance_goals.clear();
   await db.finance_voice_entries.clear();
+  await db.sync_queue.clear();
   await initializeDefaultData();
 }
