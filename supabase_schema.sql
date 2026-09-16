@@ -98,6 +98,7 @@ CREATE TABLE IF NOT EXISTS petrol_refills (
     litres NUMERIC NOT NULL,
     price_per_litre NUMERIC NOT NULL,
     total_cost NUMERIC NOT NULL,
+    is_full_tank BOOLEAN DEFAULT FALSE,
     distance_travelled NUMERIC DEFAULT 0,
     mileage_kmpl NUMERIC DEFAULT 0,
     cost_per_km NUMERIC DEFAULT 0,
@@ -456,4 +457,12 @@ BEGIN
     END LOOP;
 END $$;
 */
+
+-- ==============================================================================
+-- 20. IDEMPOTENT MIGRATION: FULL-TANK FUEL MILEAGE (is_full_tank)
+-- Safe to run on existing databases; does NOT drop tables or modify existing data.
+-- ==============================================================================
+ALTER TABLE public.petrol_refills 
+ADD COLUMN IF NOT EXISTS is_full_tank BOOLEAN DEFAULT FALSE;
+
 

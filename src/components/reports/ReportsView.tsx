@@ -12,6 +12,7 @@ import {
 import { exportElementAsJpg } from '../../utils/exportImage';
 import { addMoney, subtractMoney, multiplyMoney } from '../../utils/money';
 import { calculateChronologicalRentArrears } from '../../utils/rentCalculations';
+import { calculatePetrolIntervals, calculateMonthlyPetrolStats } from '../../utils/petrolCalculations';
 import { 
   Printer, 
   Download, 
@@ -128,12 +129,13 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   const totalMilkCost = multiplyMoney(totalSuppliedKg, milkRate);
 
   // 3. PETROL CALCULATIONS
-  const monthlyPetrolRefills = petrolRefills.filter(r => r.date.startsWith(selectedMonth));
-  const totalPetrolKm = monthlyPetrolRefills.reduce((sum, r) => sum + (r.distanceTravelled || 0), 0);
-  const totalPetrolLitres = monthlyPetrolRefills.reduce((sum, r) => sum + (r.litres || 0), 0);
-  const totalPetrolCost = monthlyPetrolRefills.reduce((sum, r) => addMoney(sum, r.totalCost || 0), 0);
-  const averageMileage = totalPetrolLitres > 0 && totalPetrolKm > 0 ? totalPetrolKm / totalPetrolLitres : 0;
-  const costPerKm = totalPetrolKm > 0 ? totalPetrolCost / totalPetrolKm : 0;
+  const allProcessedPetrol = calculatePetrolIntervals(petrolRefills);
+  const monthlyPetrolRefills = allProcessedPetrol.filter(r => r.date.startsWith(selectedMonth));
+  const monthlyPetrolStats = calculateMonthlyPetrolStats(petrolRefills, selectedMonth);
+  const totalPetrolCost = monthlyPetrolStats.monthlyCost;
+  const totalPetrolKm = monthlyPetrolStats.loggedTravelKm;
+  const totalPetrolLitres = monthlyPetrolStats.monthlyLitres;
+  const averageMileage = monthlyPetrolStats.avgMileage;
 
   // 4. RENT CALCULATIONS WITH PREVIOUS ARREARS
   const rentRecordMap = new Map<string, typeof rentRecords[0]>();
@@ -726,24 +728,35 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
             {/* Top Stat Boxes */}
             <div className="grid grid-cols-5 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
               <div>
-                <div className="text-[9px] font-bold uppercase text-slate-500">Total KM</div>
-                <div className="text-sm sm:text-base font-black text-slate-900 mt-0.5">{formatNumber(totalPetrolKm, 0)} km</div>
+                <div className="text-[9px] font-bold uppercase text-slate-500">Logged Travel</div>
+                <div className="text-sm sm:text-base font-black text-slate-900 mt-0.5">{formatNumber(monthlyPetrolStats.loggedTravelKm, 0)} km</div>
               </div>
               <div>
-                <div className="text-[9px] font-bold uppercase text-slate-500">Petrol Used</div>
-                <div className="text-sm sm:text-base font-black text-slate-900 mt-0.5">{formatNumber(totalPetrolLitres, 1)} L</div>
+                <div className="text-[9px] font-bold uppercase text-slate-500">Petrol Purchased</div>
+                <div className="text-sm sm:text-base font-black text-slate-900 mt-0.5">{formatNumber(monthlyPetrolStats.monthlyLitres, 1)} L</div>
               </div>
               <div>
                 <div className="text-[9px] font-bold uppercase text-emerald-700">Average Mileage</div>
-                <div className="text-sm sm:text-base font-black text-emerald-700 mt-0.5">{formatNumber(averageMileage, 1)} <span className="text-[9px]">km/L</span></div>
+                <div className="text-sm sm:text-base font-black text-emerald-700 mt-0.5">
+                  {monthlyPetrolStats.avgMileage > 0 ? (
+                    `${formatNumber(monthlyPetrolStats.avgMileage, 1)} km/L`
+                  ) : (
+                    '—'
+                  )}
+                </div>
+                <div className="text-[8.5px] text-slate-400 font-normal">
+                  {monthlyPetrolStats.completedIntervalsCount > 0 ? `${monthlyPetrolStats.completedIntervalsCount} completed full-tank` : 'no full-tank interval'}
+                </div>
               </div>
               <div>
                 <div className="text-[9px] font-bold uppercase text-slate-500">Petrol Cost</div>
-                <div className="text-sm sm:text-base font-black text-slate-900 mt-0.5">{formatCurrency(totalPetrolCost)}</div>
+                <div className="text-sm sm:text-base font-black text-slate-900 mt-0.5">{formatCurrency(monthlyPetrolStats.monthlyCost)}</div>
               </div>
               <div>
                 <div className="text-[9px] font-bold uppercase text-slate-500">Cost / KM</div>
-                <div className="text-sm sm:text-base font-black text-slate-800 mt-0.5">{formatNumber(costPerKm, 2)} <span className="text-[9px]">PKR</span></div>
+                <div className="text-sm sm:text-base font-black text-slate-800 mt-0.5">
+                  {monthlyPetrolStats.costPerKm > 0 ? `${formatNumber(monthlyPetrolStats.costPerKm, 2)} PKR` : '—'}
+                </div>
               </div>
             </div>
 
@@ -756,14 +769,14 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 <table className="w-full table-fixed text-left border-collapse text-[10.5px] sm:text-xs">
                   <thead>
                     <tr className="bg-slate-100 border-b border-slate-300 text-[9px] sm:text-[10px] font-black text-slate-600 uppercase">
-                      <th className="py-1.5 px-2 w-[14%]">Date</th>
+                      <th className="py-1.5 px-2 w-[13%]">Date</th>
                       <th className="py-1.5 px-2 w-[14%]">Odometer</th>
-                      <th className="py-1.5 px-2 w-[12%]">Quantity</th>
-                      <th className="py-1.5 px-2 w-[12%]">Rate/L</th>
-                      <th className="py-1.5 px-2 text-right w-[14%]">Cost</th>
-                      <th className="py-1.5 px-2 text-right w-[12%]">Distance</th>
-                      <th className="py-1.5 px-2 text-right w-[11%]">Mileage</th>
-                      <th className="py-1.5 px-2 text-right w-[11%]">Cost/KM</th>
+                      <th className="py-1.5 px-2 w-[10%]">Quantity</th>
+                      <th className="py-1.5 px-2 w-[10%]">Rate/L</th>
+                      <th className="py-1.5 px-2 text-right w-[13%]">Cost</th>
+                      <th className="py-1.5 px-2 text-center w-[13%]">Type</th>
+                      <th className="py-1.5 px-2 text-right w-[13%]">Distance</th>
+                      <th className="py-1.5 px-2 text-right w-[14%]">Mileage</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
@@ -779,20 +792,48 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                           <td className="py-1 px-2 truncate">{r.litres} L</td>
                           <td className="py-1 px-2 truncate">{r.pricePerLitre}</td>
                           <td className="py-1 px-2 text-right font-bold truncate">{formatCurrency(r.totalCost)}</td>
-                          <td className="py-1 px-2 text-right font-semibold truncate">{r.distanceTravelled > 0 ? `${r.distanceTravelled} km` : '-'}</td>
-                          <td className="py-1 px-2 text-right font-bold text-emerald-700 truncate">{r.mileageKmpl > 0 ? `${r.mileageKmpl}` : '-'}</td>
-                          <td className="py-1 px-2 text-right truncate">{r.costPerKm > 0 ? `${r.costPerKm}` : '-'}</td>
+                          <td className="py-1 px-2 text-center truncate">
+                            <span className={`px-1.5 py-0.5 rounded text-[8.5px] font-bold uppercase ${
+                              r.calculationType === 'completed'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : r.calculationType === 'baseline'
+                                ? 'bg-sky-100 text-sky-800'
+                                : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              {r.calculationType === 'completed' ? 'Full Tank' : r.calculationType === 'baseline' ? 'Baseline' : 'Partial'}
+                            </span>
+                          </td>
+                          <td className="py-1 px-2 text-right font-semibold truncate">
+                            {r.calculationType === 'completed' ? (
+                              `+${r.intervalDistance} km`
+                            ) : r.calculationType === 'baseline' ? (
+                              'Baseline'
+                            ) : r.stepDistance > 0 ? (
+                              `+${r.stepDistance} km`
+                            ) : (
+                              '—'
+                            )}
+                          </td>
+                          <td className="py-1 px-2 text-right font-bold text-emerald-700 truncate">
+                            {r.calculationType === 'completed' && r.mileageKmpl > 0 ? (
+                              `${formatNumber(r.mileageKmpl, 1)} km/L`
+                            ) : (
+                              '—'
+                            )}
+                          </td>
                         </tr>
                       ))
                     )}
                   </tbody>
                   <tfoot className="bg-slate-100 font-black border-t-2 border-slate-400 text-[10.5px] sm:text-xs">
                     <tr>
-                      <td colSpan={4} className="py-1.5 px-2">Total Fuel Expense</td>
-                      <td className="py-1.5 px-2 text-right text-emerald-800 truncate">{formatCurrency(totalPetrolCost)}</td>
-                      <td className="py-1.5 px-2 text-right truncate">{formatNumber(totalPetrolKm, 0)} km</td>
-                      <td className="py-1.5 px-2 text-right text-emerald-800 truncate">{formatNumber(averageMileage, 1)}</td>
-                      <td className="py-1.5 px-2 text-right truncate">{formatNumber(costPerKm, 1)}</td>
+                      <td colSpan={4} className="py-1.5 px-2">Total Fuel Statement</td>
+                      <td className="py-1.5 px-2 text-right text-emerald-800 truncate">{formatCurrency(monthlyPetrolStats.monthlyCost)}</td>
+                      <td></td>
+                      <td className="py-1.5 px-2 text-right truncate">{formatNumber(monthlyPetrolStats.loggedTravelKm, 0)} km</td>
+                      <td className="py-1.5 px-2 text-right text-emerald-800 truncate">
+                        {monthlyPetrolStats.avgMileage > 0 ? `${formatNumber(monthlyPetrolStats.avgMileage, 1)} km/L` : '—'}
+                      </td>
                     </tr>
                   </tfoot>
                 </table>

@@ -9,6 +9,7 @@ import {
 } from '../../utils/formatters';
 import { getTodayLocalDateStr } from '../../utils/dateTime';
 import { addMoney, subtractMoney, multiplyMoney } from '../../utils/money';
+import { calculateMonthlyPetrolStats } from '../../utils/petrolCalculations';
 import { 
   Home, 
   Milk, 
@@ -118,11 +119,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const totalMilkCost = multiplyMoney(totalMilkKg, milkRate);
 
   // 3. PETROL STATS
+  const monthlyPetrolStats = calculateMonthlyPetrolStats(petrolRefills, selectedMonth);
   const monthlyPetrol = petrolRefills.filter(r => r.date.startsWith(selectedMonth));
-  const totalPetrolCost = monthlyPetrol.reduce((sum, r) => addMoney(sum, r.totalCost || 0), 0);
-  const totalPetrolKm = monthlyPetrol.reduce((sum, r) => sum + (r.distanceTravelled || 0), 0);
-  const totalPetrolLitres = monthlyPetrol.reduce((sum, r) => sum + (r.litres || 0), 0);
-  const avgMileage = totalPetrolLitres > 0 && totalPetrolKm > 0 ? totalPetrolKm / totalPetrolLitres : 0;
 
   // 4. LOAN STATS
   const totalGiven = loans.filter(l => l.type === 'given').reduce((sum, l) => addMoney(sum, l.principalAmount), 0);
@@ -342,17 +340,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div className="mt-4">
               <div className="flex items-baseline justify-between">
                 <div className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-                  {formatCurrency(totalPetrolCost)}
+                  {formatCurrency(monthlyPetrolStats.monthlyCost)}
                 </div>
-                {avgMileage > 0 && (
+                {monthlyPetrolStats.avgMileage > 0 ? (
                   <div className="text-base sm:text-lg font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-xl">
-                    {formatNumber(avgMileage, 2)} KM/L
+                    {formatNumber(monthlyPetrolStats.avgMileage, 2)} KM/L
+                  </div>
+                ) : (
+                  <div className="text-xs font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg">
+                    {monthlyPetrolStats.completedIntervalsCount === 0 && monthlyPetrol.length > 0 ? 'Pending full tank' : 'No logs'}
                   </div>
                 )}
               </div>
               <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
-                <span>Total Travel: <strong className="text-slate-800">{formatNumber(totalPetrolKm, 0)} KM</strong></span>
-                <span>Fuel: <strong className="text-slate-800">{formatNumber(totalPetrolLitres, 1)} L</strong></span>
+                <span>Logged Travel: <strong className="text-slate-800">{formatNumber(monthlyPetrolStats.loggedTravelKm, 0)} KM</strong></span>
+                <span>Fuel: <strong className="text-slate-800">{formatNumber(monthlyPetrolStats.monthlyLitres, 1)} L</strong></span>
               </div>
             </div>
           </div>

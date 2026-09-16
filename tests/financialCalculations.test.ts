@@ -12,6 +12,8 @@ import {
   calculateUtilityNetBalance
 } from '../src/utils/utilityCalculations.ts';
 import { addMoney, subtractMoney, multiplyMoney, divideMoney } from '../src/utils/money.ts';
+import { calculatePetrolIntervals } from '../src/utils/petrolCalculations.ts';
+import type { PetrolRefill } from '../src/types/index.ts';
 
 describe('financialCalculations.test.ts - Domain Financial Accuracy', () => {
   describe('Rent Calculations & Multi-Month Arrears Reconciliation', () => {
@@ -154,7 +156,7 @@ describe('financialCalculations.test.ts - Domain Financial Accuracy', () => {
   });
 
   describe('Petrol Mileage Calculations', () => {
-    it('should compute distance, km/L economy, and cost per km accurately', () => {
+    it('should compute distance, km/L economy, and cost per km accurately between full tank checkpoints', () => {
       const prevOdometer = 12450;
       const currOdometer = 12950; // 500 km
       const litres = 35.5;
@@ -170,6 +172,44 @@ describe('financialCalculations.test.ts - Domain Financial Accuracy', () => {
       // Cost per km (PKR / km)
       const costPerKm = divideMoney(totalCost, distance);
       assert.strictEqual(costPerKm, 19.17);
+
+      // Verify full-tank intervals calculation engine
+      const refills: PetrolRefill[] = [
+        {
+          id: 'ref1',
+          date: '2026-09-01',
+          odometerReading: prevOdometer,
+          litres: 10,
+          pricePerLitre: 270,
+          totalCost: 2700,
+          isFullTank: true,
+          distanceTravelled: 0,
+          mileageKmpl: 0,
+          costPerKm: 0,
+          createdAt: '2026-09-01T00:00:00Z'
+        },
+        {
+          id: 'ref2',
+          date: '2026-09-10',
+          odometerReading: currOdometer,
+          litres: litres,
+          pricePerLitre: 270,
+          totalCost: totalCost,
+          isFullTank: true,
+          distanceTravelled: 0,
+          mileageKmpl: 0,
+          costPerKm: 0,
+          createdAt: '2026-09-10T00:00:00Z'
+        }
+      ];
+
+      const processed = calculatePetrolIntervals(refills);
+      assert.strictEqual(processed[0].calculationType, 'baseline');
+      assert.strictEqual(processed[1].calculationType, 'completed');
+      assert.strictEqual(processed[1].intervalDistance, 500);
+      assert.strictEqual(processed[1].intervalFuel, 35.5);
+      assert.strictEqual(processed[1].mileageKmpl, 14.08);
+      assert.strictEqual(processed[1].costPerKm, 19.17);
     });
   });
 

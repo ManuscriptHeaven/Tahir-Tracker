@@ -117,11 +117,13 @@ export interface PetrolRefill {
   litres: number; // Litres
   pricePerLitre: number; // PKR
   totalCost: number; // PKR
+  isFullTank?: boolean; // Full Tank flag: true for complete fill-up, false for partial
   distanceTravelled: number; // KM calculated
   mileageKmpl: number; // KM/L calculated
   costPerKm: number; // PKR/KM calculated
   notes?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface RentPortion {

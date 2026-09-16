@@ -57,7 +57,7 @@ function updateStatus(state: SyncState, message: string) {
 }
 
 // Map camelCase to snake_case for Supabase
-function toSnakeCase(obj: any): any {
+export function toSnakeCase(obj: any): any {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
   const result: any = {};
   for (const key of Object.keys(obj)) {
@@ -68,7 +68,7 @@ function toSnakeCase(obj: any): any {
 }
 
 // Map snake_case to camelCase from Supabase
-function toCamelCase(obj: any): any {
+export function toCamelCase(obj: any): any {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
   const result: any = {};
   for (const key of Object.keys(obj)) {

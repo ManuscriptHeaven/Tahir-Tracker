@@ -2,6 +2,7 @@ import { db } from '../db/db';
 import { AIProposal } from '../types/ai';
 import { UtilityBill, UtilityPayment, MilkDailyLog, LoanTransaction, PetrolRefill, RentMonthlyRecord } from '../types';
 import { calculateGasWaterShare, calculateSaleemTotalBill } from '../utils/utilityCalculations';
+import { calculatePetrolIntervals } from '../utils/petrolCalculations';
 import { getTodayLocalDateStr } from '../utils/dateTime';
 
 export interface ExecutionResult {
@@ -331,24 +332,8 @@ export async function executeAIProposal(proposal: AIProposal): Promise<Execution
       // 6. ADD PETROL REFILL
       // -------------------------------------------------------------
       case 'add_petrol_refill': {
-        const { date, totalCost, odometerReading, litres, pricePerLitre, notes } = payload;
+        const { date, totalCost, odometerReading, litres, pricePerLitre, notes, isFullTank } = payload;
         
-        // Calculate mileage from last refill
-        const lastRefill = await db.petrol_refills.orderBy('odometerReading').last();
-        let distanceTravelled = 0;
-        let mileageKmpl = 0;
-        let costPerKm = 0;
-
-        if (lastRefill && Number(odometerReading) > lastRefill.odometerReading) {
-          distanceTravelled = Number(odometerReading) - lastRefill.odometerReading;
-          if (Number(litres) > 0) {
-            mileageKmpl = parseFloat((distanceTravelled / Number(litres)).toFixed(2));
-          }
-          if (distanceTravelled > 0) {
-            costPerKm = parseFloat((Number(totalCost) / distanceTravelled).toFixed(2));
-          }
-        }
-
         const newRefill: PetrolRefill = {
           id: `pet_${Date.now()}`,
           date: date || getTodayLocalDateStr(),
@@ -356,17 +341,40 @@ export async function executeAIProposal(proposal: AIProposal): Promise<Execution
           litres: Number(litres),
           pricePerLitre: Number(pricePerLitre) || 270,
           totalCost: Number(totalCost),
-          distanceTravelled,
-          mileageKmpl,
-          costPerKm,
+          isFullTank: Boolean(isFullTank),
+          distanceTravelled: 0,
+          mileageKmpl: 0,
+          costPerKm: 0,
           notes: notes || 'AI Voice Refill Entry',
-          createdAt: now
+          createdAt: now,
+          updatedAt: now
         };
 
         await db.petrol_refills.add(newRefill);
+
+        // Recalculate all intervals deterministically using full-tank methodology
+        const allRecords = await db.petrol_refills.toArray();
+        const processed = calculatePetrolIntervals(allRecords);
+        for (const p of processed) {
+          await db.petrol_refills.update(p.id, {
+            isFullTank: p.isFullTank ?? false,
+            distanceTravelled: p.calculationType === 'completed' ? p.intervalDistance : p.stepDistance,
+            mileageKmpl: p.mileageKmpl || 0,
+            costPerKm: p.costPerKm || 0,
+            updatedAt: now
+          });
+        }
+
+        const saved = processed.find(p => p.id === newRefill.id);
+        const mileageMsg = saved?.calculationType === 'completed' && saved.mileageKmpl > 0
+          ? ` (${saved.mileageKmpl} KM/L full tank economy)`
+          : Boolean(isFullTank)
+          ? ' (Baseline full tank)'
+          : ' (Partial refill)';
+
         return {
           success: true,
-          message: `✅ ${Number(totalCost).toLocaleString()} PKR petrol refill (${odometerReading} KM) save ho gaya hai!`
+          message: `✅ ${Number(totalCost).toLocaleString()} PKR petrol refill (${odometerReading} KM) save ho gaya hai!${mileageMsg}`
         };
       }
 
