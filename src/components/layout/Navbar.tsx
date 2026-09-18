@@ -1,14 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { NavTab } from '../../types';
-import { 
-  Calendar, 
-  WifiOff, 
-  Mic, 
-  Cloud, 
-  CloudOff, 
-  RefreshCw, 
+import {
+  BarChart3,
+  Calendar,
+  Cloud,
+  CloudOff,
   Download,
-  Lock
+  Fuel,
+  HandCoins,
+  Home,
+  LayoutDashboard,
+  Lock,
+  Mic,
+  Milk,
+  RefreshCw,
+  Settings,
+  WalletCards,
+  WifiOff,
+  Zap,
 } from 'lucide-react';
 import { getMonthYearFormatted } from '../../utils/formatters';
 import { subscribeSyncStatus, syncWithSupabase, SyncStatus } from '../../services/syncService';
@@ -50,15 +59,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     };
   }, []);
 
-  // Quick navigation helper for months
-  const shiftMonth = (direction: number) => {
-    const [y, m] = selectedMonth.split('-').map(Number);
-    const date = new Date(y, m - 1 + direction, 1);
-    const newY = date.getFullYear();
-    const newM = (date.getMonth() + 1).toString().padStart(2, '0');
-    setSelectedMonth(`${newY}-${newM}`);
-  };
-
   const handleManualSync = async () => {
     if (syncStatus.state === 'unconfigured') {
       setActiveTab('settings');
@@ -74,185 +74,201 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   const formattedMonth = getMonthYearFormatted(selectedMonth);
+  const isRentMode = (import.meta as any).env?.VITE_APP_MODE === 'rent';
 
-    const isRentMode = (import.meta as any).env?.VITE_APP_MODE === 'rent';
-    const desktopTabs = isRentMode
-      ? [
-          { id: 'rent' as NavTab, label: '🏠 Rent Portions' },
-          { id: 'reports' as NavTab, label: '📊 Reports & Receipts' },
-          { id: 'settings' as NavTab, label: '⚙️ Cloud Settings' }
-        ]
-      : [
-          { id: 'dashboard' as NavTab, label: 'Dashboard' },
-          { id: 'finance' as NavTab, label: '💰 Finance' },
-          { id: 'utility' as NavTab, label: 'Utility' },
-          { id: 'loans' as NavTab, label: 'Loans' },
-          { id: 'milk' as NavTab, label: 'Milk' },
-          { id: 'petrol' as NavTab, label: 'Petrol' },
-          { id: 'rent' as NavTab, label: 'Rent' },
-          { id: 'reports' as NavTab, label: 'Reports' },
-          { id: 'settings' as NavTab, label: 'Settings' },
-        ];
+  const desktopTabs = isRentMode
+    ? [
+        { id: 'rent' as NavTab, label: 'Rent', icon: Home },
+        { id: 'reports' as NavTab, label: 'Reports', icon: BarChart3 },
+        { id: 'settings' as NavTab, label: 'Settings', icon: Settings },
+      ]
+    : [
+        { id: 'dashboard' as NavTab, label: 'Dashboard', icon: LayoutDashboard },
+        { id: 'finance' as NavTab, label: 'Finance', icon: WalletCards },
+        { id: 'utility' as NavTab, label: 'Utility', icon: Zap },
+        { id: 'loans' as NavTab, label: 'Loans', icon: HandCoins },
+        { id: 'milk' as NavTab, label: 'Milk', icon: Milk },
+        { id: 'petrol' as NavTab, label: 'Petrol', icon: Fuel },
+        { id: 'rent' as NavTab, label: 'Rent', icon: Home },
+        { id: 'reports' as NavTab, label: 'Reports', icon: BarChart3 },
+        { id: 'settings' as NavTab, label: 'Settings', icon: Settings },
+      ];
 
-    return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm no-print">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo & App Name */}
-          <div 
-            className="flex items-center gap-3 cursor-pointer select-none"
+  const syncIndicator = () => {
+    if (syncStatus.state === 'syncing') {
+      return {
+        icon: <RefreshCw className="w-4 h-4 animate-spin" />,
+        title: 'Syncing',
+        subtitle: 'Updating cloud',
+        classes: 'text-blue-700 bg-blue-50 border-blue-100',
+      };
+    }
+
+    if (syncStatus.state === 'realtime_active') {
+      return {
+        icon: (
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+          </span>
+        ),
+        title: 'Live Sync',
+        subtitle: 'Up to date',
+        classes: 'text-emerald-800 bg-emerald-50 border-emerald-100',
+      };
+    }
+
+    if (syncStatus.state === 'synced') {
+      return {
+        icon: <Cloud className="w-4 h-4" />,
+        title: 'Synced',
+        subtitle: 'Cloud ready',
+        classes: 'text-emerald-700 bg-emerald-50 border-emerald-100',
+      };
+    }
+
+    if (syncStatus.state === 'offline') {
+      return {
+        icon: <WifiOff className="w-4 h-4" />,
+        title: 'Offline',
+        subtitle: 'Local mode',
+        classes: 'text-amber-700 bg-amber-50 border-amber-100',
+      };
+    }
+
+    if (syncStatus.state === 'auth_required') {
+      return {
+        icon: <Lock className="w-4 h-4" />,
+        title: 'Sign In',
+        subtitle: 'Sync paused',
+        classes: 'text-amber-800 bg-amber-50 border-amber-100',
+      };
+    }
+
+    if (syncStatus.state === 'error') {
+      return {
+        icon: <CloudOff className="w-4 h-4" />,
+        title: 'Sync Error',
+        subtitle: 'Check status',
+        classes: 'text-rose-700 bg-rose-50 border-rose-100',
+      };
+    }
+
+    return {
+      icon: <Cloud className="w-4 h-4" />,
+      title: 'Cloud',
+      subtitle: 'Connect',
+      classes: 'text-slate-600 bg-slate-50 border-slate-200',
+    };
+  };
+
+  const sync = syncIndicator();
+
+  return (
+    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur-xl no-print">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6">
+        <div className="h-[72px] flex items-center gap-3">
+          {/* Brand */}
+          <button
+            type="button"
             onClick={() => setActiveTab(isRentMode ? 'rent' : 'dashboard')}
+            className="flex items-center gap-3 shrink-0 rounded-2xl pr-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+            aria-label={isRentMode ? 'Open Rent dashboard' : 'Open Tahir Tracker dashboard'}
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white font-bold shadow-md shadow-emerald-500/20">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-black shadow-sm shadow-emerald-500/20">
               <span className="text-xl">{isRentMode ? '🏠' : 'TT'}</span>
             </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h1 className="font-bold text-slate-800 text-base sm:text-lg leading-tight tracking-tight">
-                  {isRentMode ? 'Rent Tracking' : 'Tahir Tracker'}
-                </h1>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 hidden sm:inline-block">
-                  {isRentMode ? 'Tenant' : 'PWA • Cloud'}
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 leading-none">
+            <div className="hidden sm:block text-left">
+              <h1 className="font-extrabold text-slate-800 text-[17px] leading-tight tracking-tight">
+                {isRentMode ? 'Rent Tracking' : 'Tahir Tracker'}
+              </h1>
+              <p className="mt-0.5 text-[11px] font-medium text-slate-400 leading-none">
                 {isRentMode ? 'Property & Tenant Management' : 'Finance & Household'}
               </p>
             </div>
-          </div>
+          </button>
 
-          {/* Desktop Navigation Links */}
-          <div className="hidden lg:flex items-center gap-1 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/80">
-            {desktopTabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-white text-emerald-700 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+          {/* Desktop navigation — intentionally flat, with no bulky grey container */}
+          <nav className="hidden xl:flex flex-1 items-center justify-center gap-0.5 min-w-0" aria-label="Main navigation">
+            {desktopTabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
 
-          {/* Month Selector Controls */}
-          <div className="flex items-center gap-1 sm:gap-2 bg-slate-100/90 p-1 rounded-xl border border-slate-200/80">
-            <button
-              onClick={() => shiftMonth(-1)}
-              aria-label="Previous Month"
-              className="p-1.5 rounded-lg text-slate-600 hover:bg-white hover:text-slate-900 transition-colors shadow-sm text-xs font-semibold"
-            >
-              ◀
-            </button>
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`group flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-[12px] font-bold whitespace-nowrap transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                    isActive
+                      ? 'bg-emerald-50 text-emerald-800'
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  <Icon className={`w-4 h-4 ${
+                    isActive ? 'text-emerald-600' : 'text-slate-400 group-hover:text-slate-600'
+                  }`} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
 
-            <div className="relative flex items-center gap-1 px-2 py-1 text-slate-800 font-semibold text-xs sm:text-sm">
-              <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-              <span>{formattedMonth}</span>
+          {/* Right-side controls */}
+          <div className="ml-auto flex items-center gap-2 shrink-0">
+            {/* Compact month selector */}
+            <label className="relative flex items-center gap-2 h-10 px-3 sm:px-4 rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-xs hover:border-slate-300 transition-colors cursor-pointer">
+              <Calendar className="w-4 h-4 text-slate-500 shrink-0" />
+              <span className="hidden md:inline text-sm font-bold whitespace-nowrap">{formattedMonth}</span>
+              <span className="md:hidden text-xs font-bold whitespace-nowrap">{selectedMonth.slice(5, 7)}/{selectedMonth.slice(2, 4)}</span>
               <input
                 type="month"
                 value={selectedMonth}
                 onChange={(e) => e.target.value && setSelectedMonth(e.target.value)}
                 className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                title="Choose Month"
+                title="Choose month"
+                aria-label="Choose month"
               />
-            </div>
+            </label>
 
-            <button
-              onClick={() => shiftMonth(1)}
-              aria-label="Next Month"
-              className="p-1.5 rounded-lg text-slate-600 hover:bg-white hover:text-slate-900 transition-colors shadow-sm text-xs font-semibold"
-            >
-              ▶
-            </button>
-          </div>
-
-          {/* Status & Quick Actions */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* PWA Install Button if browser supports install prompt */}
+            {/* PWA install is retained but de-emphasized */}
             {installPrompt && onInstallPWA && (
               <button
+                type="button"
                 onClick={onInstallPWA}
-                className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white shadow-xs transition-all active:scale-95"
-                title="Install Tahir Tracker as App on this device"
+                className="hidden lg:flex w-10 h-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 transition-all"
+                title="Install Tahir Tracker"
+                aria-label="Install Tahir Tracker"
               >
-                <Download className="w-3.5 h-3.5" />
-                <span>Install</span>
+                <Download className="w-4 h-4" />
               </button>
             )}
 
-            {/* Cloud Sync Status Indicator & Trigger */}
+            {/* Clean sync status */}
             <button
+              type="button"
               onClick={handleManualSync}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
-                syncStatus.state === 'syncing'
-                  ? 'bg-blue-50 text-blue-700 border-blue-200 animate-pulse'
-                  : syncStatus.state === 'realtime_active'
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 shadow-xs'
-                  : syncStatus.state === 'synced'
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                  : syncStatus.state === 'error'
-                  ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
-                  : syncStatus.state === 'offline'
-                  ? 'bg-amber-50 text-amber-700 border-amber-200'
-                  : syncStatus.state === 'auth_required'
-                  ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 shadow-xs'
-                  : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
-              }`}
-              title={syncStatus.message || 'Realtime Supabase Sync Status'}
+              className={`h-10 flex items-center gap-2 px-3 rounded-2xl border transition-all hover:brightness-[0.98] ${sync.classes}`}
+              title={syncStatus.message || 'Supabase sync status'}
             >
-              {syncStatus.state === 'syncing' ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-600" />
-                  <span className="hidden md:inline">Syncing...</span>
-                </>
-              ) : syncStatus.state === 'realtime_active' ? (
-                <>
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                  </span>
-                  <Cloud className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="hidden md:inline font-black text-emerald-700">Live Sync</span>
-                </>
-              ) : syncStatus.state === 'synced' ? (
-                <>
-                  <Cloud className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="hidden md:inline">Cloud Synced</span>
-                </>
-              ) : syncStatus.state === 'offline' ? (
-                <>
-                  <WifiOff className="w-3.5 h-3.5 text-amber-600" />
-                  <span className="hidden md:inline">Offline</span>
-                </>
-              ) : syncStatus.state === 'auth_required' ? (
-                <>
-                  <Lock className="w-3.5 h-3.5 text-amber-600" />
-                  <span className="hidden md:inline font-bold text-amber-800">Sign In to Sync</span>
-                </>
-              ) : syncStatus.state === 'error' ? (
-                <>
-                  <CloudOff className="w-3.5 h-3.5 text-rose-600" />
-                  <span className="hidden md:inline">Sync Error</span>
-                </>
-              ) : (
-                <>
-                  <Cloud className="w-3.5 h-3.5 text-slate-500" />
-                  <span className="hidden md:inline">Connect Supabase</span>
-                </>
-              )}
+              <span className="shrink-0">{sync.icon}</span>
+              <span className="hidden lg:block text-left leading-none">
+                <span className="block text-[12px] font-extrabold whitespace-nowrap">{sync.title}</span>
+                <span className="block mt-1 text-[10px] font-semibold opacity-70 whitespace-nowrap">{sync.subtitle}</span>
+              </span>
             </button>
 
+            {/* AI voice stays available as a compact action instead of competing with navigation */}
             {onOpenAI && (
               <button
+                type="button"
                 onClick={onOpenAI}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-600/20 transition-all active:scale-95"
+                className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-sm shadow-emerald-600/20 hover:bg-emerald-700 transition-all active:scale-95"
                 title="Open AI Voice Assistant"
+                aria-label="Open AI Voice Assistant"
               >
-                <Mic className="w-3.5 h-3.5" />
-                <span className="hidden xs:inline">AI Voice</span>
+                <Mic className="w-4 h-4" />
               </button>
             )}
           </div>
