@@ -122,7 +122,7 @@ export const AppContent: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 pt-5 pb-24">
+      <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-24">
         {/* Sub Navigation Switcher only for Full Household Tracker */}
         {!isRentMode && (
           <TrackerSubNav
