@@ -149,13 +149,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-16">
+    <div className="space-y-7 pb-16">
       {/* Module Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-5 xl:gap-6">
         {/* 0. PERSONAL FINANCE CARD */}
         <div 
           onClick={() => setActiveTab('finance')}
-          className="bg-gradient-to-br from-emerald-900 to-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-md hover:shadow-xl transition-all cursor-pointer group flex flex-col justify-between border border-emerald-500/30 sm:col-span-2 lg:col-span-1"
+          className="bg-gradient-to-br from-emerald-900 via-emerald-950 to-slate-950 text-white rounded-[28px] p-6 xl:p-7 min-h-[250px] shadow-[0_18px_45px_rgba(5,46,36,0.18)] hover:shadow-[0_22px_55px_rgba(5,46,36,0.25)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group flex flex-col justify-between border border-emerald-500/25 md:col-span-2 xl:col-span-5"
         >
           <div>
             <div className="flex items-center justify-between">
@@ -175,7 +175,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
 
             <div className="mt-4">
-              <div className="text-2xl sm:text-3xl font-black text-white">
+              <div className="text-3xl xl:text-[34px] font-black tracking-tight text-white">
                 {formatCurrency(financeExpenses)} <span className="text-xs text-emerald-300/80 font-bold">Spent this month</span>
               </div>
               <div className="flex items-center justify-between text-xs text-emerald-100/80 mt-2">
@@ -196,7 +196,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* UTILITY BILLS CARD */}
         <div 
           onClick={() => setActiveTab('utility')}
-          className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-sm hover:border-emerald-500/50 transition-all cursor-pointer group flex flex-col justify-between"
+          className="bg-gradient-to-br from-amber-50 via-white to-orange-50 rounded-[28px] p-6 xl:p-7 min-h-[250px] border border-amber-100 shadow-[0_12px_35px_rgba(217,119,6,0.08)] hover:shadow-[0_18px_45px_rgba(217,119,6,0.12)] hover:border-amber-200 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group flex flex-col justify-between xl:col-span-3"
         >
           <div>
             <div className="flex items-center justify-between">
@@ -213,7 +213,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
 
             <div className="mt-4">
-              <div className="text-2xl sm:text-3xl font-extrabold text-slate-900">
+              <div className="text-3xl xl:text-[34px] font-extrabold tracking-tight text-slate-900">
                 {formatCurrency(utilityTotalBill)} <span className="text-xs text-slate-500 font-semibold">Saleem Bill</span>
               </div>
               <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
@@ -239,7 +239,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* 1. RENT CARD */}
         <div 
           onClick={() => setActiveTab('rent')}
-          className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-sm hover:border-emerald-500/50 transition-all cursor-pointer group flex flex-col justify-between"
+          className="bg-gradient-to-br from-emerald-50 via-white to-cyan-50 rounded-[28px] p-6 xl:p-7 min-h-[250px] border border-emerald-100 shadow-[0_12px_35px_rgba(16,185,129,0.08)] hover:shadow-[0_18px_45px_rgba(16,185,129,0.12)] hover:border-emerald-200 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group flex flex-col justify-between xl:col-span-4"
         >
           <div>
             <div className="flex items-center justify-between">
@@ -256,7 +256,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
 
             <div className="mt-4">
-              <div className="text-2xl sm:text-3xl font-extrabold text-slate-900">
+              <div className="text-3xl xl:text-[34px] font-extrabold tracking-tight text-slate-900">
                 {formatNumber(rentCollected, 0)} <span className="text-slate-400 font-semibold text-xl">/ {formatNumber(rentExpected, 0)} PKR</span>
               </div>
               <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
@@ -283,7 +283,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* 2. MILK CARD */}
         <div 
           onClick={() => setActiveTab('milk')}
-          className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-sm hover:border-emerald-500/50 transition-all cursor-pointer group flex flex-col justify-between"
+          className="bg-gradient-to-br from-cyan-50 via-white to-sky-50 rounded-[28px] p-6 xl:p-7 min-h-[250px] border border-cyan-100 shadow-[0_12px_35px_rgba(8,145,178,0.08)] hover:shadow-[0_18px_45px_rgba(8,145,178,0.12)] hover:border-cyan-200 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group flex flex-col justify-between xl:col-span-3"
         >
           <div>
             <div className="flex items-center justify-between">
@@ -300,7 +300,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
 
             <div className="mt-4">
-              <div className="text-2xl sm:text-3xl font-extrabold text-slate-900">
+              <div className="text-3xl xl:text-[34px] font-extrabold tracking-tight text-slate-900">
                 {formatCurrency(totalMilkCost)}
               </div>
               <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
@@ -321,7 +321,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* 3. PETROL CARD */}
         <div 
           onClick={() => setActiveTab('petrol')}
-          className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-sm hover:border-emerald-500/50 transition-all cursor-pointer group flex flex-col justify-between"
+          className="bg-gradient-to-br from-yellow-50 via-white to-orange-50 rounded-[28px] p-6 xl:p-7 min-h-[250px] border border-orange-100 shadow-[0_12px_35px_rgba(234,88,12,0.08)] hover:shadow-[0_18px_45px_rgba(234,88,12,0.12)] hover:border-orange-200 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group flex flex-col justify-between xl:col-span-5"
         >
           <div>
             <div className="flex items-center justify-between">
@@ -339,7 +339,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
             <div className="mt-4">
               <div className="flex items-baseline justify-between">
-                <div className="text-2xl sm:text-3xl font-extrabold text-slate-900">
+                <div className="text-3xl xl:text-[34px] font-extrabold tracking-tight text-slate-900">
                   {formatCurrency(monthlyPetrolStats.monthlyCost)}
                 </div>
                 {monthlyPetrolStats.avgMileage > 0 ? (
@@ -370,7 +370,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* 4. LOANS CARD */}
         <div 
           onClick={() => setActiveTab('loans')}
-          className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-sm hover:border-emerald-500/50 transition-all cursor-pointer group flex flex-col justify-between"
+          className="bg-gradient-to-br from-rose-50 via-white to-pink-50 rounded-[28px] p-6 xl:p-7 min-h-[250px] border border-rose-100 shadow-[0_12px_35px_rgba(225,29,72,0.08)] hover:shadow-[0_18px_45px_rgba(225,29,72,0.12)] hover:border-rose-200 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group flex flex-col justify-between xl:col-span-4"
         >
           <div>
             <div className="flex items-center justify-between">
@@ -387,7 +387,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
 
             <div className="mt-4">
-              <div className="text-2xl sm:text-3xl font-extrabold text-slate-900">
+              <div className="text-3xl xl:text-[34px] font-extrabold tracking-tight text-slate-900">
                 {formatCurrency(outstandingLoans)} <span className="text-sm font-semibold text-slate-500">Outstanding</span>
               </div>
               <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
@@ -407,14 +407,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* Quick Action Shortcuts */}
-      <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
+      <div className="bg-gradient-to-br from-white to-slate-50 rounded-[28px] p-5 sm:p-6 border border-slate-200/80 shadow-[0_12px_35px_rgba(15,23,42,0.05)]">
         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
           Quick Actions
         </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
           <button
             onClick={() => setActiveTab('petrol')}
-            className="p-3 bg-slate-50 hover:bg-emerald-50 rounded-2xl text-left border border-slate-200/80 hover:border-emerald-300 transition-all flex items-center gap-2.5"
+            className="p-4 bg-gradient-to-br from-amber-50 to-white hover:from-amber-100 hover:to-white rounded-2xl text-left border border-amber-100 hover:border-amber-200 transition-all flex items-center gap-3"
           >
             <div className="p-2 rounded-xl bg-amber-100 text-amber-800">
               <Plus className="w-4 h-4" />
@@ -427,7 +427,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           <button
             onClick={handleMarkMilkToday}
-            className="p-3 bg-slate-50 hover:bg-emerald-50 rounded-2xl text-left border border-slate-200/80 hover:border-emerald-300 transition-all flex items-center gap-2.5"
+            className="p-4 bg-gradient-to-br from-cyan-50 to-white hover:from-cyan-100 hover:to-white rounded-2xl text-left border border-cyan-100 hover:border-cyan-200 transition-all flex items-center gap-3"
           >
             <div className="p-2 rounded-xl bg-teal-100 text-teal-800">
               <Check className="w-4 h-4" />
@@ -440,7 +440,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           <button
             onClick={() => setActiveTab('rent')}
-            className="p-3 bg-slate-50 hover:bg-emerald-50 rounded-2xl text-left border border-slate-200/80 hover:border-emerald-300 transition-all flex items-center gap-2.5"
+            className="p-4 bg-gradient-to-br from-emerald-50 to-white hover:from-emerald-100 hover:to-white rounded-2xl text-left border border-emerald-100 hover:border-emerald-200 transition-all flex items-center gap-3"
           >
             <div className="p-2 rounded-xl bg-emerald-100 text-emerald-800">
               <Home className="w-4 h-4" />
@@ -453,7 +453,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           <button
             onClick={() => setActiveTab('loans')}
-            className="p-3 bg-slate-50 hover:bg-emerald-50 rounded-2xl text-left border border-slate-200/80 hover:border-emerald-300 transition-all flex items-center gap-2.5"
+            className="p-4 bg-gradient-to-br from-rose-50 to-white hover:from-rose-100 hover:to-white rounded-2xl text-left border border-rose-100 hover:border-rose-200 transition-all flex items-center gap-3"
           >
             <div className="p-2 rounded-xl bg-rose-100 text-rose-800">
               <HandCoins className="w-4 h-4" />
