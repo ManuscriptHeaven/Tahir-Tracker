@@ -87,6 +87,7 @@ export const TABLE_MAP: Record<string, any> = {
   milk_logs: db.milk_logs,
   milk_monthly_records: db.milk_monthly_records,
   petrol_refills: db.petrol_refills,
+  rent_properties: db.rent_properties,
   rent_portions: db.rent_portions,
   rent_records: db.rent_records,
   loans: db.loans,

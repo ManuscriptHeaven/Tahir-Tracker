@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
-import { RentPortion, RentMonthlyRecord } from '../../types';
+import { RentProperty, RentPortion, RentMonthlyRecord } from '../../types';
+import { filterPortionsByProperty, getRentPropertyName, resolvePortionPropertyId } from '../../utils/rentProperties';
 import { getPortionFinancialSummary } from '../../utils/rentCalculations';
 import { getTodayLocalDateStr } from '../../utils/dateTime';
 import { 
@@ -23,7 +24,8 @@ import {
   X,
   Building,
   History,
-  MessageSquare
+  MessageSquare,
+  MapPin
 } from 'lucide-react';
 
 interface RentTrackerProps {
@@ -35,14 +37,26 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
   selectedMonth,
   onOpenReport
 }) => {
-  const portions = useLiveQuery(() => db.rent_portions.filter(p => p.active).toArray()) || [];
+  const rentProperties = useLiveQuery(() => db.rent_properties.toArray()) || [];
+  const activeProperties = rentProperties.filter(p => p.status === 'active');
+  const allPortions = useLiveQuery(() => db.rent_portions.filter(p => p.active).toArray()) || [];
   const allRecords = useLiveQuery(() => db.rent_records.toArray()) || [];
-  
+
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('all');
+  const portions = filterPortionsByProperty(allPortions, activeProperties, selectedPropertyId);
   const currentMonthRecords = allRecords.filter(r => r.monthYear === selectedMonth);
 
-  // State
+  // Property management state
+  const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false);
+  const [editingProperty, setEditingProperty] = useState<RentProperty | null>(null);
+  const [propertyName, setPropertyName] = useState('');
+  const [propertyAddress, setPropertyAddress] = useState('');
+  const [propertyNotes, setPropertyNotes] = useState('');
+
+  // Portion state
   const [isPortionModalOpen, setIsPortionModalOpen] = useState(false);
   const [editingPortion, setEditingPortion] = useState<RentPortion | null>(null);
+  const [portionPropertyId, setPortionPropertyId] = useState('');
   const [portionName, setPortionName] = useState('');
   const [tenantName, setTenantName] = useState('');
   const [tenantPhone, setTenantPhone] = useState('');
@@ -102,12 +116,99 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
   const totalNetOutstanding = Math.max(0, totalOverallPayable - totalCollected);
   const collectionRate = totalOverallPayable > 0 ? Math.round((totalCollected / totalOverallPayable) * 100) : 0;
 
+  const resetPropertyForm = () => {
+    setEditingProperty(null);
+    setPropertyName('');
+    setPropertyAddress('');
+    setPropertyNotes('');
+  };
+
+  const handleEditProperty = (property: RentProperty) => {
+    setEditingProperty(property);
+    setPropertyName(property.name);
+    setPropertyAddress(property.address || '');
+    setPropertyNotes(property.notes || '');
+  };
+
+  const handleSaveProperty = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = propertyName.trim();
+    if (!name) {
+      alert('Please enter a house/property name.');
+      return;
+    }
+
+    const duplicate = rentProperties.some(
+      p => p.id !== editingProperty?.id && p.status === 'active' && p.name.trim().toLowerCase() === name.toLowerCase()
+    );
+    if (duplicate) {
+      alert('An active house with this name already exists.');
+      return;
+    }
+
+    const now = new Date().toISOString();
+    if (editingProperty) {
+      await db.rent_properties.update(editingProperty.id, {
+        name,
+        address: propertyAddress.trim() || undefined,
+        notes: propertyNotes.trim() || undefined,
+        updatedAt: now
+      });
+    } else {
+      const property: RentProperty = {
+        id: `property_${Date.now()}`,
+        name,
+        address: propertyAddress.trim() || undefined,
+        notes: propertyNotes.trim() || undefined,
+        status: 'active',
+        createdAt: now,
+        updatedAt: now
+      };
+      await db.rent_properties.add(property);
+      if (selectedPropertyId === 'all') {
+        setSelectedPropertyId(property.id);
+      }
+    }
+
+    resetPropertyForm();
+  };
+
+  const handleDeactivateProperty = async (property: RentProperty) => {
+    const assignedActivePortions = allPortions.filter(
+      p => resolvePortionPropertyId(p, activeProperties) === property.id
+    );
+    if (assignedActivePortions.length > 0) {
+      alert(`${property.name} has ${assignedActivePortions.length} active portion(s). Move or deactivate those portions before deactivating the house.`);
+      return;
+    }
+    if (!confirm(`Deactivate ${property.name}?`)) return;
+    await db.rent_properties.update(property.id, {
+      status: 'inactive',
+      updatedAt: new Date().toISOString()
+    });
+    if (selectedPropertyId === property.id) setSelectedPropertyId('all');
+    resetPropertyForm();
+  };
+
+  const openNewPortion = () => {
+    resetPortionForm();
+    const preferred = selectedPropertyId !== 'all'
+      ? selectedPropertyId
+      : activeProperties[0]?.id || '';
+    setPortionPropertyId(preferred);
+    setIsPortionModalOpen(true);
+  };
+
   // Handle Save Portion
   const handleSavePortion = async (e: React.FormEvent) => {
     e.preventDefault();
     const rent = parseFloat(expectedRent);
     const day = parseInt(dueDay, 10);
     const initArr = parseFloat(initialArrears) || 0;
+    if (!portionPropertyId || !activeProperties.some(p => p.id === portionPropertyId)) {
+      alert('Please select a valid house/property first.');
+      return;
+    }
     if (!portionName.trim() || !tenantName.trim() || isNaN(rent) || rent <= 0) {
       alert('Please fill valid portion and tenant details.');
       return;
@@ -115,6 +216,7 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
 
     if (editingPortion) {
       await db.rent_portions.update(editingPortion.id, {
+        propertyId: portionPropertyId,
         portionName: portionName.trim(),
         tenantName: tenantName.trim(),
         tenantPhone: tenantPhone.trim() || undefined,
@@ -126,6 +228,7 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
     } else {
       const newP: RentPortion = {
         id: `p_${Date.now()}`,
+        propertyId: portionPropertyId,
         portionName: portionName.trim(),
         tenantName: tenantName.trim(),
         tenantPhone: tenantPhone.trim() || undefined,
@@ -144,6 +247,7 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
 
   const resetPortionForm = () => {
     setEditingPortion(null);
+    setPortionPropertyId('');
     setPortionName('');
     setTenantName('');
     setTenantPhone('');
@@ -154,6 +258,7 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
 
   const handleEditPortion = (portion: RentPortion) => {
     setEditingPortion(portion);
+    setPortionPropertyId(resolvePortionPropertyId(portion, activeProperties) || '');
     setPortionName(portion.portionName);
     setTenantName(portion.tenantName);
     setTenantPhone(portion.tenantPhone || '');
@@ -227,7 +332,7 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
             Rent Management
           </h2>
           <p className="text-xs sm:text-sm text-slate-500">
-            Portions, monthly dues, collection, and cumulative previous arrears tracking
+            Multi-house portfolio, portions, monthly dues, collections, and arrears
           </p>
         </div>
 
@@ -243,13 +348,69 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
           )}
           <button
             onClick={() => {
-              resetPortionForm();
-              setIsPortionModalOpen(true);
+              resetPropertyForm();
+              setIsPropertyModalOpen(true);
             }}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-md shadow-emerald-600/20"
+            className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-sm"
+          >
+            <Building className="w-4 h-4 text-slate-600" />
+            Manage Houses
+          </button>
+          <button
+            onClick={openNewPortion}
+            disabled={activeProperties.length === 0}
+            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-md shadow-emerald-600/20"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
-            Manage Portions
+            Add Portion
+          </button>
+        </div>
+      </div>
+
+      {/* Property Portfolio Selector */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-3">
+        <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
+          <button
+            onClick={() => setSelectedPropertyId('all')}
+            className={`shrink-0 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
+              selectedPropertyId === 'all'
+                ? 'bg-slate-900 text-white border-slate-900'
+                : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300'
+            }`}
+          >
+            All Houses
+            <span className="ml-1.5 opacity-70">({allPortions.length})</span>
+          </button>
+
+          {activeProperties.map(property => {
+            const count = allPortions.filter(
+              p => resolvePortionPropertyId(p, activeProperties) === property.id
+            ).length;
+            return (
+              <button
+                key={property.id}
+                onClick={() => setSelectedPropertyId(property.id)}
+                className={`shrink-0 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
+                  selectedPropertyId === property.id
+                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                    : 'bg-emerald-50/60 text-emerald-900 border-emerald-100 hover:border-emerald-300'
+                }`}
+              >
+                <Home className="w-3.5 h-3.5" />
+                {property.name}
+                <span className="opacity-70">({count})</span>
+              </button>
+            );
+          })}
+
+          <button
+            onClick={() => {
+              resetPropertyForm();
+              setIsPropertyModalOpen(true);
+            }}
+            className="shrink-0 px-3 py-2 rounded-xl text-xs font-bold text-emerald-700 hover:bg-emerald-50 border border-dashed border-emerald-300"
+          >
+            + Add House
           </button>
         </div>
       </div>
@@ -325,14 +486,11 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
             Add your house portions or apartments along with tenant details to start tracking monthly rents and collections.
           </p>
           <button
-            onClick={() => {
-              resetPortionForm();
-              setIsPortionModalOpen(true);
-            }}
+            onClick={openNewPortion}
             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs inline-flex items-center gap-1.5 shadow-sm transition-all"
           >
             <Plus className="w-4 h-4" />
-            Add First Portion
+            Add Portion
           </button>
         </div>
       ) : (
@@ -370,7 +528,14 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
                       <Building className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="font-extrabold text-slate-900 text-base">{portion.portionName}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-extrabold text-slate-900 text-base">{portion.portionName}</h3>
+                        {selectedPropertyId === 'all' && (
+                          <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold">
+                            {getRentPropertyName(resolvePortionPropertyId(portion, activeProperties), activeProperties)}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1.5 text-xs text-slate-600 mt-0.5">
                         <User className="w-3.5 h-3.5 text-slate-400" />
                         <span>{portion.tenantName}</span>
@@ -664,6 +829,124 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
         </div>
       )}
 
+      {/* MODAL: MANAGE HOUSES / PROPERTIES */}
+      {isPropertyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="font-bold text-slate-900 text-lg">Manage Houses</h3>
+                <p className="text-xs text-slate-500">Create properties first, then assign portions/tenants to each house.</p>
+              </div>
+              <button
+                onClick={() => {
+                  setIsPropertyModalOpen(false);
+                  resetPropertyForm();
+                }}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {activeProperties.length > 0 && (
+              <div className="space-y-2 mt-4">
+                {activeProperties.map(property => {
+                  const count = allPortions.filter(
+                    p => resolvePortionPropertyId(p, activeProperties) === property.id
+                  ).length;
+                  return (
+                    <div key={property.id} className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                      <div className="min-w-0">
+                        <div className="font-bold text-slate-900 text-sm">{property.name}</div>
+                        <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                          {property.address && <><MapPin className="w-3 h-3" />{property.address}<span>•</span></>}
+                          <span>{count} active {count === 1 ? 'portion' : 'portions'}</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleEditProperty(property)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:bg-white border border-slate-200"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveProperty} className="space-y-3 mt-4 pt-4 border-t border-slate-100">
+              <div className="text-xs font-black uppercase tracking-wider text-slate-500">
+                {editingProperty ? `Edit ${editingProperty.name}` : 'Add New House'}
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">House Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. House 2"
+                  value={propertyName}
+                  onChange={(e) => setPropertyName(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Address (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="Property address"
+                  value={propertyAddress}
+                  onChange={(e) => setPropertyAddress(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Notes (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Main house, rental building"
+                  value={propertyNotes}
+                  onChange={(e) => setPropertyNotes(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                {editingProperty && (
+                  <button
+                    type="button"
+                    onClick={() => handleDeactivateProperty(editingProperty)}
+                    className="text-xs text-rose-600 hover:text-rose-700 font-semibold flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Deactivate House
+                  </button>
+                )}
+                <div className="flex items-center gap-2 ml-auto">
+                  {editingProperty && (
+                    <button
+                      type="button"
+                      onClick={resetPropertyForm}
+                      className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-xl"
+                    >
+                      Cancel Edit
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    className="px-4 py-1.5 bg-emerald-600 text-white rounded-xl font-bold text-xs shadow-md"
+                  >
+                    {editingProperty ? 'Save House' : 'Add House'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* MODAL: MANAGE PORTIONS */}
       {isPortionModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
@@ -684,6 +967,23 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
             </div>
 
             <form onSubmit={handleSavePortion} className="space-y-3 mt-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  House / Property *
+                </label>
+                <select
+                  required
+                  value={portionPropertyId}
+                  onChange={(e) => setPortionPropertyId(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+                >
+                  <option value="">Select house</option>
+                  {activeProperties.map(property => (
+                    <option key={property.id} value={property.id}>{property.name}</option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Portion Name *
