@@ -8,7 +8,6 @@ import {
   Repeat, 
   Target, 
   PieChart, 
-  Mic, 
   Plus, 
   Calendar, 
   ChevronLeft, 
@@ -85,39 +84,32 @@ export const FinanceTracker: React.FC<FinanceTrackerProps> = ({
   const formattedMonth = getMonthYearFormatted(selectedMonth);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* 1. MODULE HEADER & ACTIONS */}
-      <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         {/* Title & Month Navigation */}
-        <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+        <div className="flex items-center gap-3 w-full lg:w-auto">
           <div className="flex items-center gap-2.5">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-bold text-xl shadow-md shadow-emerald-500/20">
+            <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xl">
               💰
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg sm:text-xl font-black text-slate-900 leading-none">
-                  Personal Finance
-                </h1>
-                <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                  Voice Enabled
-                </span>
-              </div>
+              <h1 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">Personal Finance</h1>
               <p className="text-xs text-slate-500 mt-0.5">
-                Track daily expenses, income, accounts & budgets
+                Your money at a glance
               </p>
             </div>
           </div>
         </div>
 
         {/* Month Switcher & Quick Buttons */}
-        <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end flex-wrap">
+        <div className="flex items-center gap-2 w-full lg:w-auto flex-wrap">
           {/* Month Selector */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200/80 text-xs">
+          <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200 text-xs">
             <button
               onClick={() => shiftMonth(-1)}
               aria-label="Previous Month"
-              className="p-1.5 rounded-xl text-slate-600 hover:bg-white hover:text-slate-900 transition-colors"
+              className="p-2 rounded-lg text-slate-600 hover:bg-white hover:text-slate-900 transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -130,6 +122,7 @@ export const FinanceTracker: React.FC<FinanceTrackerProps> = ({
                 value={selectedMonth}
                 onChange={(e) => e.target.value && setSelectedMonth(e.target.value)}
                 className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                aria-label="Select finance month"
                 title="Select month"
               />
             </div>
@@ -137,34 +130,25 @@ export const FinanceTracker: React.FC<FinanceTrackerProps> = ({
             <button
               onClick={() => shiftMonth(1)}
               aria-label="Next Month"
-              className="p-1.5 rounded-xl text-slate-600 hover:bg-white hover:text-slate-900 transition-colors"
+              className="p-2 rounded-lg text-slate-600 hover:bg-white hover:text-slate-900 transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Voice Entry Button */}
-          <button
-            onClick={() => setIsVoiceModalOpen(true)}
-            className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 active:scale-95 transition-all"
-          >
-            <Mic className="w-4 h-4" />
-            <span>🎙️ Voice Entry</span>
-          </button>
-
           {/* Add Transaction Button */}
           <button
             onClick={() => handleOpenAddModalWithType('expense')}
-            className="px-3.5 py-2 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
+            className="px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-sm flex items-center gap-1.5 transition-colors"
           >
             <Plus className="w-4 h-4" />
-            <span>+ Add Transaction</span>
+            <span>Add transaction</span>
           </button>
         </div>
       </div>
 
       {/* 2. SUB-NAVIGATION TABS */}
-      <div className="bg-white p-1.5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-1 overflow-x-auto no-scrollbar">
+      <nav aria-label="Finance sections" className="bg-white p-1.5 rounded-2xl border border-slate-200 flex items-center gap-1 overflow-x-auto no-scrollbar">
         {subTabs.map(tab => {
           const Icon = tab.icon;
           const isActive = activeSubTab === tab.id;
@@ -173,18 +157,19 @@ export const FinanceTracker: React.FC<FinanceTrackerProps> = ({
             <button
               key={tab.id}
               onClick={() => setActiveSubTab(tab.id)}
-              className={`flex-1 min-w-[80px] py-2 px-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all whitespace-nowrap ${
+              aria-current={isActive ? 'page' : undefined}
+              className={`shrink-0 lg:flex-1 min-w-[92px] py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all whitespace-nowrap ${
                 isActive
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
-              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-emerald-400 fill-emerald-400' : ''}`} />
+              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-emerald-400' : ''}`} />
               <span>{tab.label}</span>
             </button>
           );
         })}
-      </div>
+      </nav>
 
       {/* 3. ACTIVE SUB-VIEW CONTENT */}
       {activeSubTab === 'overview' && (
