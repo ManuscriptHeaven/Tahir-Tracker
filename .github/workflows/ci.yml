@@ -1,0 +1,40 @@
+name: Tahir Tracker Pull Request CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Build production app
+        run: npm run build
+
+      - name: Build rent mode
+        run: npm run build:rent
