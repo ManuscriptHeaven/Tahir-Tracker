@@ -5,6 +5,7 @@ import type {
   MilkDailyLog,
   MilkMonthlyRecord,
   PetrolRefill,
+  RentProperty,
   RentPortion,
   RentMonthlyRecord,
   AppSettings,
@@ -26,6 +27,7 @@ export class TahirTrackerDB extends Dexie {
   milk_logs!: Table<MilkDailyLog, string>;
   milk_monthly_records!: Table<MilkMonthlyRecord, string>;
   petrol_refills!: Table<PetrolRefill, string>;
+  rent_properties!: Table<RentProperty, string>;
   rent_portions!: Table<RentPortion, string>;
   rent_records!: Table<RentMonthlyRecord, string>;
   settings!: Table<AppSettings, number>;
@@ -79,6 +81,12 @@ export class TahirTrackerDB extends Dexie {
 
     this.version(5).stores({
       sync_queue: 'id, tableName, action, recordId, timestamp'
+    });
+
+    // Version 6: Multi-property rent hierarchy (Property -> Portion -> Rent Records)
+    this.version(6).stores({
+      rent_properties: 'id, name, status, createdAt, updatedAt',
+      rent_portions: 'id, propertyId, portionName, tenantName, active, [propertyId+active]'
     });
   }
 }
@@ -320,14 +328,14 @@ export function validateBackupJson(data: any): { isValid: boolean; error?: strin
   }
 
   // Version compatibility check
-  if (data.version !== undefined && (typeof data.version !== 'number' || data.version > 5 || data.version < 1)) {
-    return { isValid: false, error: `Unsupported backup schema version: ${data.version}. Current version is 5.` };
+  if (data.version !== undefined && (typeof data.version !== 'number' || data.version > 6 || data.version < 1)) {
+    return { isValid: false, error: `Unsupported backup schema version: ${data.version}. Current version is 6.` };
   }
 
   // Check that at least some valid Tahir Tracker table arrays exist
   const knownTables = [
     'loans', 'milk_consumers', 'milk_logs', 'milk_monthly_records',
-    'petrol_refills', 'rent_portions', 'rent_records', 'settings',
+    'petrol_refills', 'rent_properties', 'rent_portions', 'rent_records', 'settings',
     'utility_persons', 'utility_bills', 'utility_payments',
     'finance_accounts', 'finance_categories', 'finance_transactions',
     'finance_budgets', 'finance_recurring_transactions', 'finance_goals',
@@ -360,17 +368,18 @@ export function validateBackupJson(data: any): { isValid: boolean; error?: strin
   return { isValid: true, summary };
 }
 
-// Full DB JSON Export (Exports all 17 domain tables; sync_queue is safely excluded)
+// Full DB JSON Export (sync_queue is safely excluded)
 export async function exportDatabaseToJson(): Promise<string> {
   const data = {
     appName: 'Tahir Tracker',
-    version: 5,
+    version: 6,
     exportedAt: new Date().toISOString(),
     loans: await db.loans.toArray(),
     milk_consumers: await db.milk_consumers.toArray(),
     milk_logs: await db.milk_logs.toArray(),
     milk_monthly_records: await db.milk_monthly_records.toArray(),
     petrol_refills: await db.petrol_refills.toArray(),
+    rent_properties: await db.rent_properties.toArray(),
     rent_portions: await db.rent_portions.toArray(),
     rent_records: await db.rent_records.toArray(),
     settings: await db.settings.toArray(),
@@ -411,6 +420,7 @@ export async function importDatabaseFromJson(jsonString: string): Promise<boolea
       db.milk_logs,
       db.milk_monthly_records,
       db.petrol_refills,
+      db.rent_properties,
       db.rent_portions,
       db.rent_records,
       db.settings,
@@ -445,6 +455,10 @@ export async function importDatabaseFromJson(jsonString: string): Promise<boolea
       if (Array.isArray(data.petrol_refills)) {
         await db.petrol_refills.clear();
         await db.petrol_refills.bulkAdd(data.petrol_refills);
+      }
+      if (Array.isArray(data.rent_properties)) {
+        await db.rent_properties.clear();
+        await db.rent_properties.bulkAdd(data.rent_properties);
       }
       if (Array.isArray(data.rent_portions)) {
         await db.rent_portions.clear();
@@ -517,6 +531,7 @@ export async function resetDatabaseToDefaults(): Promise<void> {
   await db.milk_logs.clear();
   await db.milk_monthly_records.clear();
   await db.petrol_refills.clear();
+  await db.rent_properties.clear();
   await db.rent_portions.clear();
   await db.rent_records.clear();
   await db.settings.clear();
