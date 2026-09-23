@@ -26,7 +26,10 @@ export async function enqueueSyncOperation(
       recordId,
       payload: action === 'delete' ? undefined : payload,
       timestamp: new Date().toISOString(),
-      retryCount: 0
+      retryCount: 0,
+      lastAttemptAt: undefined,
+      nextRetryAt: undefined,
+      lastError: undefined
     };
     await db.sync_queue.put(item);
   } catch (err) {
@@ -60,12 +63,28 @@ export async function dequeueSyncOperation(id: string): Promise<void> {
 /**
  * Increment retry count on failure
  */
-export async function incrementRetryCount(id: string): Promise<void> {
+export function getRetryDelayMs(retryCount: number): number {
+  const schedule = [5_000, 15_000, 60_000, 5 * 60_000, 30 * 60_000, 60 * 60_000];
+  return schedule[Math.min(Math.max(retryCount - 1, 0), schedule.length - 1)];
+}
+
+export function isQueueItemReady(item: SyncQueueItem, nowMs = Date.now()): boolean {
+  if (!item.nextRetryAt) return true;
+  const next = Date.parse(item.nextRetryAt);
+  return Number.isNaN(next) || next <= nowMs;
+}
+
+export async function incrementRetryCount(id: string, errorMessage?: string): Promise<void> {
   try {
     const item = await db.sync_queue.get(id);
     if (item) {
+      const retryCount = (item.retryCount || 0) + 1;
+      const now = Date.now();
       await db.sync_queue.update(id, {
-        retryCount: (item.retryCount || 0) + 1
+        retryCount,
+        lastAttemptAt: new Date(now).toISOString(),
+        nextRetryAt: new Date(now + getRetryDelayMs(retryCount)).toISOString(),
+        lastError: errorMessage
       });
     }
   } catch (err) {
