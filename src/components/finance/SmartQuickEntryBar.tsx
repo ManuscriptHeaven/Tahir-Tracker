@@ -19,6 +19,7 @@ export const SmartQuickEntryBar: React.FC<SmartQuickEntryBarProps> = ({
   const [parsed, setParsed] = useState<ParsedVoiceTransaction | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showSavedToast, setShowSavedToast] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   const accounts = useLiveQuery(() => db.finance_accounts.filter(a => a.isActive).toArray()) || [];
   const categories = useLiveQuery(() => db.finance_categories.filter(c => c.isActive).toArray()) || [];
@@ -42,6 +43,7 @@ export const SmartQuickEntryBar: React.FC<SmartQuickEntryBarProps> = ({
     if (!parsed || parsed.amount <= 0 || isSaving) return;
 
     setIsSaving(true);
+    setSaveError('');
     const now = new Date().toISOString();
 
     try {
@@ -74,6 +76,7 @@ export const SmartQuickEntryBar: React.FC<SmartQuickEntryBarProps> = ({
       onTransactionSaved?.();
     } catch (err) {
       console.error('Failed to quick save:', err);
+      setSaveError('Could not save this transaction. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -82,7 +85,7 @@ export const SmartQuickEntryBar: React.FC<SmartQuickEntryBarProps> = ({
   return (
     <div className="relative">
       <form onSubmit={handleSubmit} className="relative">
-        <div className="flex items-center bg-white border border-slate-200/90 rounded-2xl shadow-xs hover:border-emerald-500/50 transition-all p-1.5 sm:p-2 focus-within:ring-2 focus-within:ring-emerald-500/30 focus-within:border-emerald-500">
+        <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl transition-all p-1.5 sm:p-2 focus-within:ring-2 focus-within:ring-emerald-500/30 focus-within:border-emerald-500">
           <div className="p-2 text-emerald-600">
             <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 fill-emerald-500" />
           </div>
@@ -90,13 +93,14 @@ export const SmartQuickEntryBar: React.FC<SmartQuickEntryBarProps> = ({
           <input
             type="text"
             value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder="Smart Text: e.g. '500 lunch', '3000 petrol yesterday', '50000 from client'..."
-            className="flex-1 bg-transparent border-none text-xs sm:text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none px-2"
+            onChange={(e) => { setInputText(e.target.value); setSaveError(''); }}
+            aria-label="Describe a transaction"
+            placeholder="Try: 500 lunch or 3000 petrol yesterday"
+            className="min-w-0 flex-1 bg-transparent border-none text-sm text-slate-800 placeholder-slate-500 focus:outline-none px-2"
           />
 
           {parsed && (
-            <div className="hidden md:flex items-center gap-1.5 bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-xl text-xs font-bold border border-emerald-200 mr-1.5">
+            <div className="hidden lg:flex items-center gap-1.5 bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-xl text-xs font-semibold border border-emerald-200 mr-1.5">
               <span>{formatCurrency(parsed.amount)}</span>
               <span>•</span>
               <span className="truncate max-w-[100px]">{parsed.category}</span>
@@ -107,9 +111,9 @@ export const SmartQuickEntryBar: React.FC<SmartQuickEntryBarProps> = ({
             <button
               type="submit"
               disabled={isSaving}
-              className="px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-xs hover:from-emerald-500 hover:to-teal-500 active:scale-95 transition-all"
+              className="shrink-0 px-3 py-2 bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 hover:bg-emerald-800 transition-colors disabled:opacity-50"
             >
-              <span>Add</span>
+              <span>{isSaving ? 'Saving' : 'Save'}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           ) : (
@@ -125,6 +129,12 @@ export const SmartQuickEntryBar: React.FC<SmartQuickEntryBarProps> = ({
             )
           )}
         </div>
+        {parsed && (
+          <p className="mt-2 text-xs text-slate-600" aria-live="polite">
+            Ready to save: <strong>{formatCurrency(parsed.amount)}</strong> · {parsed.category} · {parsed.account}
+          </p>
+        )}
+        {saveError && <p role="alert" className="mt-2 text-xs text-rose-700">{saveError}</p>}
       </form>
 
       {/* Instant Saved Toast */}
