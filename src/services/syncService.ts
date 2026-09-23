@@ -2,6 +2,7 @@ import { RealtimeChannel } from '@supabase/supabase-js';
 import { db, LEGACY_DUMMY_IDS } from '../db/db';
 import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
 import { getCurrentUserId, isAuthenticated, subscribeAuth } from './authService';
+import { SYNC_TABLE_KEYS, isBootstrapSync } from './syncPolicy';
 
 export type SyncState = 'idle' | 'syncing' | 'synced' | 'realtime_active' | 'error' | 'offline' | 'unconfigured' | 'auth_required';
 
@@ -104,8 +105,9 @@ export const TABLE_MAP: Record<string, any> = {
 import { 
   enqueueSyncOperation, 
   getPendingSyncOperations, 
-  dequeueSyncOperation, 
-  incrementRetryCount 
+  dequeueSyncOperation,
+  incrementRetryCount,
+  isQueueItemReady
 } from './syncQueue';
 
 // Re-entrant sync depth counter to safely handle concurrent asynchronous remote sync events
@@ -428,9 +430,7 @@ export async function processOfflineQueue(): Promise<void> {
 
   for (const item of pending) {
     try {
-      if (item.retryCount >= 5) {
-        console.warn(`[SyncQueue] Dropping permanently failed item ${item.id} after 5 retries.`);
-        await dequeueSyncOperation(item.id);
+      if (!isQueueItemReady(item)) {
         continue;
       }
 
@@ -444,7 +444,7 @@ export async function processOfflineQueue(): Promise<void> {
         if (!error) {
           await dequeueSyncOperation(item.id);
         } else {
-          await incrementRetryCount(item.id);
+          await incrementRetryCount(item.id, error.message);
         }
       } else if (item.action === 'upsert') {
         let payload = item.payload;
@@ -461,13 +461,14 @@ export async function processOfflineQueue(): Promise<void> {
           if (!error) {
             await dequeueSyncOperation(item.id);
           } else {
-            await incrementRetryCount(item.id);
+            await incrementRetryCount(item.id, error.message);
           }
         } else {
           await dequeueSyncOperation(item.id);
         }
       }
-    } catch (err) {
+    } catch (err: any) {
+      await incrementRetryCount(item.id, err?.message || 'Unexpected sync queue error');
       console.warn(`Error processing queue item ${item.id}:`, err);
     }
   }
@@ -477,7 +478,12 @@ export async function processOfflineQueue(): Promise<void> {
  * Merges remote records into Dexie using Last-Write-Wins (LWW) conflict resolution
  * and protection for pending local offline mutations and append-only financial records.
  */
-async function mergeRemoteRecords(dexieTable: any, remoteRecords: any[], tableName: string) {
+async function mergeRemoteRecords(
+  dexieTable: any,
+  remoteRecords: any[],
+  tableName: string,
+  preferRemote = false
+) {
   if (!remoteRecords || remoteRecords.length === 0) return;
   const dummyIds = (LEGACY_DUMMY_IDS as any)[tableName] || [];
   const cleanRemotes = remoteRecords.filter(r => !dummyIds.includes(r.id));
@@ -492,6 +498,13 @@ async function mergeRemoteRecords(dexieTable: any, remoteRecords: any[], tableNa
         // 1. If local record has a pending offline mutation waiting in sync_queue, NEVER let remote overwrite it!
         const hasPendingLocalEdit = await db.sync_queue.get(`${tableName}_${camel.id}`);
         if (hasPendingLocalEdit) {
+          continue;
+        }
+
+        // On first authenticated sync, cloud is authoritative over seeded defaults.
+        // Real offline edits are protected because they are processed through sync_queue first.
+        if (preferRemote) {
+          await dexieTable.put(camel);
           continue;
         }
 
@@ -605,22 +618,46 @@ export async function syncWithSupabase(): Promise<{ success: boolean; message: s
       } catch (_) {}
     }
 
-    // Two-way sync across all tables
-    const tableKeys = [
-      'utility_persons', 'utility_bills', 'utility_payments',
-      'milk_consumers', 'milk_logs', 'milk_monthly_records',
-      'petrol_refills', 'rent_portions', 'rent_records',
-      'loans', 'settings', 'finance_accounts', 'finance_categories',
-      'finance_transactions', 'finance_budgets', 'finance_recurring_transactions',
-      'finance_goals', 'finance_voice_entries'
-    ];
+    // Two-way sync across every cloud-backed table.
+    // On first authenticated sync, pull cloud data before pushing local defaults.
+    const bootstrap = isBootstrapSync(localStorage.getItem(STORAGE_LAST_SYNCED));
 
-    for (const tableName of tableKeys) {
+    for (const tableName of SYNC_TABLE_KEYS) {
       const dexieTable = TABLE_MAP[tableName];
       if (!dexieTable) continue;
 
       try {
-        // 1. Push local records scoped to current authenticated user
+        // 1. Pull first so a fresh install cannot overwrite existing cloud records with seeded defaults.
+        let pullSucceeded = false;
+        const { data: remoteRecords, error: pullError } = await client
+          .from(tableName)
+          .select('*')
+          .eq('user_id', currentUserId);
+
+        if (pullError) {
+          const errEntry: TableSyncError = {
+            table: tableName,
+            operation: 'pull',
+            code: pullError.code || 'UNKNOWN',
+            message: sanitizeErrorMessage(pullError.message || 'Fetch failed'),
+            details: sanitizeErrorMessage(pullError.details) || null,
+            hint: sanitizeErrorMessage(pullError.hint) || null
+          };
+          syncErrors.push(errEntry);
+          console.error(`[CloudSync] Supabase PULL error on table "${tableName}":`, errEntry);
+        } else {
+          pullSucceeded = true;
+          if (remoteRecords) {
+            await mergeRemoteRecords(dexieTable, remoteRecords, tableName, bootstrap);
+          }
+        }
+
+        // During bootstrap, never push until the remote state is known for this table.
+        if (bootstrap && !pullSucceeded) {
+          continue;
+        }
+
+        // 2. Push the merged local state scoped to the authenticated user.
         const localRecords = await dexieTable.toArray();
         const dummyIds = (LEGACY_DUMMY_IDS as any)[tableName] || [];
         const cleanLocal = localRecords.filter((r: any) => !dummyIds.includes(r.id));
@@ -643,27 +680,6 @@ export async function syncWithSupabase(): Promise<{ success: boolean; message: s
             syncErrors.push(errEntry);
             console.error(`[CloudSync] Supabase PUSH error on table "${tableName}":`, errEntry);
           }
-        }
-
-        // 2. Pull remote records scoped to current authenticated user with LWW merge
-        const { data: remoteRecords, error: pullError } = await client
-          .from(tableName)
-          .select('*')
-          .eq('user_id', currentUserId);
-
-        if (pullError) {
-          const errEntry: TableSyncError = {
-            table: tableName,
-            operation: 'pull',
-            code: pullError.code || 'UNKNOWN',
-            message: sanitizeErrorMessage(pullError.message || 'Fetch failed'),
-            details: sanitizeErrorMessage(pullError.details) || null,
-            hint: sanitizeErrorMessage(pullError.hint) || null
-          };
-          syncErrors.push(errEntry);
-          console.error(`[CloudSync] Supabase PULL error on table "${tableName}":`, errEntry);
-        } else if (remoteRecords) {
-          await mergeRemoteRecords(dexieTable, remoteRecords, tableName);
         }
       } catch (tableErr: any) {
         // Safe continuation: unexpected table exceptions don't prevent remaining tables from syncing

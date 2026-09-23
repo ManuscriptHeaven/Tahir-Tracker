@@ -466,3 +466,15 @@ ALTER TABLE public.petrol_refills
 ADD COLUMN IF NOT EXISTS is_full_tank BOOLEAN DEFAULT FALSE;
 
 
+
+
+-- =============================================================================
+-- RENT TRIGGER HARDENING (2026-09-23)
+-- Keep the trigger function privileged internally, but prevent direct RPC execution.
+-- =============================================================================
+REVOKE EXECUTE ON FUNCTION public.ensure_default_rent_property() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.ensure_default_rent_property() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.ensure_default_rent_property() FROM authenticated;
+ALTER FUNCTION public.ensure_default_rent_property() SET search_path = public, pg_temp;
+CREATE INDEX IF NOT EXISTS idx_rent_portions_property_id ON public.rent_portions(property_id);
+CREATE INDEX IF NOT EXISTS idx_rent_properties_user_id ON public.rent_properties(user_id);
