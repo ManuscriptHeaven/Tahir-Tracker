@@ -97,23 +97,18 @@ describe('offlineQueueAndLWW.test.ts - Sync Queue Lifecycle & Conflict Safety', 
       assert.strictEqual(pending[0].payload, undefined); // Strips stale payload
     });
 
-    it('should prevent infinite retry loop by dropping after max retries (5)', () => {
+    it('should retain failed offline mutations instead of silently dropping user data', () => {
       const qm = new MockQueueManager();
       qm.enqueue('utility_bills', 'upsert', 'invalid_bill', { electricity: 'NaN' });
 
-      for (let attempt = 0; attempt < 5; attempt++) {
+      for (let attempt = 0; attempt < 8; attempt++) {
         qm.incrementRetry('utility_bills_invalid_bill');
       }
 
       const item = qm.getPending()[0];
-      assert.strictEqual(item.retryCount, 5);
-
-      // Processing engine drops items with retryCount >= 5
-      if (item.retryCount >= 5) {
-        qm.dequeue(item.id);
-      }
-
-      assert.strictEqual(qm.getPending().length, 0); // Dropped, loop terminated
+      assert.strictEqual(item.retryCount, 8);
+      assert.strictEqual(qm.getPending().length, 1);
+      assert.strictEqual(item.recordId, 'invalid_bill');
     });
 
     it('should ensure processing the same queue item twice is idempotent', () => {
