@@ -736,7 +736,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 <div className="text-sm sm:text-base font-black text-slate-900 mt-0.5">{formatNumber(monthlyPetrolStats.monthlyLitres, 1)} L</div>
               </div>
               <div>
-                <div className="text-[9px] font-bold uppercase text-emerald-700">Average Mileage</div>
+                <div className="text-[9px] font-bold uppercase text-emerald-700">Verified Mileage</div>
                 <div className="text-sm sm:text-base font-black text-emerald-700 mt-0.5">
                   {monthlyPetrolStats.avgMileage > 0 ? (
                     `${formatNumber(monthlyPetrolStats.avgMileage, 1)} km/L`
@@ -753,9 +753,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 <div className="text-sm sm:text-base font-black text-slate-900 mt-0.5">{formatCurrency(monthlyPetrolStats.monthlyCost)}</div>
               </div>
               <div>
-                <div className="text-[9px] font-bold uppercase text-slate-500">Cost / KM</div>
+                <div className="text-[9px] font-bold uppercase text-slate-500">Avg Refill Cost / KM</div>
                 <div className="text-sm sm:text-base font-black text-slate-800 mt-0.5">
-                  {monthlyPetrolStats.costPerKm > 0 ? `${formatNumber(monthlyPetrolStats.costPerKm, 2)} PKR` : '—'}
+                  {monthlyPetrolStats.avgRefillCostPerKm > 0 ? `${formatNumber(monthlyPetrolStats.avgRefillCostPerKm, 2)} PKR` : '—'}
                 </div>
               </div>
             </div>
@@ -830,7 +830,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                       <td colSpan={4} className="py-1.5 px-2">Total Fuel Statement</td>
                       <td className="py-1.5 px-2 text-right text-emerald-800 truncate">{formatCurrency(monthlyPetrolStats.monthlyCost)}</td>
                       <td></td>
-                      <td className="py-1.5 px-2 text-right truncate">{formatNumber(monthlyPetrolStats.loggedTravelKm, 0)} km</td>
+                      <td className="py-1.5 px-2 text-right truncate">{formatNumber(monthlyPetrolStats.refillCycleDistanceKm, 0)} km</td>
                       <td className="py-1.5 px-2 text-right text-emerald-800 truncate">
                         {monthlyPetrolStats.avgMileage > 0 ? `${formatNumber(monthlyPetrolStats.avgMileage, 1)} km/L` : '—'}
                       </td>
