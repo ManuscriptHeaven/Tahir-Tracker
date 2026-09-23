@@ -183,6 +183,9 @@ export interface SyncQueueItem {
   payload?: any;
   timestamp: string;
   retryCount: number;
+  lastAttemptAt?: string;
+  nextRetryAt?: string;
+  lastError?: string;
 }
 
 export interface AuthUser {
