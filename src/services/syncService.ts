@@ -444,7 +444,7 @@ export async function processOfflineQueue(): Promise<void> {
         if (!error) {
           await dequeueSyncOperation(item.id);
         } else {
-          await incrementRetryCount(item.id);
+          await incrementRetryCount(item.id, error.message);
         }
       } else if (item.action === 'upsert') {
         let payload = item.payload;
@@ -461,13 +461,14 @@ export async function processOfflineQueue(): Promise<void> {
           if (!error) {
             await dequeueSyncOperation(item.id);
           } else {
-            await incrementRetryCount(item.id);
+            await incrementRetryCount(item.id, error.message);
           }
         } else {
           await dequeueSyncOperation(item.id);
         }
       }
-    } catch (err) {
+    } catch (err: any) {
+      await incrementRetryCount(item.id, err?.message || 'Unexpected sync queue error');
       console.warn(`Error processing queue item ${item.id}:`, err);
     }
   }
