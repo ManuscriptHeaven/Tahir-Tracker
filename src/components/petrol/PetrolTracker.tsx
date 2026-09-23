@@ -193,7 +193,7 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
       <PageHeader
         icon={Fuel}
         title="Petrol & Mileage Tracking"
-        subtitle="Monitor fuel consumption, vehicle odometer distance, and travel economy."
+        subtitle="Track every refill: fuel cost → KM until next refill → PKR/KM, plus verified full-tank KM/L"
         primaryAction={{
           label: "+ Add Refill",
           onClick: () => {
@@ -291,7 +291,7 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
         <MetricCard
           title="Total Fuel Spend"
           value={formatCurrency(monthlyStats.monthlyCost)}
-          subtitle="Monthly Fuel Inflow"
+          subtitle="Monthly Fuel Spending"
           icon={DollarSign}
           variant="danger"
         />
@@ -626,7 +626,7 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
                       )}
                     </span>
                     <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
-                      Enable when the tank is filled completely. Accurate mileage is calculated between full-tank refills.
+                      Enable only when the tank is completely full. Verified KM/L uses full-tank checkpoints; refill cost/KM is tracked for every refill automatically.
                     </p>
                   </div>
                 </label>

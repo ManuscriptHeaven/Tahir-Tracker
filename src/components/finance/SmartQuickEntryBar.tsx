@@ -21,6 +21,7 @@ export const SmartQuickEntryBar: React.FC<SmartQuickEntryBarProps> = ({
   const [parsed, setParsed] = useState<ParsedVoiceTransaction | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showSavedToast, setShowSavedToast] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   const accounts = useLiveQuery(() => db.finance_accounts.filter(a => a.isActive).toArray()) || [];
   const categories = useLiveQuery(() => db.finance_categories.filter(c => c.isActive).toArray()) || [];
@@ -44,6 +45,7 @@ export const SmartQuickEntryBar: React.FC<SmartQuickEntryBarProps> = ({
     if (!parsed || parsed.amount <= 0 || isSaving) return;
 
     setIsSaving(true);
+    setSaveError('');
     const now = new Date().toISOString();
 
     try {
@@ -76,6 +78,7 @@ export const SmartQuickEntryBar: React.FC<SmartQuickEntryBarProps> = ({
       onTransactionSaved?.();
     } catch (err) {
       console.error('Failed to quick save:', err);
+      setSaveError('Could not save this transaction. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -148,7 +151,8 @@ export const SmartQuickEntryBar: React.FC<SmartQuickEntryBarProps> = ({
           <input
             type="text"
             value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
+            onChange={(e) => { setInputText(e.target.value); setSaveError(''); }}
+            aria-label="Describe a transaction"
             placeholder="e.g. 500 lunch or 3000 petrol yesterday or 50k salary"
             className="flex-1 bg-transparent border-none text-xs sm:text-sm font-semibold text-[#F4F8FB] placeholder-[#6F899B] focus:outline-none px-2"
           />
@@ -165,9 +169,9 @@ export const SmartQuickEntryBar: React.FC<SmartQuickEntryBarProps> = ({
             <button
               type="submit"
               disabled={isSaving}
-              className="px-3 py-1.5 bg-[#18E6BE] hover:bg-[#23F2CB] text-[#06131F] rounded-lg text-xs font-bold flex items-center gap-1 shadow-[0_0_12px_rgba(24,230,190,0.3)] active:scale-95 transition-all"
+              className="px-3 py-1.5 bg-[#18E6BE] hover:bg-[#23F2CB] text-[#06131F] rounded-lg text-xs font-bold flex items-center gap-1 shadow-[0_0_12px_rgba(24,230,190,0.3)] active:scale-95 transition-all disabled:opacity-50"
             >
-              <span>Add</span>
+              <span>{isSaving ? 'Saving' : 'Add'}</span>
               <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
             </button>
           ) : (
@@ -183,6 +187,12 @@ export const SmartQuickEntryBar: React.FC<SmartQuickEntryBarProps> = ({
             )
           )}
         </div>
+        {parsed && (
+          <p className="mt-2 text-xs text-slate-600" aria-live="polite">
+            Ready to save: <strong>{formatCurrency(parsed.amount)}</strong> · {parsed.category} · {parsed.account}
+          </p>
+        )}
+        {saveError && <p role="alert" className="mt-2 text-xs text-rose-700">{saveError}</p>}
       </form>
 
       {/* Instant Saved Toast */}

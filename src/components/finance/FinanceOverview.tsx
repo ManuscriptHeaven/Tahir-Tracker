@@ -18,11 +18,11 @@ import {
   ArrowDownLeft, 
   ArrowUpRight, 
   Sparkles, 
+  TrendingUp, 
+  TrendingDown,
   ArrowRight, 
   ShieldCheck, 
   PieChart, 
-  TrendingDown,
-  TrendingUp,
   Target
 } from 'lucide-react';
 import { SmartQuickEntryBar } from './SmartQuickEntryBar';
@@ -101,6 +101,9 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
                 <span className={`font-semibold ${isNetPositive ? 'text-[#14E6AA]' : 'text-[#FF627B]'}`}>
                   {isNetPositive ? 'Surplus this month' : 'Shortfall this month'}
                 </span>
+                {summary.monthlyIncome > 0 && (
+                  <span className="text-[#6F899B]">· {summary.savingsRate}% of income</span>
+                )}
               </div>
             </div>
           </div>
@@ -112,9 +115,10 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
         </div>
 
         {/* Card 2: Current Liquid Assets / Balance */}
-        <div 
+        <button 
+          type="button"
           onClick={() => onNavigateToSubTab('accounts')}
-          className="bg-[#0B1D2C] rounded-2xl p-5 border border-[rgba(70,150,180,0.18)] hover:border-[rgba(55,210,190,0.35)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col justify-between cursor-pointer transition-all hover:-translate-y-0.5 group"
+          className="text-left bg-[#0B1D2C] rounded-2xl p-5 border border-[rgba(70,150,180,0.18)] hover:border-[rgba(55,210,190,0.35)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col justify-between cursor-pointer transition-all hover:-translate-y-0.5 group focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#18E6BE]"
         >
           <div>
             <div className="flex items-center justify-between">
@@ -138,12 +142,13 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
             <span>View accounts</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
           </div>
-        </div>
+        </button>
 
         {/* Card 3: Monthly Income */}
-        <div 
+        <button 
+          type="button"
           onClick={() => onOpenAddModal('income')}
-          className="bg-[#0B1D2C] rounded-2xl p-5 border border-[rgba(70,150,180,0.18)] hover:border-[rgba(20,230,170,0.35)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col justify-between cursor-pointer transition-all hover:-translate-y-0.5 group"
+          className="text-left bg-[#0B1D2C] rounded-2xl p-5 border border-[rgba(70,150,180,0.18)] hover:border-[rgba(20,230,170,0.35)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col justify-between cursor-pointer transition-all hover:-translate-y-0.5 group focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#14E6AA]"
         >
           <div>
             <div className="flex items-center justify-between">
@@ -164,15 +169,16 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
             </div>
           </div>
           <div className="mt-4 pt-3 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between text-xs text-[#14E6AA] font-bold group-hover:underline">
-            <span>View income</span>
+            <span>Add income</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
           </div>
-        </div>
+        </button>
 
         {/* Card 4: Monthly Expenses */}
-        <div 
+        <button 
+          type="button"
           onClick={() => onNavigateToSubTab('budgets')}
-          className="bg-[#0B1D2C] rounded-2xl p-5 border border-[rgba(70,150,180,0.18)] hover:border-[rgba(255,98,123,0.35)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col justify-between cursor-pointer transition-all hover:-translate-y-0.5 group"
+          className="text-left bg-[#0B1D2C] rounded-2xl p-5 border border-[rgba(70,150,180,0.18)] hover:border-[rgba(255,98,123,0.35)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col justify-between cursor-pointer transition-all hover:-translate-y-0.5 group focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF627B]"
         >
           <div>
             <div className="flex items-center justify-between">
@@ -193,10 +199,10 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
             </div>
           </div>
           <div className="mt-4 pt-3 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between text-xs text-[#FF627B] font-bold group-hover:underline">
-            <span>View budget</span>
+            <span>View budgets</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
           </div>
-        </div>
+        </button>
       </div>
 
       {/* 2. RECORD A TRANSACTION (Quick Entry Bar) */}
@@ -230,7 +236,14 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
 
           <div className="flex items-center gap-5 my-2">
             {/* Circular Gauge */}
-            <div className="relative w-20 h-20 shrink-0 flex items-center justify-center">
+            <div 
+              className="relative w-20 h-20 shrink-0 flex items-center justify-center"
+              role="progressbar" 
+              aria-label="Financial health score" 
+              aria-valuenow={healthScore.score} 
+              aria-valuemin={0} 
+              aria-valuemax={100}
+            >
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                 <circle
                   cx="50"
@@ -261,7 +274,9 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
             <div className="flex-1 space-y-1.5 text-xs">
               <div className="flex justify-between items-center text-[#A9BDCC]">
                 <span>Savings Rate:</span>
-                <strong className="text-[#14E6AA] font-bold">{healthScore.savingsRate}%</strong>
+                <strong className={`font-bold ${healthScore.savingsRate < 0 ? 'text-[#FF627B]' : 'text-[#14E6AA]'}`}>
+                  {healthScore.savingsRate}%
+                </strong>
               </div>
               <div className="flex justify-between items-center text-[#A9BDCC]">
                 <span>Budget Adherence:</span>
@@ -478,13 +493,14 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
                   const isTransfer = tx.transactionType === 'transfer';
 
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={tx.id}
                       onClick={() => onSelectTransactionToEdit(tx)}
-                      className="py-2.5 flex items-center justify-between hover:bg-[#102638] px-2 rounded-xl cursor-pointer transition-colors"
+                      className="w-full text-left py-2.5 flex items-center justify-between gap-3 hover:bg-[#102638] px-2 rounded-xl cursor-pointer transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#18E6BE]"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm border ${
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center text-sm border ${
                           isIncome 
                             ? 'bg-[rgba(20,230,170,0.12)] text-[#14E6AA] border-[rgba(20,230,170,0.25)]' 
                             : isTransfer 
@@ -493,11 +509,11 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
                         }`}>
                           {isIncome ? '💵' : isTransfer ? '⇄' : '🛍️'}
                         </div>
-                        <div>
-                          <div className="font-bold text-xs sm:text-sm text-[#F4F8FB]">
+                        <div className="min-w-0">
+                          <div className="font-bold text-xs sm:text-sm text-[#F4F8FB] truncate">
                             {tx.description || tx.categoryName}
                           </div>
-                          <div className="flex items-center gap-1.5 text-[10px] text-[#6F899B]">
+                          <div className="flex items-center flex-wrap gap-x-1.5 text-[10px] text-[#6F899B]">
                             <span>{tx.categoryName || 'General'}</span>
                             <span>•</span>
                             <span>{tx.accountName || 'Cash'}</span>
@@ -510,12 +526,12 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
                         </div>
                       </div>
 
-                      <div className={`text-xs sm:text-sm font-extrabold tabular-nums ${
+                      <div className={`text-xs sm:text-sm font-extrabold shrink-0 tabular-nums ${
                         isIncome ? 'text-[#14E6AA]' : isTransfer ? 'text-[#39AFFF]' : 'text-[#FF627B]'
                       }`}>
                         {isIncome ? '+' : isTransfer ? '⇄ ' : '-'}{formatCurrency(tx.amount)}
                       </div>
-                    </div>
+                    </button>
                   );
                 })
               ) : (

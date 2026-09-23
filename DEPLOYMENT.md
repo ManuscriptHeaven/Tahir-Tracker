@@ -87,3 +87,19 @@ git push origin main
 ---
 
 ### 🎉 Mubarak ho! Aapka Tahir Tracker GitHub, Cloudflare Pages aur Supabase par fully deployed hai.
+
+
+---
+
+## 🔁 Automatic Production Deployment
+
+Production deployment is automated through GitHub Actions using:
+
+- Workflow: `.github/workflows/deploy-cloudflare-pages.yml`
+- Trigger: every push to `main` (plus manual `workflow_dispatch`)
+- Validation: tests, TypeScript typecheck, production build
+- Target: Cloudflare Pages project `tahir-tracker`
+- Production URL: `https://tahir-tracker.pages.dev`
+- Required GitHub Actions secret: `CLOUDFLARE_API_TOKEN`
+
+The Cloudflare Pages project itself is Direct Upload, so GitHub Actions performs the Wrangler upload after a successful build.

@@ -8,9 +8,9 @@ import {
   Repeat, 
   Target, 
   PieChart, 
-  Mic, 
   Plus, 
-  WalletCards
+  WalletCards,
+  Mic
 } from 'lucide-react';
 import { FinanceOverview } from './FinanceOverview';
 import { TransactionsView } from './TransactionsView';
@@ -94,7 +94,7 @@ export const FinanceTracker: React.FC<FinanceTrackerProps> = ({
       />
 
       {/* 2. SUB-NAVIGATION TABS */}
-      <div className="bg-[#0B1D2C] p-1.5 rounded-2xl border border-[rgba(70,150,180,0.18)] shadow-sm flex items-center gap-1 overflow-x-auto no-scrollbar">
+      <nav aria-label="Finance sections" className="bg-[#0B1D2C] p-1.5 rounded-2xl border border-[rgba(70,150,180,0.18)] shadow-sm flex items-center gap-1 overflow-x-auto no-scrollbar">
         {subTabs.map(tab => {
           const Icon = tab.icon;
           const isActive = activeSubTab === tab.id;
@@ -103,6 +103,7 @@ export const FinanceTracker: React.FC<FinanceTrackerProps> = ({
             <button
               key={tab.id}
               onClick={() => setActiveSubTab(tab.id)}
+              aria-current={isActive ? 'page' : undefined}
               className={`flex-1 min-w-[85px] py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all whitespace-nowrap ${
                 isActive
                   ? 'bg-[rgba(24,230,190,0.12)] text-[#18E6BE] border border-[rgba(24,230,190,0.32)] shadow-[0_0_12px_rgba(24,230,190,0.2)]'
@@ -114,7 +115,7 @@ export const FinanceTracker: React.FC<FinanceTrackerProps> = ({
             </button>
           );
         })}
-      </div>
+      </nav>
 
       {/* 3. ACTIVE SUB-VIEW CONTENT */}
       {activeSubTab === 'overview' && (

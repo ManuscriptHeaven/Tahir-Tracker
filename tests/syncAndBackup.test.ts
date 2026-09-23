@@ -7,10 +7,11 @@ describe('syncAndBackup.test.ts - Sync, Queue & Backup Safety', () => {
     it('should validate a complete backup payload', () => {
       const validBackup = {
         appName: 'Tahir Tracker',
-        version: 5,
+        version: 6,
         exportedAt: '2026-09-09T12:00:00.000Z',
         loans: [{ id: 'loan_1', personName: 'Ali', amount: 5000 }],
-        rent_portions: [{ id: 'portion_1', name: 'Upper Floor', expectedRent: 35000 }],
+        rent_properties: [{ id: 'house_1', name: 'House 1', status: 'active' }],
+        rent_portions: [{ id: 'portion_1', propertyId: 'house_1', name: 'Upper Floor', expectedRent: 35000 }],
         rent_records: [{ id: 'rec_1', portionId: 'portion_1', monthYear: '2026-08', paidAmount: 35000 }],
         finance_accounts: [{ id: 'acc_1', name: 'HBL', openingBalance: 50000 }]
       };
@@ -18,6 +19,7 @@ describe('syncAndBackup.test.ts - Sync, Queue & Backup Safety', () => {
       const res = validateBackupJson(validBackup);
       assert.strictEqual(res.isValid, true);
       assert.strictEqual(res.summary?.loans, 1);
+      assert.strictEqual(res.summary?.rent_properties, 1);
       assert.strictEqual(res.summary?.rent_portions, 1);
       assert.strictEqual(res.summary?.rent_records, 1);
       assert.strictEqual(res.summary?.finance_accounts, 1);
@@ -55,7 +57,7 @@ describe('syncAndBackup.test.ts - Sync, Queue & Backup Safety', () => {
     it('should reject backups containing duplicate primary keys in the same table', () => {
       const duplicateBackup = {
         appName: 'Tahir Tracker',
-        version: 5,
+        version: 6,
         loans: [
           { id: 'loan_1', personName: 'Ali', amount: 5000 },
           { id: 'loan_1', personName: 'Duplicate Ali', amount: 5000 }

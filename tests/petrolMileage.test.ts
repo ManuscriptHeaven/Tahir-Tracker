@@ -733,6 +733,261 @@ describe('petrolMileage.test.ts - Full-Tank Fuel Economy Methodology', () => {
     assert.strictEqual(sorted[1].id, 'r2');
     assert.strictEqual(sorted[2].id, 'r3');
   });
+  // Q. Every refill gets a practical distance/cost cycle when the next refill exists.
+  it('Q. Refill-to-refill: Rs 500 at 10000 -> next refill 10080 = 80 KM and 6.25 PKR/KM', () => {
+    const refills: PetrolRefill[] = [
+      {
+        id: 'cycle_1',
+        date: '2026-09-01',
+        odometerReading: 10000,
+        litres: 2,
+        pricePerLitre: 250,
+        totalCost: 500,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0,
+        createdAt: '2026-09-01T10:00:00Z'
+      },
+      {
+        id: 'cycle_2',
+        date: '2026-09-03',
+        odometerReading: 10080,
+        litres: 3,
+        pricePerLitre: 250,
+        totalCost: 750,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0,
+        createdAt: '2026-09-03T10:00:00Z'
+      }
+    ];
+
+    const processed = calculatePetrolIntervals(refills);
+    assert.strictEqual(processed[0].distanceUntilNextRefill, 80);
+    assert.strictEqual(processed[0].refillCostPerKm, 6.25);
+    assert.strictEqual(processed[0].refillCycleStatus, 'completed');
+    assert.strictEqual(processed[1].refillCycleStatus, 'in_progress');
+    assert.strictEqual(processed[1].distanceUntilNextRefill, null);
+    assert.strictEqual(processed[1].refillCostPerKm, null);
+    // Practical tracking must not invent verified KM/L for partial refills.
+    assert.strictEqual(processed[0].mileageKmpl, 0);
+    assert.strictEqual(processed[1].mileageKmpl, 0);
+  });
+
+  // R. Practical cycle works regardless of Full/Partial flag.
+  it('R. Full and partial refills both receive refill-to-refill practical cost tracking', () => {
+    const refills: PetrolRefill[] = [
+      {
+        id: 'r1',
+        date: '2026-09-01',
+        odometerReading: 20000,
+        litres: 4,
+        pricePerLitre: 250,
+        totalCost: 1000,
+        isFullTank: true,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0,
+        createdAt: '2026-09-01T10:00:00Z'
+      },
+      {
+        id: 'r2',
+        date: '2026-09-04',
+        odometerReading: 20100,
+        litres: 2,
+        pricePerLitre: 250,
+        totalCost: 500,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0,
+        createdAt: '2026-09-04T10:00:00Z'
+      },
+      {
+        id: 'r3',
+        date: '2026-09-07',
+        odometerReading: 20150,
+        litres: 3,
+        pricePerLitre: 250,
+        totalCost: 750,
+        isFullTank: true,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0,
+        createdAt: '2026-09-07T10:00:00Z'
+      }
+    ];
+
+    const processed = calculatePetrolIntervals(refills);
+    assert.strictEqual(processed[0].distanceUntilNextRefill, 100);
+    assert.strictEqual(processed[0].refillCostPerKm, 10);
+    assert.strictEqual(processed[1].distanceUntilNextRefill, 50);
+    assert.strictEqual(processed[1].refillCostPerKm, 10);
+    assert.strictEqual(processed[2].refillCycleStatus, 'in_progress');
+
+    // Verified full-tank mileage remains independent and intact.
+    assert.strictEqual(processed[2].calculationType, 'completed');
+    assert.strictEqual(processed[2].intervalDistance, 150);
+    assert.strictEqual(processed[2].intervalFuel, 5);
+    assert.strictEqual(processed[2].mileageKmpl, 30);
+  });
+
+  // S. Monthly refill cost/km is weighted by completed refill-cycle distance.
+  it('S. Monthly Avg Refill Cost/KM uses weighted refill cost divided by completed refill-cycle distance', () => {
+    const refills: PetrolRefill[] = [
+      {
+        id: 'm1',
+        date: '2026-09-01',
+        odometerReading: 30000,
+        litres: 2,
+        pricePerLitre: 250,
+        totalCost: 500,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0,
+        createdAt: '2026-09-01T10:00:00Z'
+      },
+      {
+        id: 'm2',
+        date: '2026-09-05',
+        odometerReading: 30100,
+        litres: 4,
+        pricePerLitre: 250,
+        totalCost: 1000,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0,
+        createdAt: '2026-09-05T10:00:00Z'
+      },
+      {
+        id: 'm3',
+        date: '2026-09-10',
+        odometerReading: 30300,
+        litres: 2,
+        pricePerLitre: 250,
+        totalCost: 500,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0,
+        createdAt: '2026-09-10T10:00:00Z'
+      }
+    ];
+
+    const stats = calculateMonthlyPetrolStats(refills, '2026-09');
+    assert.strictEqual(stats.completedRefillCyclesCount, 2);
+    assert.strictEqual(stats.refillCycleDistanceKm, 300);
+    assert.strictEqual(stats.refillCycleCost, 1500);
+    assert.strictEqual(stats.avgRefillCostPerKm, 5);
+    assert.strictEqual(stats.costPerKm, 5);
+  });
+
+  // T. Cross-month cycle belongs to the month when the fuel was purchased.
+  it('T. Refill-cycle performance is assigned to the starting refill month', () => {
+    const refills: PetrolRefill[] = [
+      {
+        id: 'x1',
+        date: '2026-09-30',
+        odometerReading: 40000,
+        litres: 2,
+        pricePerLitre: 250,
+        totalCost: 500,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0,
+        createdAt: '2026-09-30T10:00:00Z'
+      },
+      {
+        id: 'x2',
+        date: '2026-10-03',
+        odometerReading: 40100,
+        litres: 2,
+        pricePerLitre: 250,
+        totalCost: 500,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0,
+        createdAt: '2026-10-03T10:00:00Z'
+      }
+    ];
+
+    const sep = calculateMonthlyPetrolStats(refills, '2026-09');
+    const oct = calculateMonthlyPetrolStats(refills, '2026-10');
+    assert.strictEqual(sep.completedRefillCyclesCount, 1);
+    assert.strictEqual(sep.refillCycleDistanceKm, 100);
+    assert.strictEqual(sep.avgRefillCostPerKm, 5);
+    assert.strictEqual(oct.completedRefillCyclesCount, 0);
+    assert.strictEqual(oct.avgRefillCostPerKm, 0);
+  });
+
+  // U. Historical insertion deterministically re-splits refill cycles.
+  it('U. Historical insert deterministically recalculates refill-to-refill cycles', () => {
+    const base: PetrolRefill[] = [
+      {
+        id: 'h1',
+        date: '2026-09-01',
+        odometerReading: 50000,
+        litres: 2,
+        pricePerLitre: 250,
+        totalCost: 500,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0,
+        createdAt: '2026-09-01T10:00:00Z'
+      },
+      {
+        id: 'h3',
+        date: '2026-09-10',
+        odometerReading: 50200,
+        litres: 2,
+        pricePerLitre: 250,
+        totalCost: 500,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0,
+        createdAt: '2026-09-10T10:00:00Z'
+      }
+    ];
+
+    let processed = calculatePetrolIntervals(base);
+    assert.strictEqual(processed[0].distanceUntilNextRefill, 200);
+    assert.strictEqual(processed[0].refillCostPerKm, 2.5);
+
+    const withHistoricalInsert: PetrolRefill[] = [
+      ...base,
+      {
+        id: 'h2',
+        date: '2026-09-05',
+        odometerReading: 50100,
+        litres: 1,
+        pricePerLitre: 250,
+        totalCost: 250,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0,
+        createdAt: '2026-09-05T10:00:00Z'
+      }
+    ];
+
+    processed = calculatePetrolIntervals(withHistoricalInsert);
+    assert.strictEqual(processed[0].id, 'h1');
+    assert.strictEqual(processed[0].distanceUntilNextRefill, 100);
+    assert.strictEqual(processed[0].refillCostPerKm, 5);
+    assert.strictEqual(processed[1].id, 'h2');
+    assert.strictEqual(processed[1].distanceUntilNextRefill, 100);
+    assert.strictEqual(processed[1].refillCostPerKm, 2.5);
+    assert.strictEqual(processed[2].refillCycleStatus, 'in_progress');
+  });
+
 });
 
 describe('Hybrid Fuel Tracking Model - Refill-to-Refill & Full-Tank Integration', () => {

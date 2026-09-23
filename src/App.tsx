@@ -41,11 +41,15 @@ export const AppContent: React.FC = () => {
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<any>(null);
 
   useEffect(() => {
+    let disposed = false;
+    let cleanupSync = () => {};
+
     // 1. Initialize local Dexie database
     initializeDefaultData().then(() => {
+      if (disposed) return;
       setIsDbReady(true);
       // 2. Initialize Supabase cloud synchronization
-      initSyncService();
+      cleanupSync = initSyncService();
     });
 
     // 3. PWA install prompt handler
@@ -57,6 +61,8 @@ export const AppContent: React.FC = () => {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
     return () => {
+      disposed = true;
+      cleanupSync();
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);

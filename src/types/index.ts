@@ -126,8 +126,19 @@ export interface PetrolRefill {
   updatedAt?: string;
 }
 
+export interface RentProperty {
+  id: string;
+  name: string;
+  address?: string;
+  notes?: string;
+  status: 'active' | 'inactive';
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface RentPortion {
   id: string;
+  propertyId?: string; // Optional only for legacy local backups; new records always set this
   portionName: string; // e.g. "Portion 1"
   tenantName: string;
   tenantPhone?: string;
@@ -172,6 +183,9 @@ export interface SyncQueueItem {
   payload?: any;
   timestamp: string;
   retryCount: number;
+  lastAttemptAt?: string;
+  nextRetryAt?: string;
+  lastError?: string;
 }
 
 export interface AuthUser {
