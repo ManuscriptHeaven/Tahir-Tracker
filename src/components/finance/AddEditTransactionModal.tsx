@@ -168,24 +168,24 @@ export const AddEditTransactionModal: React.FC<AddEditTransactionModalProps> = (
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
       <div className="fixed inset-0" onClick={onClose} />
 
-      <div className="relative z-10 w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-in slide-in-from-bottom duration-200 max-h-[92vh] flex flex-col">
+      <div className="relative z-10 w-full max-w-lg bg-[#0B1D2C] rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden border border-cyan-500/30 animate-in slide-in-from-bottom duration-200 max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+        <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between">
           <div>
-            <h2 className="text-base sm:text-lg font-black text-slate-900">
+            <h2 className="text-base sm:text-lg font-bold text-slate-100">
               {transactionToEdit ? 'Edit Transaction' : 'Add Transaction'}
             </h2>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-slate-400">
               Record expense, income or account transfer
             </p>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:bg-[#102638] hover:text-slate-200 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -194,54 +194,54 @@ export const AddEditTransactionModal: React.FC<AddEditTransactionModalProps> = (
         {/* Form Body */}
         <form onSubmit={handleSave} className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
           {/* Type Selector (Expense, Income, Transfer) */}
-          <div className="grid grid-cols-3 gap-2 bg-slate-100 p-1 rounded-2xl border border-slate-200/80">
+          <div className="grid grid-cols-3 gap-2 bg-[#071724] p-1.5 rounded-xl border border-slate-800">
             <button
               type="button"
               onClick={() => handleTypeChange('expense')}
-              className={`py-2 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all ${
+              className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
                 type === 'expense'
-                  ? 'bg-rose-500 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <ArrowUpRight className="w-4 h-4" />
+              <ArrowUpRight className="w-4 h-4 text-rose-400" />
               <span>Expense</span>
             </button>
 
             <button
               type="button"
               onClick={() => handleTypeChange('income')}
-              className={`py-2 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all ${
+              className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
                 type === 'income'
-                  ? 'bg-teal-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <ArrowDownLeft className="w-4 h-4" />
+              <ArrowDownLeft className="w-4 h-4 text-teal-400" />
               <span>Income</span>
             </button>
 
             <button
               type="button"
               onClick={() => handleTypeChange('transfer')}
-              className={`py-2 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all ${
+              className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
                 type === 'transfer'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <ArrowRightLeft className="w-4 h-4" />
+              <ArrowRightLeft className="w-4 h-4 text-cyan-400" />
               <span>Transfer</span>
             </button>
           </div>
 
           {/* Amount Field */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-              Amount (PKR) <span className="text-rose-500">*</span>
+            <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">
+              Amount (PKR) <span className="text-rose-400">*</span>
             </label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">
                 Rs.
               </span>
               <input
@@ -252,7 +252,7 @@ export const AddEditTransactionModal: React.FC<AddEditTransactionModalProps> = (
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0"
-                className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-xl font-black focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                className="w-full pl-12 pr-4 py-3 bg-[#071724] border border-slate-700 rounded-xl text-slate-100 text-xl font-bold placeholder-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all"
               />
             </div>
           </div>
@@ -260,14 +260,14 @@ export const AddEditTransactionModal: React.FC<AddEditTransactionModalProps> = (
           {/* Category Selector (If not transfer) */}
           {type !== 'transfer' && (
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
-                <Tag className="w-3.5 h-3.5 text-slate-400" />
+              <label className="text-xs font-medium text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5 text-cyan-400" />
                 <span>Category</span>
               </label>
               <select
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 text-sm font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                className="w-full px-4 py-2.5 bg-[#071724] border border-slate-700 rounded-xl text-slate-200 text-sm font-medium focus:outline-none focus:border-cyan-400 transition-all"
               >
                 {filteredCategories.map(cat => (
                   <option key={cat.id} value={cat.id}>
@@ -280,14 +280,14 @@ export const AddEditTransactionModal: React.FC<AddEditTransactionModalProps> = (
 
           {/* Source Account Selector */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
-              <Wallet className="w-3.5 h-3.5 text-slate-400" />
+            <label className="text-xs font-medium text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <Wallet className="w-3.5 h-3.5 text-cyan-400" />
               <span>{type === 'transfer' ? 'From Account (Source)' : 'Account / Payment Method'}</span>
             </label>
             <select
               value={accountId}
               onChange={(e) => setAccountId(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 text-sm font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+              className="w-full px-4 py-2.5 bg-[#071724] border border-slate-700 rounded-xl text-slate-200 text-sm font-medium focus:outline-none focus:border-cyan-400 transition-all"
             >
               {accounts.map(acc => (
                 <option key={acc.id} value={acc.id}>
@@ -300,14 +300,14 @@ export const AddEditTransactionModal: React.FC<AddEditTransactionModalProps> = (
           {/* Destination Account Selector (Transfer only) */}
           {type === 'transfer' && (
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
-                <ArrowRightLeft className="w-3.5 h-3.5 text-blue-500" />
+              <label className="text-xs font-medium text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <ArrowRightLeft className="w-3.5 h-3.5 text-cyan-400" />
                 <span>To Account (Destination)</span>
               </label>
               <select
                 value={transferToAccountId}
                 onChange={(e) => setTransferToAccountId(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 text-sm font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                className="w-full px-4 py-2.5 bg-[#071724] border border-slate-700 rounded-xl text-slate-200 text-sm font-medium focus:outline-none focus:border-cyan-400 transition-all"
               >
                 {accounts.filter(a => a.id !== accountId).map(acc => (
                   <option key={acc.id} value={acc.id}>
@@ -320,8 +320,8 @@ export const AddEditTransactionModal: React.FC<AddEditTransactionModalProps> = (
 
           {/* Date Picker */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+            <label className="text-xs font-medium text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-cyan-400" />
               <span>Date</span>
             </label>
             <input
@@ -329,14 +329,14 @@ export const AddEditTransactionModal: React.FC<AddEditTransactionModalProps> = (
               required
               value={transactionDate}
               onChange={(e) => setTransactionDate(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 text-sm font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+              className="w-full px-4 py-2.5 bg-[#071724] border border-slate-700 rounded-xl text-slate-200 text-sm font-medium focus:outline-none focus:border-cyan-400 transition-all"
             />
           </div>
 
           {/* Description / Note */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
-              <FileText className="w-3.5 h-3.5 text-slate-400" />
+            <label className="text-xs font-medium text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5 text-cyan-400" />
               <span>Description / Note (Optional)</span>
             </label>
             <input
@@ -344,13 +344,13 @@ export const AddEditTransactionModal: React.FC<AddEditTransactionModalProps> = (
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g. Lunch at office, Petrol refill, Al-Fatah Grocery..."
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+              className="w-full px-4 py-2.5 bg-[#071724] border border-slate-700 rounded-xl text-slate-100 text-sm placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-all"
             />
           </div>
 
           {/* Attachment / Receipt Note */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+            <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">
               Receipt / Ref ID (Optional)
             </label>
             <input
@@ -358,16 +358,16 @@ export const AddEditTransactionModal: React.FC<AddEditTransactionModalProps> = (
               value={attachmentNote}
               onChange={(e) => setAttachmentNote(e.target.value)}
               placeholder="e.g. Receipt #1042 or Bank Slip Ref"
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+              className="w-full px-4 py-2.5 bg-[#071724] border border-slate-700 rounded-xl text-slate-100 text-xs placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-all"
             />
           </div>
 
           {/* Footer Save Buttons */}
-          <div className="pt-3 flex items-center justify-between gap-3 border-t border-slate-100">
+          <div className="pt-3 flex items-center justify-between gap-3 border-t border-slate-800">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-3 px-4 rounded-2xl bg-slate-100 text-slate-700 font-bold text-xs sm:text-sm hover:bg-slate-200 transition-colors"
+              className="flex-1 py-2.5 px-4 rounded-xl bg-[#102638] text-slate-300 font-semibold text-xs sm:text-sm hover:text-white border border-slate-700 transition-colors"
             >
               Cancel
             </button>
@@ -375,9 +375,9 @@ export const AddEditTransactionModal: React.FC<AddEditTransactionModalProps> = (
             <button
               type="submit"
               disabled={isSaving}
-              className="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs sm:text-sm transition-all shadow-md shadow-emerald-600/25 flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 px-4 rounded-xl bg-[#18E6BE] hover:bg-[#23F2CB] active:scale-95 text-slate-950 font-bold text-xs sm:text-sm transition-all shadow-md shadow-[#18E6BE]/20 flex items-center justify-center gap-2"
             >
-              <Check className="w-4 h-4 stroke-[3]" />
+              <Check className="w-4 h-4 stroke-[2.5]" />
               <span>{isSaving ? 'Saving...' : 'Save Transaction'}</span>
             </button>
           </div>

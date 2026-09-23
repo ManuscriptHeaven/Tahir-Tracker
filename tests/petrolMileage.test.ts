@@ -734,3 +734,524 @@ describe('petrolMileage.test.ts - Full-Tank Fuel Economy Methodology', () => {
     assert.strictEqual(sorted[2].id, 'r3');
   });
 });
+
+describe('Hybrid Fuel Tracking Model - Refill-to-Refill & Full-Tank Integration', () => {
+  // A. Refill-to-Refill: 10000 (Rs 500) -> 10080 (Rs 700)
+  it('A. Refill A distance until next refill = 80 KM and refillCostPerKm = 500/80 = 6.25 PKR/KM', () => {
+    const refills: PetrolRefill[] = [
+      {
+        id: 'refA',
+        date: '2026-09-10',
+        odometerReading: 10000,
+        litres: 1.92,
+        pricePerLitre: 260.42,
+        totalCost: 500,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0,
+        createdAt: '2026-09-10T09:00:00Z'
+      },
+      {
+        id: 'refB',
+        date: '2026-09-14',
+        odometerReading: 10080,
+        litres: 2.69,
+        pricePerLitre: 260.22,
+        totalCost: 700,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0,
+        createdAt: '2026-09-14T09:00:00Z'
+      }
+    ];
+
+    const processed = calculatePetrolIntervals(refills);
+    assert.strictEqual(processed.length, 2);
+
+    // Refill A: completed segment
+    assert.strictEqual(processed[0].distanceUntilNextRefill, 80);
+    assert.strictEqual(processed[0].refillCostPerKm, 6.25);
+    assert.strictEqual(processed[0].isRefillSegmentComplete, true);
+    assert.strictEqual(processed[0].displayDistanceUntilNext, '+80 km');
+    assert.strictEqual(processed[0].displayRefillCostPerKm, '6.25 PKR/KM');
+
+    // Refill B: latest refill (in progress)
+    assert.strictEqual(processed[1].distanceUntilNextRefill, null);
+    assert.strictEqual(processed[1].refillCostPerKm, null);
+    assert.strictEqual(processed[1].isRefillSegmentComplete, false);
+    assert.strictEqual(processed[1].displayDistanceUntilNext, 'In Progress');
+    assert.strictEqual(processed[1].displayRefillCostPerKm, '—');
+  });
+
+  // B. Refill-to-Refill 3 consecutive refills: 10000 (Rs 500) -> 10080 (Rs 700) -> 10190 (Rs 500)
+  it('B. Three refills: First = 80 KM (Rs 6.25), Second = 110 KM (Rs 6.36), Third = In Progress', () => {
+    const refills: PetrolRefill[] = [
+      {
+        id: 'r1',
+        date: '2026-09-10',
+        odometerReading: 10000,
+        litres: 1.92,
+        pricePerLitre: 260,
+        totalCost: 500,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      },
+      {
+        id: 'r2',
+        date: '2026-09-14',
+        odometerReading: 10080,
+        litres: 2.69,
+        pricePerLitre: 260,
+        totalCost: 700,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      },
+      {
+        id: 'r3',
+        date: '2026-09-18',
+        odometerReading: 10190,
+        litres: 1.92,
+        pricePerLitre: 260,
+        totalCost: 500,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      }
+    ];
+
+    const processed = calculatePetrolIntervals(refills);
+    assert.strictEqual(processed.length, 3);
+
+    // r1: 10000 -> 10080: 80 km, 500/80 = 6.25
+    assert.strictEqual(processed[0].distanceUntilNextRefill, 80);
+    assert.strictEqual(processed[0].refillCostPerKm, 6.25);
+    assert.strictEqual(processed[0].isRefillSegmentComplete, true);
+
+    // r2: 10080 -> 10190: 110 km, 700/110 = 6.3636... -> 6.36
+    assert.strictEqual(processed[1].distanceUntilNextRefill, 110);
+    assert.strictEqual(processed[1].refillCostPerKm, 6.36);
+    assert.strictEqual(processed[1].isRefillSegmentComplete, true);
+
+    // r3: latest -> in progress
+    assert.strictEqual(processed[2].distanceUntilNextRefill, null);
+    assert.strictEqual(processed[2].refillCostPerKm, null);
+    assert.strictEqual(processed[2].isRefillSegmentComplete, false);
+    assert.strictEqual(processed[2].displayDistanceUntilNext, 'In Progress');
+  });
+
+  // C. Historical insertion splits segment
+  it('C. Inserting a historical refill between two records splits the segment correctly', () => {
+    const initial: PetrolRefill[] = [
+      {
+        id: 'r1',
+        date: '2026-09-10',
+        odometerReading: 10000,
+        litres: 1.92,
+        pricePerLitre: 260,
+        totalCost: 500,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      },
+      {
+        id: 'r3',
+        date: '2026-09-18',
+        odometerReading: 10080,
+        litres: 2.69,
+        pricePerLitre: 260,
+        totalCost: 700,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      }
+    ];
+
+    const before = calculatePetrolIntervals(initial);
+    assert.strictEqual(before[0].distanceUntilNextRefill, 80);
+
+    // Now insert a refill at 10040 (Rs 300)
+    const inserted: PetrolRefill[] = [
+      ...initial,
+      {
+        id: 'r2',
+        date: '2026-09-14',
+        odometerReading: 10040,
+        litres: 1.15,
+        pricePerLitre: 260,
+        totalCost: 300,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      }
+    ];
+
+    const after = calculatePetrolIntervals(inserted);
+    assert.strictEqual(after.length, 3);
+    // r1: 10000 -> 10040 = 40 km, 500/40 = 12.50
+    assert.strictEqual(after[0].distanceUntilNextRefill, 40);
+    assert.strictEqual(after[0].refillCostPerKm, 12.5);
+    // r2: 10040 -> 10080 = 40 km, 300/40 = 7.50
+    assert.strictEqual(after[1].distanceUntilNextRefill, 40);
+    assert.strictEqual(after[1].refillCostPerKm, 7.5);
+    // r3: in progress
+    assert.strictEqual(after[2].distanceUntilNextRefill, null);
+  });
+
+  // D. Editing odometer recalculates neighboring segments
+  it('D. Editing odometer recalculates preceding and current segment distances', () => {
+    const refills: PetrolRefill[] = [
+      {
+        id: 'r1',
+        date: '2026-09-10',
+        odometerReading: 10000,
+        litres: 1.92,
+        pricePerLitre: 260,
+        totalCost: 500,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      },
+      {
+        id: 'r2',
+        date: '2026-09-14',
+        odometerReading: 10100, // edited from 10080
+        litres: 2.69,
+        pricePerLitre: 260,
+        totalCost: 700,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      },
+      {
+        id: 'r3',
+        date: '2026-09-18',
+        odometerReading: 10190,
+        litres: 1.92,
+        pricePerLitre: 260,
+        totalCost: 500,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      }
+    ];
+
+    const processed = calculatePetrolIntervals(refills);
+    // r1 -> r2: 100 km, 500/100 = 5.00
+    assert.strictEqual(processed[0].distanceUntilNextRefill, 100);
+    assert.strictEqual(processed[0].refillCostPerKm, 5.0);
+
+    // r2 -> r3: 90 km, 700/90 = 7.78
+    assert.strictEqual(processed[1].distanceUntilNextRefill, 90);
+    assert.strictEqual(processed[1].refillCostPerKm, 7.78);
+  });
+
+  // E. Deleting refill reconnects previous and next refill correctly
+  it('E. Deleting intermediate refill reconnects surrounding refills seamlessly', () => {
+    const refills: PetrolRefill[] = [
+      {
+        id: 'r1',
+        date: '2026-09-10',
+        odometerReading: 10000,
+        litres: 1.92,
+        pricePerLitre: 260,
+        totalCost: 500,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      },
+      // r2 deleted
+      {
+        id: 'r3',
+        date: '2026-09-18',
+        odometerReading: 10190,
+        litres: 1.92,
+        pricePerLitre: 260,
+        totalCost: 500,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      }
+    ];
+
+    const processed = calculatePetrolIntervals(refills);
+    assert.strictEqual(processed.length, 2);
+    // 10190 - 10000 = 190 km, 500 / 190 = 2.63
+    assert.strictEqual(processed[0].distanceUntilNextRefill, 190);
+    assert.strictEqual(processed[0].refillCostPerKm, 2.63);
+  });
+
+  // F. Latest refill never fabricates distance
+  it('F. Latest refill never fabricates distance and remains In Progress', () => {
+    const refills: PetrolRefill[] = [
+      {
+        id: 'r1',
+        date: '2026-09-10',
+        odometerReading: 10000,
+        litres: 5,
+        pricePerLitre: 260,
+        totalCost: 1300,
+        isFullTank: true,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      }
+    ];
+
+    const processed = calculatePetrolIntervals(refills);
+    assert.strictEqual(processed[0].distanceUntilNextRefill, null);
+    assert.strictEqual(processed[0].refillCostPerKm, null);
+    assert.strictEqual(processed[0].isRefillSegmentComplete, false);
+    assert.strictEqual(processed[0].displayDistanceUntilNext, 'In Progress');
+    assert.strictEqual(processed[0].displayRefillCostPerKm, '—');
+  });
+
+  // G. Partial refill never gets fake Verified KM/L
+  it('G. Partial refill never receives fake Verified KM/L', () => {
+    const refills: PetrolRefill[] = [
+      {
+        id: 'p1',
+        date: '2026-09-10',
+        odometerReading: 10000,
+        litres: 2,
+        pricePerLitre: 260,
+        totalCost: 520,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      },
+      {
+        id: 'p2',
+        date: '2026-09-14',
+        odometerReading: 10080,
+        litres: 2,
+        pricePerLitre: 260,
+        totalCost: 520,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      }
+    ];
+
+    const processed = calculatePetrolIntervals(refills);
+    assert.strictEqual(processed[0].mileageKmpl, 0);
+    assert.strictEqual(processed[0].displayMileage, '—');
+    assert.strictEqual(processed[1].mileageKmpl, 0);
+    assert.strictEqual(processed[1].displayMileage, '—');
+  });
+
+  // H. Full-Tank Verified Mileage continues working exactly as before
+  it('H. Full-Tank Verified Mileage operates identically with verified intervals', () => {
+    const refills: PetrolRefill[] = [
+      {
+        id: 'f1',
+        date: '2026-09-01',
+        odometerReading: 10000,
+        litres: 8,
+        pricePerLitre: 270,
+        totalCost: 2160,
+        isFullTank: true,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      },
+      {
+        id: 'f2',
+        date: '2026-09-05',
+        odometerReading: 10300,
+        litres: 10,
+        pricePerLitre: 270,
+        totalCost: 2700,
+        isFullTank: true,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      }
+    ];
+
+    const processed = calculatePetrolIntervals(refills);
+    assert.strictEqual(processed[0].calculationType, 'baseline');
+    assert.strictEqual(processed[1].calculationType, 'completed');
+    assert.strictEqual(processed[1].intervalDistance, 300);
+    assert.strictEqual(processed[1].intervalFuel, 10);
+    assert.strictEqual(processed[1].mileageKmpl, 30);
+    assert.strictEqual(processed[1].costPerKm, 9);
+    // Simultaneously has daily refill-to-refill tracking:
+    assert.strictEqual(processed[0].distanceUntilNextRefill, 300);
+    assert.strictEqual(processed[0].refillCostPerKm, 7.2); // 2160 / 300 = 7.20
+  });
+
+  // I. Partial refills between two Full Tanks continue contributing litres to Full-Tank interval
+  it('I. Partial refills between Full Tanks contribute litres and cost to Full-Tank interval', () => {
+    const refills: PetrolRefill[] = [
+      {
+        id: 'r1',
+        date: '2026-09-01',
+        odometerReading: 10000,
+        litres: 5,
+        pricePerLitre: 270,
+        totalCost: 1350,
+        isFullTank: true,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      },
+      {
+        id: 'r2',
+        date: '2026-09-03',
+        odometerReading: 10100,
+        litres: 3,
+        pricePerLitre: 270,
+        totalCost: 810,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      },
+      {
+        id: 'r3',
+        date: '2026-09-05',
+        odometerReading: 10200,
+        litres: 3,
+        pricePerLitre: 270,
+        totalCost: 810,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      },
+      {
+        id: 'r4',
+        date: '2026-09-08',
+        odometerReading: 10400,
+        litres: 7,
+        pricePerLitre: 270,
+        totalCost: 1890,
+        isFullTank: true,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      }
+    ];
+
+    const processed = calculatePetrolIntervals(refills);
+    // Ending full tank (r4): 400 KM / (3 + 3 + 7 = 13 L) = 30.77 KM/L
+    assert.strictEqual(processed[3].calculationType, 'completed');
+    assert.strictEqual(processed[3].intervalDistance, 400);
+    assert.strictEqual(processed[3].intervalFuel, 13);
+    assert.strictEqual(processed[3].mileageKmpl, 30.77);
+
+    // Each leg has its own daily refill distance and cost/km:
+    assert.strictEqual(processed[0].distanceUntilNextRefill, 100); // 10000 -> 10100
+    assert.strictEqual(processed[0].refillCostPerKm, 13.5); // 1350 / 100
+    assert.strictEqual(processed[1].distanceUntilNextRefill, 100); // 10100 -> 10200
+    assert.strictEqual(processed[1].refillCostPerKm, 8.1); // 810 / 100
+    assert.strictEqual(processed[2].distanceUntilNextRefill, 200); // 10200 -> 10400
+    assert.strictEqual(processed[2].refillCostPerKm, 4.05); // 810 / 200
+    assert.strictEqual(processed[3].distanceUntilNextRefill, null); // in progress
+  });
+
+  // J. Weighted monthly Cost/KM is correct
+  it('J. Monthly stats calculates weighted avgRefillCostPerKm and preserves quick pointers', () => {
+    const refills: PetrolRefill[] = [
+      {
+        id: 'r1',
+        date: '2026-09-10',
+        odometerReading: 10000,
+        litres: 1.92,
+        pricePerLitre: 260,
+        totalCost: 500,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      },
+      {
+        id: 'r2',
+        date: '2026-09-14',
+        odometerReading: 10080,
+        litres: 2.69,
+        pricePerLitre: 260,
+        totalCost: 700,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      },
+      {
+        id: 'r3',
+        date: '2026-09-18',
+        odometerReading: 10190,
+        litres: 1.92,
+        pricePerLitre: 260,
+        totalCost: 500,
+        isFullTank: false,
+        distanceTravelled: 0,
+        mileageKmpl: 0,
+        costPerKm: 0
+      }
+    ];
+
+    const stats = calculateMonthlyPetrolStats(refills, '2026-09');
+    // Completed legs in September:
+    // r1: 500 cost, 80 km
+    // r2: 700 cost, 110 km
+    // Total completed cost = 1200, Total completed distance = 190 km
+    // Weighted avgRefillCostPerKm = 1200 / 190 = 6.3157... -> 6.32 PKR/KM
+    assert.strictEqual(stats.completedRefillsCount, 2);
+    assert.strictEqual(stats.totalCompletedRefillDistance, 190);
+    assert.strictEqual(stats.totalCompletedRefillCost, 1200);
+    assert.strictEqual(stats.avgRefillCostPerKm, 6.32);
+
+    // Latest and previous pointers
+    assert.strictEqual(stats.latestRefill?.id, 'r3');
+    assert.strictEqual(stats.latestRefill?.displayDistanceUntilNext, 'In Progress');
+    assert.strictEqual(stats.previousCompletedRefill?.id, 'r2');
+    assert.strictEqual(stats.previousCompletedRefill?.distanceUntilNextRefill, 110);
+  });
+
+  // K. Supabase serialization/sync remains intact
+  it('K. Supabase serialization mapping handles isFullTank bidirectionally', () => {
+    const refill = {
+      id: 'ref1',
+      isFullTank: true,
+      odometerReading: 10000,
+      totalCost: 500
+    };
+    const dbRow = toSnakeCase(refill);
+    assert.strictEqual(dbRow.is_full_tank, true);
+    assert.strictEqual(dbRow.odometer_reading, 10000);
+
+    const deserialized = toCamelCase(dbRow);
+    assert.strictEqual(deserialized.isFullTank, true);
+    assert.strictEqual(deserialized.odometerReading, 10000);
+  });
+
+  // L. Existing validation continues to reject decreasing odometer
+  it('L. Validation rejects impossible decreasing odometer reading and duplicate readings', () => {
+    const res1 = validateRefillInput(10050, 5, 270, 10080);
+    assert.strictEqual(res1.isValid, false);
+    assert.match(res1.error || '', /Decreasing odometer/);
+
+    const res2 = validateRefillInput(10080, 5, 270, 10080);
+    assert.strictEqual(res2.isValid, false);
+    assert.match(res2.error || '', /identical to previous record/);
+  });
+});
+

@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { LoginModal } from '../auth/LoginModal';
+import { PageHeader } from '../ui/PageHeader';
 
 export const SettingsView: React.FC = () => {
   const { user, isAuthenticated, signOut } = useAuth();
@@ -103,7 +104,7 @@ export const SettingsView: React.FC = () => {
         currency: currency.trim() || 'PKR',
         milkDefaultRate: rate,
         rentDueDayDefault: due,
-        theme: 'light'
+        theme: 'dark'
       });
     }
 
@@ -227,47 +228,45 @@ export const SettingsView: React.FC = () => {
   return (
     <div className="space-y-6 max-w-3xl mx-auto pb-16">
       {/* Header */}
-      <div>
-        <h2 className="text-xl sm:text-2xl font-bold text-slate-800 flex items-center gap-2">
-          <Settings className="w-6 h-6 text-emerald-600" />
-          Settings & Cloud Integration
-        </h2>
-        <p className="text-xs sm:text-sm text-slate-500">
-          Connect Supabase database, manage offline sync, and configure default preferences
-        </p>
-      </div>
+      <PageHeader
+        title="Settings & Cloud Integration"
+        subtitle="Connect Supabase database, manage offline sync, and configure default preferences"
+        icon={Settings}
+      />
 
       {/* 0. SUPABASE AUTHENTICATION & ACCOUNT */}
-      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+      <div className="bg-[#0B1D2C] rounded-3xl p-5 sm:p-6 border border-cyan-500/20 shadow-xl space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-2xl bg-teal-500/10 text-[#18E6BE] border border-teal-500/20 flex items-center justify-center font-bold">
               <Lock className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-base">Account & Cloud Authentication</h3>
-              <p className="text-xs text-slate-500">Secure owner session required for cloud sync</p>
+              <h3 className="font-bold text-white text-base">Account & Cloud Authentication</h3>
+              <p className="text-xs text-slate-400">Secure owner session required for cloud sync</p>
             </div>
           </div>
 
-          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-            isAuthenticated ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+          <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
+            isAuthenticated 
+              ? 'bg-teal-500/20 text-[#18E6BE] border-teal-500/40' 
+              : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
           }`}>
             {isAuthenticated ? 'Authenticated' : 'Sign In Required'}
           </span>
         </div>
 
         {isAuthenticated && user ? (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-[#071724] border border-teal-500/30">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <UserIcon className="w-4 h-4 text-emerald-600" />
-                <span className="text-xs font-bold text-slate-800">{user.email}</span>
+                <UserIcon className="w-4 h-4 text-[#18E6BE]" />
+                <span className="text-xs font-bold text-white">{user.email}</span>
               </div>
-              <p className="text-[11px] text-slate-500 font-mono">
+              <p className="text-[11px] text-slate-400 font-mono">
                 User ID: {user.id}
               </p>
-              <p className="text-[11px] text-emerald-700 font-semibold">
+              <p className="text-[11px] text-teal-400 font-semibold">
                 ✓ Cloud synchronization is active and user-scoped.
               </p>
             </div>
@@ -277,19 +276,19 @@ export const SettingsView: React.FC = () => {
               onClick={async () => {
                 await signOut();
               }}
-              className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all self-start sm:self-auto cursor-pointer"
+              className="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all self-start sm:self-auto cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>Sign Out</span>
             </button>
           </div>
         ) : (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-amber-50/60 border border-amber-200/70">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-[#071724] border border-amber-500/30">
             <div className="space-y-1">
-              <p className="text-xs font-bold text-amber-900">
+              <p className="text-xs font-bold text-amber-300">
                 Not signed in to Supabase Cloud
               </p>
-              <p className="text-[11px] text-amber-800 leading-relaxed">
+              <p className="text-[11px] text-slate-300 leading-relaxed">
                 Your local Dexie database remains fully functional offline. To enable cloud synchronization and multi-device backups, please sign in.
               </p>
             </div>
@@ -297,7 +296,7 @@ export const SettingsView: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsLoginModalOpen(true)}
-              className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-emerald-600/20 shrink-0 cursor-pointer self-start sm:self-auto"
+              className="px-4 py-2 bg-gradient-to-r from-teal-500 to-[#18E6BE] hover:from-teal-400 hover:to-[#23F2CB] text-[#06131F] rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-lg shadow-teal-500/20 shrink-0 cursor-pointer self-start sm:self-auto"
             >
               <LogIn className="w-3.5 h-3.5" />
               <span>Sign In to Cloud Sync</span>
@@ -307,20 +306,22 @@ export const SettingsView: React.FC = () => {
       </div>
 
       {/* 1. SUPABASE CLOUD DATABASE CONFIGURATION */}
-      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+      <div className="bg-[#0B1D2C] rounded-3xl p-5 sm:p-6 border border-cyan-500/20 shadow-xl space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-2xl bg-teal-500/10 text-[#18E6BE] border border-teal-500/20 flex items-center justify-center font-bold">
               <Cloud className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-base">Supabase Cloud Database</h3>
-              <p className="text-xs text-slate-500">PostgreSQL backend with offline-first synchronization</p>
+              <h3 className="font-bold text-white text-base">Supabase Cloud Database</h3>
+              <p className="text-xs text-slate-400">PostgreSQL backend with offline-first synchronization</p>
             </div>
           </div>
 
-          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-            isSupabaseConfigured() ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+          <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
+            isSupabaseConfigured() 
+              ? 'bg-teal-500/20 text-[#18E6BE] border-teal-500/40' 
+              : 'bg-slate-800 text-slate-400 border-slate-700'
           }`}>
             {isSupabaseConfigured() ? 'Configured' : 'Not Connected'}
           </span>
@@ -328,7 +329,7 @@ export const SettingsView: React.FC = () => {
 
         <form onSubmit={handleSaveSupabaseConfig} className="space-y-3.5">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
+            <label className="block text-xs font-bold text-slate-300 mb-1">
               Supabase Project URL
             </label>
             <input
@@ -336,12 +337,12 @@ export const SettingsView: React.FC = () => {
               placeholder="https://xyzcompany.supabase.co"
               value={supabaseUrl}
               onChange={(e) => setSupabaseUrl(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-mono text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
+              className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-xs sm:text-sm font-mono text-white focus:border-[#18E6BE] focus:ring-1 focus:ring-[#18E6BE]"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
+            <label className="block text-xs font-bold text-slate-300 mb-1">
               Supabase Anon Public API Key
             </label>
             <input
@@ -349,18 +350,20 @@ export const SettingsView: React.FC = () => {
               placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
               value={supabaseKey}
               onChange={(e) => setSupabaseKey(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-mono text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
+              className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-xs sm:text-sm font-mono text-white focus:border-[#18E6BE] focus:ring-1 focus:ring-[#18E6BE]"
             />
           </div>
 
           {testResult && (
-            <div className={`p-3 rounded-xl text-xs font-semibold flex items-start gap-2 ${
-              testResult.success ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'
+            <div className={`p-3 rounded-xl text-xs font-semibold flex items-start gap-2 border ${
+              testResult.success 
+                ? 'bg-teal-500/10 text-teal-300 border-teal-500/30' 
+                : 'bg-rose-500/10 text-rose-300 border-rose-500/30'
             }`}>
               {testResult.success ? (
-                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <ShieldCheck className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
               ) : (
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
               )}
               <span>{testResult.message}</span>
             </div>
@@ -372,7 +375,7 @@ export const SettingsView: React.FC = () => {
               type="button"
               onClick={handleTestConnection}
               disabled={isTestingSupabase || !supabaseUrl || !supabaseKey}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold text-xs transition-all disabled:opacity-50 cursor-pointer"
+              className="px-4 py-2 bg-[#102638] hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl font-bold text-xs transition-all disabled:opacity-50 cursor-pointer"
             >
               {isTestingSupabase ? 'Testing Connection...' : 'Test Connection'}
             </button>
@@ -381,7 +384,7 @@ export const SettingsView: React.FC = () => {
               type="button"
               onClick={handleManualSyncNow}
               disabled={isSyncing || !isSupabaseConfigured()}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+              className="px-4 py-2 bg-gradient-to-r from-teal-500 to-[#18E6BE] hover:from-teal-400 hover:to-[#23F2CB] text-[#06131F] rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-teal-500/20 disabled:opacity-50 cursor-pointer"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
               {isSyncing ? 'Syncing...' : 'Sync Now (Push & Pull)'}
@@ -390,16 +393,16 @@ export const SettingsView: React.FC = () => {
             <button
               type="button"
               onClick={handleCopySchemaSql}
-              className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all ml-auto cursor-pointer"
+              className="px-3 py-2 bg-[#102638] hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all ml-auto cursor-pointer"
               title="Copy SQL script to paste in Supabase SQL Editor"
             >
-              {copiedSchema ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedSchema ? <Check className="w-3.5 h-3.5 text-teal-400" /> : <Copy className="w-3.5 h-3.5" />}
               {copiedSchema ? 'SQL Copied!' : 'Copy SQL Schema'}
             </button>
 
             <button
               type="submit"
-              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition-all shadow-xs cursor-pointer"
+              className="px-5 py-2 bg-gradient-to-r from-teal-500 to-[#18E6BE] hover:from-teal-400 hover:to-[#23F2CB] text-[#06131F] rounded-xl font-bold text-xs transition-all shadow-md cursor-pointer"
             >
               Save Credentials
             </button>
@@ -408,23 +411,23 @@ export const SettingsView: React.FC = () => {
 
         {syncStatus.lastSyncedAt && (
           <div className="text-[11px] text-slate-400 pt-1">
-            Last Synced: <strong>{new Date(syncStatus.lastSyncedAt).toLocaleString()}</strong>
+            Last Synced: <strong className="text-teal-300">{new Date(syncStatus.lastSyncedAt).toLocaleString()}</strong>
           </div>
         )}
       </div>
 
       {/* 2. GLOBAL PREFERENCES FORM */}
-      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm">
-        <h3 className="font-bold text-slate-900 text-base mb-4 flex items-center gap-2">
-          <DollarSign className="w-4 h-4 text-emerald-600" />
+      <div className="bg-[#0B1D2C] rounded-3xl p-5 sm:p-6 border border-cyan-500/20 shadow-xl">
+        <h3 className="font-bold text-white text-base mb-4 flex items-center gap-2">
+          <DollarSign className="w-4 h-4 text-[#18E6BE]" />
           App Preferences & Defaults
         </h3>
 
         <form onSubmit={handleSaveSettings} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
-                <Milk className="w-3.5 h-3.5 text-teal-600" />
+              <label className="block text-xs font-bold text-slate-300 mb-1 flex items-center gap-1.5">
+                <Milk className="w-3.5 h-3.5 text-teal-400" />
                 Default Milk Rate (PKR/kg)
               </label>
               <input
@@ -434,13 +437,13 @@ export const SettingsView: React.FC = () => {
                 required
                 value={milkRate}
                 onChange={(e) => setMilkRate(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
+                className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-sm font-bold text-white focus:border-[#18E6BE]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
-                <Home className="w-3.5 h-3.5 text-emerald-600" />
+              <label className="block text-xs font-bold text-slate-300 mb-1 flex items-center gap-1.5">
+                <Home className="w-3.5 h-3.5 text-teal-400" />
                 Rent Due Day of Month
               </label>
               <input
@@ -450,12 +453,12 @@ export const SettingsView: React.FC = () => {
                 required
                 value={rentDueDay}
                 onChange={(e) => setRentDueDay(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
+                className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-sm font-bold text-white focus:border-[#18E6BE]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
+              <label className="block text-xs font-bold text-slate-300 mb-1">
                 Currency Symbol
               </label>
               <input
@@ -463,21 +466,21 @@ export const SettingsView: React.FC = () => {
                 required
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20"
+                className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-sm font-bold text-white focus:border-[#18E6BE]"
               />
             </div>
           </div>
 
           <div className="flex items-center justify-between pt-2">
             {saveSuccess && (
-              <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+              <span className="text-xs font-bold text-[#18E6BE] flex items-center gap-1">
                 <CheckCircle2 className="w-4 h-4" /> Preferences saved!
               </span>
             )}
             <button
               type="submit"
               disabled={isSaving}
-              className="ml-auto px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+              className="ml-auto px-5 py-2 bg-gradient-to-r from-teal-500 to-[#18E6BE] hover:from-teal-400 hover:to-[#23F2CB] text-[#06131F] rounded-xl font-bold text-xs sm:text-sm shadow-md shadow-teal-500/20 transition-all cursor-pointer"
             >
               {isSaving ? 'Saving...' : 'Save Preferences'}
             </button>
@@ -486,13 +489,13 @@ export const SettingsView: React.FC = () => {
       </div>
 
       {/* 3. BACKUP & RESTORE SECTION */}
-      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-4">
+      <div className="bg-[#0B1D2C] rounded-3xl p-5 sm:p-6 border border-cyan-500/20 shadow-xl space-y-4">
         <div>
-          <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
-            <Database className="w-4 h-4 text-emerald-600" />
+          <h3 className="font-bold text-white text-base flex items-center gap-2">
+            <Database className="w-4 h-4 text-[#18E6BE]" />
             Offline Backup & Restore
           </h3>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-400 mt-0.5">
             Your data is stored 100% locally in your phone's IndexedDB and synchronizes with Supabase. Export a JSON backup to keep offline archives.
           </p>
         </div>
@@ -500,24 +503,24 @@ export const SettingsView: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
           <button
             onClick={handleExportBackup}
-            className="p-4 rounded-2xl bg-slate-50 hover:bg-emerald-50 border border-slate-200/90 hover:border-emerald-300 transition-all flex items-center gap-3 text-left group cursor-pointer"
+            className="p-4 rounded-2xl bg-[#071724] hover:bg-[#102638] border border-cyan-500/20 hover:border-cyan-500/40 transition-all flex items-center gap-3 text-left group cursor-pointer"
           >
-            <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-800 group-hover:scale-105 transition-transform">
+            <div className="p-2.5 rounded-xl bg-teal-500/10 text-[#18E6BE] border border-teal-500/20 group-hover:scale-105 transition-transform">
               <Download className="w-5 h-5" />
             </div>
             <div>
-              <div className="font-bold text-slate-900 text-sm">Download Backup (JSON)</div>
-              <div className="text-xs text-slate-500">Export full database file</div>
+              <div className="font-bold text-white text-sm">Download Backup (JSON)</div>
+              <div className="text-xs text-slate-400">Export full database file</div>
             </div>
           </button>
 
-          <label className="p-4 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-slate-200/90 hover:border-blue-300 transition-all flex items-center gap-3 text-left cursor-pointer group">
-            <div className="p-2.5 rounded-xl bg-blue-100 text-blue-800 group-hover:scale-105 transition-transform">
+          <label className="p-4 rounded-2xl bg-[#071724] hover:bg-[#102638] border border-cyan-500/20 hover:border-cyan-500/40 transition-all flex items-center gap-3 text-left cursor-pointer group">
+            <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 group-hover:scale-105 transition-transform">
               <Upload className="w-5 h-5" />
             </div>
             <div>
-              <div className="font-bold text-slate-900 text-sm">Restore from Backup</div>
-              <div className="text-xs text-slate-500">Select previously saved JSON</div>
+              <div className="font-bold text-white text-sm">Restore from Backup</div>
+              <div className="text-xs text-slate-400">Select previously saved JSON</div>
             </div>
             <input
               type="file"
@@ -528,10 +531,10 @@ export const SettingsView: React.FC = () => {
           </label>
         </div>
 
-        <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+        <div className="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
           <button
             onClick={handlePurgeDummyData}
-            className="px-3.5 py-2 text-xs font-bold text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="px-3.5 py-2 text-xs font-bold text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" />
             Purge Legacy Dummy Records
@@ -539,7 +542,7 @@ export const SettingsView: React.FC = () => {
 
           <button
             onClick={handleResetToClean}
-            className="px-3.5 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="px-3.5 py-2 text-xs font-bold text-slate-300 hover:text-white bg-[#102638] hover:bg-slate-700 border border-slate-700 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             Reset All Data to Clean State
@@ -548,22 +551,22 @@ export const SettingsView: React.FC = () => {
       </div>
 
       {/* 4. PWA & MOBILE INSTALLATION GUIDE */}
-      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-3xl p-5 sm:p-6 border border-emerald-200/80 shadow-sm space-y-3">
+      <div className="bg-gradient-to-br from-[#0B1D2C] to-[#102638] rounded-3xl p-5 sm:p-6 border border-cyan-500/20 shadow-xl space-y-3">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-emerald-600 text-white font-bold">
+          <div className="p-2 rounded-xl bg-teal-500/10 text-[#18E6BE] border border-teal-500/20 font-bold">
             <Smartphone className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-bold text-slate-900 text-base">Progressive Web App (PWA)</h3>
-            <p className="text-xs text-emerald-800">Install to your Android, iPhone or Desktop</p>
+            <h3 className="font-bold text-white text-base">Progressive Web App (PWA)</h3>
+            <p className="text-xs text-teal-400">Install to your Android, iPhone or Desktop</p>
           </div>
         </div>
 
-        <div className="text-xs text-slate-700 space-y-1.5 pl-1">
-          <p><strong>On Android (Chrome/Edge):</strong> Tap the 3 dots (⋮) in your browser &gt; Tap <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong>.</p>
-          <p><strong>On iPhone (Safari):</strong> Tap the Share button (<span className="text-sm">⎋</span>) &gt; Tap <strong>"Add to Home Screen"</strong>.</p>
-          <p><strong>On Desktop (Chrome/Edge):</strong> Click the install icon (<Download className="w-3 h-3 inline" />) in the address bar to install as a standalone desktop app.</p>
-          <p className="text-emerald-900 font-bold">✓ Works 100% offline and auto-syncs with Supabase cloud when internet is available!</p>
+        <div className="text-xs text-slate-300 space-y-1.5 pl-1">
+          <p><strong className="text-white">On Android (Chrome/Edge):</strong> Tap the 3 dots (⋮) in your browser &gt; Tap <strong className="text-teal-300">&quot;Install app&quot;</strong> or <strong className="text-teal-300">&quot;Add to Home screen&quot;</strong>.</p>
+          <p><strong className="text-white">On iPhone (Safari):</strong> Tap the Share button (<span className="text-sm">⎋</span>) &gt; Tap <strong className="text-teal-300">&quot;Add to Home Screen&quot;</strong>.</p>
+          <p><strong className="text-white">On Desktop (Chrome/Edge):</strong> Click the install icon (<Download className="w-3 h-3 inline text-teal-400" />) in the address bar to install as a standalone desktop app.</p>
+          <p className="text-[#18E6BE] font-bold">✓ Works 100% offline and auto-syncs with Supabase cloud when internet is available!</p>
         </div>
       </div>
 

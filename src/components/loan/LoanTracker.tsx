@@ -6,7 +6,6 @@ import { formatCurrency, formatDate } from '../../utils/formatters';
 import { addMoney, subtractMoney } from '../../utils/money';
 import { getTodayLocalDateStr } from '../../utils/dateTime';
 import { 
-  Plus, 
   HandCoins, 
   CheckCircle2, 
   User, 
@@ -16,8 +15,12 @@ import {
   ArrowUpRight, 
   ArrowDownLeft,
   X,
-  Search
+  Search,
+  Users
 } from 'lucide-react';
+import { PageHeader } from '../ui/PageHeader';
+import { MetricCard } from '../ui/MetricCard';
+import { EmptyState } from '../ui/EmptyState';
 
 interface LoanTrackerProps {
   onOpenReport?: () => void;
@@ -252,104 +255,67 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
 
   return (
     <div className="space-y-6 pb-16">
-      {/* Header & Main Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <HandCoins className="w-6 h-6 text-emerald-600" />
-            Loan Management
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500">
-            Person-centric profiles (e.g. Saleem bhai) with combined Udhaar given, borrowings, and returns
-          </p>
-        </div>
+      {/* 1. PAGE HEADER */}
+      <PageHeader
+        icon={HandCoins}
+        title="Lease & Loan Management"
+        subtitle="Person-centric profiles with combined Udhaar given, borrowings, and return ledgers."
+        primaryAction={{
+          label: "+ New Lease / Entry",
+          onClick: () => {
+            resetForm();
+            setIsAddModalOpen(true);
+          }
+        }}
+        secondaryAction={onOpenReport ? {
+          label: "Loan Reports",
+          icon: FileText,
+          onClick: onOpenReport
+        } : undefined}
+      />
 
-        <div className="flex items-center gap-2">
-          {onOpenReport && (
-            <button
-              onClick={onOpenReport}
-              className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-sm"
-            >
-              <FileText className="w-4 h-4 text-slate-600" />
-              Loan Report
-            </button>
-          )}
-          <button
-            onClick={() => {
-              resetForm();
-              setIsAddModalOpen(true);
-            }}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-md shadow-emerald-600/20"
-          >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            New Entry / Person
-          </button>
-        </div>
+      {/* 2. TOP METRIC CARDS (4 across matching Panel 4) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Metric 1: Money Given (Receivable) */}
+        <MetricCard
+          title="Money Given (Udhaar)"
+          value={formatCurrency(outstandingGivenOverall)}
+          subtitle={`Total Issued: ${formatCurrency(totalGivenOverall)}`}
+          icon={ArrowUpRight}
+          variant="success"
+        />
+
+        {/* Metric 2: Money Taken (Payable) */}
+        <MetricCard
+          title="Money Taken (Borrowed)"
+          value={formatCurrency(outstandingTakenOverall)}
+          subtitle={`Total Taken: ${formatCurrency(totalTakenOverall)}`}
+          icon={ArrowDownLeft}
+          variant="danger"
+        />
+
+        {/* Metric 3: Owes You Ledgers */}
+        <MetricCard
+          title="People Owing You"
+          value={`${personGroups.filter(g => g.netBalance > 0).length} Profiles`}
+          subtitle="Net positive receivables"
+          icon={CheckCircle2}
+          variant="accent"
+        />
+
+        {/* Metric 4: Total Profiles */}
+        <MetricCard
+          title="Total People / Ledgers"
+          value={`${personGroups.length} Profiles`}
+          subtitle={`${personGroups.filter(g => g.netBalance === 0).length} fully settled`}
+          icon={Users}
+          variant="default"
+        />
       </div>
 
-      {/* Summary Banner Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-        <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-4 text-white shadow-md">
-          <div className="flex items-center justify-between opacity-90 text-[10px] font-bold uppercase tracking-wider">
-            <span>Money Given (Udhaar)</span>
-            <ArrowUpRight className="w-4 h-4" />
-          </div>
-          <div className="text-2xl sm:text-3xl font-extrabold mt-1">
-            {formatCurrency(outstandingGivenOverall)}
-          </div>
-          <div className="flex items-center justify-between text-xs mt-2 pt-2 border-t border-white/20 text-emerald-100">
-            <span>Total Issued: {formatCurrency(totalGivenOverall)}</span>
-            <span>Received: {formatCurrency(totalReceivedOverall)}</span>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-            <span>Money Taken (Borrowed)</span>
-            <ArrowDownLeft className="w-4 h-4 text-amber-500" />
-          </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-slate-800 mt-1">
-            {formatCurrency(outstandingTakenOverall)}
-          </div>
-          <div className="flex items-center justify-between text-xs mt-2 pt-2 border-t border-slate-100 text-slate-500">
-            <span>Total Taken: {formatCurrency(totalTakenOverall)}</span>
-            <span>Repaid: {formatCurrency(totalRepaidOverall)}</span>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-            <span>People Count</span>
-            <User className="w-4 h-4 text-emerald-600" />
-          </div>
-          <div className="flex items-center gap-4 mt-2">
-            <div>
-              <div className="text-xl font-bold text-slate-800">
-                {personGroups.length}
-              </div>
-              <div className="text-[11px] text-slate-500 font-medium">Total Profiles</div>
-            </div>
-            <div className="h-8 w-px bg-slate-200" />
-            <div>
-              <div className="text-xl font-bold text-emerald-700">
-                {personGroups.filter(g => g.netBalance > 0).length}
-              </div>
-              <div className="text-[11px] text-emerald-600 font-medium">Owes You</div>
-            </div>
-            <div className="h-8 w-px bg-slate-200" />
-            <div>
-              <div className="text-xl font-bold text-amber-700">
-                {personGroups.filter(g => g.netBalance < 0).length}
-              </div>
-              <div className="text-[11px] text-amber-600 font-medium">You Owe</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter & Search Toolbar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
+      {/* 3. FILTER & SEARCH TOOLBAR */}
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-[#0B1D2C] p-3 rounded-2xl border border-slate-700/50 shadow-sm">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
           {[
             { id: 'all', label: 'All People' },
             { id: 'owes_you', label: 'Owes You' },
@@ -361,8 +327,8 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
               onClick={() => setFilter(tab.id as any)}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                 filter === tab.id
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:bg-slate-100'
+                  ? 'bg-[#18E6BE] text-slate-950 font-bold shadow-sm'
+                  : 'bg-[#102638] text-slate-300 hover:text-white border border-slate-700/60'
               }`}
             >
               {tab.label}
@@ -371,26 +337,31 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
         </div>
 
         <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Search person or notes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full sm:w-64 pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+            className="w-full sm:w-64 pl-9 pr-3 py-1.5 bg-[#071724] border border-slate-700 rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400"
           />
         </div>
       </div>
 
-      {/* PERSON CARDS GRID */}
+      {/* 4. PERSON CARDS GRID */}
       {filteredPersonGroups.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-3xl border border-slate-200/80 p-6">
-          <User className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <h3 className="font-bold text-slate-700 text-base">No person profiles found</h3>
-          <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-            {searchQuery ? 'Try matching a different keyword or clear search' : 'Start by adding a person profile or loan record above.'}
-          </p>
-        </div>
+        <EmptyState
+          icon={HandCoins}
+          title="No Person Profiles Found"
+          description={searchQuery ? 'Try matching a different keyword or clear your search query.' : 'Start by adding a person profile or loan record above.'}
+          action={{
+            label: "+ Add Person Entry",
+            onClick: () => {
+              resetForm();
+              setIsAddModalOpen(true);
+            }
+          }}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredPersonGroups.map((group) => {
@@ -400,55 +371,55 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
             return (
               <div
                 key={group.personName}
-                className="bg-white rounded-3xl p-5 border border-slate-200/90 hover:border-emerald-500/40 shadow-sm transition-all flex flex-col justify-between gap-4"
+                className="bg-[#0B1D2C] rounded-2xl p-5 border border-slate-700/50 hover:border-cyan-500/40 shadow-sm transition-all flex flex-col justify-between gap-4"
               >
                 <div>
                   {/* Top Row: Person Avatar, Name & Net Position Badge */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3">
-                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-sm ${
+                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-sm border ${
                         isOwesYou 
-                          ? 'bg-emerald-100 text-emerald-800' 
+                          ? 'bg-teal-500/20 text-teal-300 border-teal-500/40' 
                           : isYouOwe 
-                          ? 'bg-amber-100 text-amber-800'
-                          : 'bg-slate-100 text-slate-700'
+                          ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                          : 'bg-[#102638] text-slate-300 border-slate-700'
                       }`}>
                         {group.personName.substring(0, 2).toUpperCase()}
                       </div>
                       <div>
-                        <h3 className="font-extrabold text-slate-900 text-base">{group.personName}</h3>
+                        <h3 className="font-bold text-slate-100 text-base">{group.personName}</h3>
                         {group.personPhone ? (
-                          <div className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
-                            <Phone className="w-3.5 h-3.5 text-slate-400" />
+                          <div className="flex items-center gap-1 text-xs text-slate-400 mt-0.5">
+                            <Phone className="w-3.5 h-3.5 text-cyan-400" />
                             <span>{group.personPhone}</span>
                           </div>
                         ) : (
-                          <div className="text-xs text-slate-400 mt-0.5">{group.transactions.length} Transactions</div>
+                          <div className="text-xs text-slate-500 mt-0.5">{group.transactions.length} Transactions</div>
                         )}
                       </div>
                     </div>
 
                     {/* Net Position Badge */}
-                    <span className={`px-2.5 py-1 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1 ${
+                    <span className={`px-2.5 py-1 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1 border ${
                       isOwesYou
-                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        ? 'bg-teal-500/20 text-teal-300 border-teal-500/40'
                         : isYouOwe
-                        ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                        : 'bg-slate-100 text-slate-700 border border-slate-200'
+                        ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                        : 'bg-[#102638] text-slate-300 border-slate-700'
                     }`}>
                       {isOwesYou ? (
                         <>
-                          <ArrowUpRight className="w-3.5 h-3.5" />
+                          <ArrowUpRight className="w-3.5 h-3.5 text-teal-400" />
                           Owes You {formatCurrency(group.netBalance)}
                         </>
                       ) : isYouOwe ? (
                         <>
-                          <ArrowDownLeft className="w-3.5 h-3.5" />
+                          <ArrowDownLeft className="w-3.5 h-3.5 text-rose-400" />
                           You Owe {formatCurrency(Math.abs(group.netBalance))}
                         </>
                       ) : (
                         <>
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#18E6BE]" />
                           Settled
                         </>
                       )}
@@ -456,45 +427,45 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
                   </div>
 
                   {/* Financial Matrix for Person */}
-                  <div className="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-2xl mt-3.5 text-center border border-slate-100">
+                  <div className="grid grid-cols-2 gap-2 bg-[#071724] p-3 rounded-xl mt-3.5 text-center border border-slate-800">
                     <div className="p-1">
-                      <div className="text-[10px] text-slate-500 font-bold uppercase">Udhaar Given Balance</div>
-                      <div className="font-extrabold text-emerald-700 text-sm mt-0.5">
+                      <div className="text-[10px] text-slate-400 font-semibold uppercase">Udhaar Given Balance</div>
+                      <div className="font-bold text-teal-400 text-sm mt-0.5">
                         {formatCurrency(group.totalGivenRemaining)}
                       </div>
-                      <div className="text-[10px] text-slate-400">Total: {formatCurrency(group.totalGiven)}</div>
+                      <div className="text-[10px] text-slate-500">Total: {formatCurrency(group.totalGiven)}</div>
                     </div>
-                    <div className="p-1 border-l border-slate-200">
-                      <div className="text-[10px] text-slate-500 font-bold uppercase">Borrowing Balance</div>
-                      <div className="font-extrabold text-amber-700 text-sm mt-0.5">
+                    <div className="p-1 border-l border-slate-800">
+                      <div className="text-[10px] text-slate-400 font-semibold uppercase">Borrowing Balance</div>
+                      <div className="font-bold text-rose-400 text-sm mt-0.5">
                         {formatCurrency(group.totalTakenRemaining)}
                       </div>
-                      <div className="text-[10px] text-slate-400">Total: {formatCurrency(group.totalTaken)}</div>
+                      <div className="text-[10px] text-slate-500">Total: {formatCurrency(group.totalTaken)}</div>
                     </div>
                   </div>
                 </div>
 
                 {/* Person Card Footer Actions */}
-                <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 flex-wrap">
+                <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-800 flex-wrap">
                   <button
                     onClick={() => setSelectedPersonForLedger(group.personName)}
-                    className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all flex items-center gap-1"
+                    className="px-3.5 py-1.5 rounded-xl bg-[#102638] hover:bg-[#16344d] text-cyan-300 text-xs font-semibold transition-all flex items-center gap-1.5 border border-cyan-500/20"
                   >
-                    <FileText className="w-3.5 h-3.5 text-slate-600" />
-                    Full Ledger ({group.transactions.length})
+                    <FileText className="w-3.5 h-3.5 text-[#18E6BE]" />
+                    <span>Full Ledger ({group.transactions.length})</span>
                   </button>
 
                   <div className="flex items-center gap-1.5 ml-auto">
                     <button
                       onClick={() => handleOpenAddForPerson(group.personName, 'given')}
-                      className="px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold transition-colors border border-emerald-200"
+                      className="px-2.5 py-1.5 rounded-xl bg-teal-950/50 hover:bg-teal-900/60 text-teal-300 text-[11px] font-bold transition-colors border border-teal-500/30"
                       title="Add Given Loan for this person"
                     >
                       + Udhaar
                     </button>
                     <button
                       onClick={() => handleOpenAddForPerson(group.personName, 'taken')}
-                      className="px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold transition-colors border border-amber-200"
+                      className="px-2.5 py-1.5 rounded-xl bg-rose-950/50 hover:bg-rose-900/60 text-rose-300 text-[11px] font-bold transition-colors border border-rose-500/30"
                       title="Add Borrowing for this person"
                     >
                       + Taken
@@ -507,55 +478,55 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
         </div>
       )}
 
-      {/* MODAL: FULL PERSON PROFILE LEDGER */}
+      {/* 5. MODAL: FULL PERSON PROFILE LEDGER */}
       {activePersonGroup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+          <div className="bg-[#0B1D2C] rounded-2xl max-w-xl w-full p-5 sm:p-6 shadow-2xl border border-cyan-500/30 animate-in fade-in zoom-in duration-200 max-h-[90vh] flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-800 font-extrabold text-base flex items-center justify-center">
+                <div className="w-11 h-11 rounded-xl bg-[#102638] text-cyan-400 border border-cyan-500/30 font-bold text-base flex items-center justify-center">
                   {activePersonGroup.personName.substring(0, 2).toUpperCase()}
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-slate-900 text-lg leading-tight">
+                  <h3 className="font-bold text-slate-100 text-lg leading-tight">
                     {activePersonGroup.personName}
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-400">
                     {activePersonGroup.personPhone ? `Phone: ${activePersonGroup.personPhone}` : 'Person Ledger Profile'}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setSelectedPersonForLedger(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100"
+                className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-[#102638]"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Net Position Summary Box */}
-            <div className="grid grid-cols-3 gap-2 bg-slate-50 p-3 rounded-2xl my-3 text-center border border-slate-200/60">
+            <div className="grid grid-cols-3 gap-2 bg-[#071724] p-3 rounded-xl my-3 text-center border border-slate-800">
               <div>
-                <div className="text-[10px] text-slate-500 font-bold uppercase">Udhaar Given</div>
-                <div className="font-extrabold text-emerald-700 text-sm mt-0.5">
+                <div className="text-[10px] text-slate-400 font-medium uppercase">Udhaar Given</div>
+                <div className="font-bold text-teal-400 text-sm mt-0.5">
                   {formatCurrency(activePersonGroup.totalGivenRemaining)}
                 </div>
               </div>
               <div>
-                <div className="text-[10px] text-slate-500 font-bold uppercase">Borrowing Taken</div>
-                <div className="font-extrabold text-amber-700 text-sm mt-0.5">
+                <div className="text-[10px] text-slate-400 font-medium uppercase">Borrowing Taken</div>
+                <div className="font-bold text-rose-400 text-sm mt-0.5">
                   {formatCurrency(activePersonGroup.totalTakenRemaining)}
                 </div>
               </div>
               <div>
-                <div className="text-[10px] text-slate-500 font-bold uppercase">Net Position</div>
-                <div className={`font-black text-sm mt-0.5 ${
+                <div className="text-[10px] text-slate-400 font-medium uppercase">Net Position</div>
+                <div className={`font-bold text-sm mt-0.5 ${
                   activePersonGroup.netBalance > 0 
-                    ? 'text-emerald-700' 
+                    ? 'text-teal-400' 
                     : activePersonGroup.netBalance < 0 
-                    ? 'text-amber-700' 
-                    : 'text-slate-800'
+                    ? 'text-rose-400' 
+                    : 'text-slate-300'
                 }`}>
                   {activePersonGroup.netBalance > 0 
                     ? `+${formatCurrency(activePersonGroup.netBalance)}`
@@ -569,19 +540,19 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
             {/* Transactions & Payment Timeline */}
             <div className="flex-1 overflow-y-auto pr-1 space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                   Transaction History ({activePersonGroup.transactions.length})
                 </h4>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => handleOpenAddForPerson(activePersonGroup.personName, 'given')}
-                    className="px-2 py-1 bg-emerald-50 text-emerald-800 text-[10px] font-bold rounded-lg hover:bg-emerald-100"
+                    className="px-2 py-1 bg-teal-950/60 text-teal-300 text-[10px] font-bold rounded-lg border border-teal-500/30"
                   >
                     + Given
                   </button>
                   <button
                     onClick={() => handleOpenAddForPerson(activePersonGroup.personName, 'taken')}
-                    className="px-2 py-1 bg-amber-50 text-amber-800 text-[10px] font-bold rounded-lg hover:bg-amber-100"
+                    className="px-2 py-1 bg-rose-950/60 text-rose-300 text-[10px] font-bold rounded-lg border border-rose-500/30"
                   >
                     + Taken
                   </button>
@@ -593,34 +564,34 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
                 const isSettled = balance === 0;
 
                 return (
-                  <div key={tx.id} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
+                  <div key={tx.id} className="p-3.5 bg-[#071724] rounded-xl border border-slate-800 space-y-2">
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                          <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border ${
                             tx.type === 'given' 
-                              ? 'bg-emerald-100 text-emerald-800' 
-                              : 'bg-amber-100 text-amber-800'
+                              ? 'bg-teal-500/20 text-teal-300 border-teal-500/40' 
+                              : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
                           }`}>
-                            {tx.type === 'given' ? 'Money Given (Udhaar)' : 'Money Taken (Borrowed)'}
+                            {tx.type === 'given' ? 'Money Given' : 'Borrowed'}
                           </span>
-                          <span className="text-xs font-bold text-slate-900">{formatCurrency(tx.principalAmount)}</span>
+                          <span className="text-xs font-bold text-slate-100">{formatCurrency(tx.principalAmount)}</span>
                           <button
                             onClick={() => handleDeleteLoan(tx.id)}
-                            className="text-slate-400 hover:text-rose-600 p-0.5 ml-1"
+                            className="text-slate-500 hover:text-rose-400 p-0.5 ml-1 transition-colors"
                             title="Delete transaction"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
-                        <div className="text-[11px] text-slate-500 mt-1">
+                        <div className="text-[11px] text-slate-400 mt-1">
                           Date: {formatDate(tx.date, 'short')} {tx.dueDate && `• Due: ${formatDate(tx.dueDate, 'short')}`}
                         </div>
-                        {tx.notes && <div className="text-xs text-slate-600 mt-0.5">"{tx.notes}"</div>}
+                        {tx.notes && <div className="text-xs text-slate-300 mt-0.5">"{tx.notes}"</div>}
                       </div>
 
                       <div className="text-right">
-                        <div className="text-xs font-black text-slate-900">
+                        <div className="text-xs font-bold text-slate-100">
                           {formatCurrency(balance)} <span className="text-[10px] text-slate-400 font-normal">rem</span>
                         </div>
                         {!isSettled && (
@@ -629,7 +600,7 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
                               setSelectedLoanForPayment(tx);
                               setPaymentAmount(balance.toString());
                             }}
-                            className="mt-1 px-2.5 py-1 bg-emerald-600 text-white font-bold text-[10px] rounded-lg hover:bg-emerald-700 shadow-xs"
+                            className="mt-1 px-2.5 py-1 bg-[#18E6BE] hover:bg-[#23F2CB] text-slate-950 font-bold text-[10px] rounded-lg shadow-sm transition-colors"
                           >
                             + Log Return
                           </button>
@@ -639,15 +610,15 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
 
                     {/* Payment History for this specific transaction */}
                     {tx.payments && tx.payments.length > 0 && (
-                      <div className="pt-2 border-t border-slate-200/60 space-y-1">
+                      <div className="pt-2 border-t border-slate-800 space-y-1">
                         <div className="text-[10px] font-bold text-slate-400 uppercase">Repayments:</div>
                         {tx.payments.map((p) => (
-                          <div key={p.id} className="flex items-center justify-between text-[11px] bg-white px-2.5 py-1 rounded-lg border border-slate-200/60">
-                            <span className="font-bold text-slate-800">{formatCurrency(p.amount)}</span>
-                            <span className="text-slate-500">{formatDate(p.date, 'short')} {p.note && `• ${p.note}`}</span>
+                          <div key={p.id} className="flex items-center justify-between text-[11px] bg-[#0B1D2C] px-2.5 py-1 rounded-lg border border-slate-800">
+                            <span className="font-bold text-slate-200">{formatCurrency(p.amount)}</span>
+                            <span className="text-slate-400">{formatDate(p.date, 'short')} {p.note && `• ${p.note}`}</span>
                             <button
                               onClick={() => handleDeletePayment(tx.id, p.id)}
-                              className="text-slate-400 hover:text-rose-600 p-0.5"
+                              className="text-slate-500 hover:text-rose-400 p-0.5"
                             >
                               <Trash2 className="w-3 h-3" />
                             </button>
@@ -660,10 +631,10 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
               })}
             </div>
 
-            <div className="pt-3 border-t border-slate-100 flex justify-end">
+            <div className="pt-3 border-t border-slate-800 flex justify-end">
               <button
                 onClick={() => setSelectedPersonForLedger(null)}
-                className="px-5 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold"
+                className="px-5 py-2 bg-[#102638] hover:bg-[#16344d] text-slate-200 font-semibold rounded-xl text-xs border border-slate-700 transition-colors"
               >
                 Close Ledger
               </button>
@@ -672,18 +643,18 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
         </div>
       )}
 
-      {/* MODAL: ADD LOAN TRANSACTION / PERSON */}
+      {/* 6. MODAL: ADD LOAN TRANSACTION / PERSON */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
-                <HandCoins className="w-5 h-5 text-emerald-600" />
-                Add Loan Transaction
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+          <div className="bg-[#0B1D2C] rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-cyan-500/30 animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h3 className="font-bold text-slate-100 text-lg flex items-center gap-2">
+                <HandCoins className="w-5 h-5 text-[#18E6BE]" />
+                <span>Add Lease / Loan Entry</span>
               </h3>
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100"
+                className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-[#102638]"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -692,7 +663,7 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
             <form onSubmit={handleAddLoan} className="space-y-4 mt-4">
               {/* Type Switcher */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                <label className="block text-xs font-medium text-slate-300 mb-1.5">
                   Transaction Type
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -701,11 +672,11 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
                     onClick={() => setLoanType('given')}
                     className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
                       loanType === 'given'
-                        ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm'
-                        : 'bg-slate-50 border-slate-200 text-slate-600'
+                        ? 'bg-teal-500/20 border-teal-500 text-teal-300 shadow-sm'
+                        : 'bg-[#071724] border-slate-700 text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    <ArrowUpRight className="w-4 h-4 text-emerald-600" />
+                    <ArrowUpRight className="w-4 h-4 text-teal-400" />
                     Money Given (Udhaar)
                   </button>
                   <button
@@ -713,11 +684,11 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
                     onClick={() => setLoanType('taken')}
                     className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
                       loanType === 'taken'
-                        ? 'bg-amber-50 border-amber-500 text-amber-700 shadow-sm'
-                        : 'bg-slate-50 border-slate-200 text-slate-600'
+                        ? 'bg-rose-500/20 border-rose-500 text-rose-300 shadow-sm'
+                        : 'bg-[#071724] border-slate-700 text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    <ArrowDownLeft className="w-4 h-4 text-amber-600" />
+                    <ArrowDownLeft className="w-4 h-4 text-rose-400" />
                     Money Taken (Borrowed)
                   </button>
                 </div>
@@ -725,14 +696,14 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
 
               {/* Person Selection */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-medium text-slate-300 mb-1">
                   Select or Add Person *
                 </label>
                 {existingPeople.length > 0 && (
                   <select
                     value={existingPersonSelect}
                     onChange={(e) => setExistingPersonSelect(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 mb-2"
+                    className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-xs font-semibold text-slate-200 mb-2 focus:outline-none focus:border-cyan-400"
                   >
                     <option value="__new__">+ Create New Person Profile</option>
                     {existingPeople.map(name => (
@@ -743,14 +714,14 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
 
                 {existingPersonSelect === '__new__' && (
                   <div className="relative">
-                    <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <User className="w-4 h-4 text-cyan-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
                       required
                       placeholder="e.g. Saleem bhai, Ali, Ahmed"
                       value={personNameInput}
                       onChange={(e) => setPersonNameInput(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium"
+                      className="w-full pl-9 pr-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-medium"
                     />
                   </div>
                 )}
@@ -758,24 +729,24 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
 
               {/* Phone */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-medium text-slate-300 mb-1">
                   Phone Number (Optional)
                 </label>
                 <div className="relative">
-                  <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Phone className="w-4 h-4 text-cyan-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="tel"
                     placeholder="e.g. 0300-1234567"
                     value={personPhone}
                     onChange={(e) => setPersonPhone(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium"
+                    className="w-full pl-9 pr-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-medium"
                   />
                 </div>
               </div>
 
               {/* Amount */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-medium text-slate-300 mb-1">
                   Amount (PKR) *
                 </label>
                 <input
@@ -786,14 +757,14 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
                   placeholder="e.g. 50000"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-base font-bold text-slate-100 placeholder-slate-600 focus:outline-none focus:border-cyan-400"
                 />
               </div>
 
               {/* Dates */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-medium text-slate-300 mb-1">
                     Date
                   </label>
                   <input
@@ -801,25 +772,25 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
                     required
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
+                    className="w-full px-2.5 py-2 bg-[#071724] border border-slate-700 rounded-xl text-xs font-medium text-slate-200 focus:outline-none focus:border-cyan-400"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-medium text-slate-300 mb-1">
                     Due Date (Optional)
                   </label>
                   <input
                     type="date"
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
+                    className="w-full px-2.5 py-2 bg-[#071724] border border-slate-700 rounded-xl text-xs font-medium text-slate-200 focus:outline-none focus:border-cyan-400"
                   />
                 </div>
               </div>
 
               {/* Notes */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-medium text-slate-300 mb-1">
                   Notes / Details
                 </label>
                 <textarea
@@ -827,24 +798,24 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
                   placeholder="Optional notes..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-400"
                 />
               </div>
 
               {/* Submit Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-[#102638] border border-slate-700 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20"
+                  className="px-5 py-2 rounded-xl bg-[#18E6BE] hover:bg-[#23F2CB] text-slate-950 font-bold text-xs sm:text-sm shadow-md shadow-[#18E6BE]/20 transition-all"
                 >
-                  Save Loan Entry
+                  Save Entry
                 </button>
               </div>
             </form>
@@ -852,37 +823,37 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
         </div>
       )}
 
-      {/* MODAL: LOG REPAYMENT */}
+      {/* 7. MODAL: LOG REPAYMENT */}
       {selectedLoanForPayment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+          <div className="bg-[#0B1D2C] rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-cyan-500/30 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div>
-                <h3 className="font-bold text-slate-900 text-lg">
+                <h3 className="font-bold text-slate-100 text-lg">
                   Log Return / Payment
                 </h3>
-                <p className="text-xs text-slate-500">
-                  Person: <strong className="text-slate-800">{selectedLoanForPayment.personName}</strong>
+                <p className="text-xs text-slate-400">
+                  Person: <strong className="text-slate-200">{selectedLoanForPayment.personName}</strong>
                 </p>
               </div>
               <button
                 onClick={() => setSelectedLoanForPayment(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100"
+                className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-[#102638]"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleAddPayment} className="space-y-4 mt-4">
-              <div className="bg-slate-50 p-3 rounded-xl flex justify-between items-center text-xs">
-                <span className="text-slate-500">Transaction Balance Remaining:</span>
-                <span className="font-bold text-slate-900 text-sm">
+              <div className="bg-[#071724] p-3 rounded-xl flex justify-between items-center text-xs border border-slate-800">
+                <span className="text-slate-400">Transaction Balance Remaining:</span>
+                <span className="font-bold text-slate-100 text-sm">
                   {formatCurrency(calculateBalance(selectedLoanForPayment))}
                 </span>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-medium text-slate-300 mb-1">
                   Payment Amount (PKR) *
                 </label>
                 <input
@@ -892,12 +863,12 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
                   step="any"
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-base font-bold text-slate-100 placeholder-slate-600 focus:outline-none focus:border-cyan-400"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-medium text-slate-300 mb-1">
                   Payment Date
                 </label>
                 <input
@@ -905,12 +876,12 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
                   required
                   value={paymentDate}
                   onChange={(e) => setPaymentDate(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
+                  className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-xs font-medium text-slate-200 focus:outline-none focus:border-cyan-400"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-medium text-slate-300 mb-1">
                   Note (Optional)
                 </label>
                 <input
@@ -918,21 +889,21 @@ export const LoanTracker: React.FC<LoanTrackerProps> = ({ onOpenReport }) => {
                   placeholder="e.g. Bank transfer, Cash installment"
                   value={paymentNote}
                   onChange={(e) => setPaymentNote(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800"
+                  className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-400"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setSelectedLoanForPayment(null)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-[#102638] border border-slate-700 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20"
+                  className="px-5 py-2 rounded-xl bg-[#18E6BE] hover:bg-[#23F2CB] text-slate-950 font-bold text-xs sm:text-sm shadow-md shadow-[#18E6BE]/20 transition-all"
                 >
                   Confirm Payment
                 </button>

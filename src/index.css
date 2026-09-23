@@ -2,34 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg-app: #071724;
+  --bg-surface: #0B1D2C;
+  --bg-surface-secondary: #102638;
+  --bg-elevated: #122B3E;
+  --bg-input: #091A28;
+  --border-default: rgba(70, 150, 180, 0.18);
+  --border-strong: rgba(55, 210, 190, 0.32);
+  --accent-primary: #18E6BE;
+  --text-primary: #F4F8FB;
+  --text-secondary: #A9BDCC;
+  --text-muted: #6F899B;
+}
+
 @layer base {
   * {
     -webkit-tap-highlight-color: transparent;
   }
   
   body {
-    @apply bg-slate-100 text-slate-900 min-h-screen font-sans;
+    background-color: #071724;
+    background-image: radial-gradient(circle at 50% -10%, rgba(24, 120, 150, 0.18) 0%, rgba(7, 23, 36, 0.95) 50%, #06131F 100%);
+    background-attachment: fixed;
+    color: #F4F8FB;
+    min-height: 100vh;
+    font-family: Inter, system-ui, -apple-system, sans-serif;
     touch-action: manipulation;
   }
 }
 
-/* Custom scrollbars for clean mobile/desktop appearance */
+/* Custom scrollbars for dark premium appearance */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #071724;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #122B3E;
   border-radius: 9999px;
+  border: 1px solid rgba(70, 150, 180, 0.2);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #18E6BE;
 }
 
 /* A4 Print & PDF Stylesheet */

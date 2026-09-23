@@ -24,6 +24,7 @@ import {
   Layers,
   Zap
 } from 'lucide-react';
+import { PageHeader } from '../ui/PageHeader';
 
 export type ReportCategory = 'master' | 'utility' | 'milk' | 'rent' | 'petrol' | 'loans';
 
@@ -206,49 +207,33 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     <div className="space-y-6 pb-16">
       {/* Top Toolbar (Hidden in Print) */}
       <div className="no-print space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-800 flex items-center gap-2">
-              <FileText className="w-6 h-6 text-emerald-600" />
-              Monthly Statements & Reports
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500">
-              Mobile-responsive layout with instant Print and high-resolution Save as JPG options
-            </p>
-          </div>
+        <PageHeader
+          title="Monthly Statements & Reports"
+          subtitle="Mobile-responsive layout with instant Print and high-resolution Save as JPG options"
+          icon={FileText}
+          selectedMonth={selectedMonth}
+          onMonthChange={setSelectedMonth}
+        >
+          <button
+            onClick={handlePrint}
+            className="px-3.5 py-2 bg-[#102638] hover:bg-[#1a3850] text-[#F4F8FB] border border-[rgba(70,150,180,0.25)] rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-sm transition-all"
+          >
+            <Printer className="w-4 h-4" />
+            <span>Print</span>
+          </button>
 
-          {/* Month Selector & Export Action Buttons */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-sm text-xs font-bold text-slate-700">
-              <input
-                type="month"
-                value={selectedMonth}
-                onChange={(e) => e.target.value && setSelectedMonth(e.target.value)}
-                className="bg-transparent focus:outline-none cursor-pointer"
-              />
-            </div>
-
-            <button
-              onClick={handlePrint}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-sm transition-all"
-            >
-              <Printer className="w-4 h-4" />
-              Print
-            </button>
-
-            <button
-              onClick={handleSaveJpg}
-              disabled={isExporting}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all"
-            >
-              <Download className="w-4 h-4" />
-              {isExporting ? 'Generating JPG...' : 'Save as JPG'}
-            </button>
-          </div>
-        </div>
+          <button
+            onClick={handleSaveJpg}
+            disabled={isExporting}
+            className="px-4 py-2 bg-[#18E6BE] hover:bg-[#23F2CB] disabled:opacity-50 text-[#06131F] rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-[0_0_15px_rgba(24,230,190,0.25)] transition-all"
+          >
+            <Download className="w-4 h-4" />
+            <span>{isExporting ? 'Generating JPG...' : 'Save as JPG'}</span>
+          </button>
+        </PageHeader>
 
         {/* Category Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 bg-[#0B1D2C] p-2 rounded-2xl border border-cyan-500/20 shadow-lg scrollbar-none">
           {[
             { id: 'utility' as ReportCategory, label: 'Utility Report', icon: Zap },
             { id: 'milk' as ReportCategory, label: 'Milk Report', icon: Milk },
@@ -265,8 +250,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 onClick={() => setActiveCategory(tab.id)}
                 className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all ${
                   isActive
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    ? 'bg-[#18E6BE] text-[#06131F] font-black shadow-[0_0_15px_rgba(24,230,190,0.3)]'
+                    : 'text-[#A9BDCC] hover:bg-[#102638] hover:text-[#F4F8FB]'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -281,7 +266,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       <div 
         id="printable-report-card" 
         ref={reportRef}
-        className="bg-white rounded-3xl p-3.5 sm:p-6 border border-slate-200/90 shadow-md max-w-4xl mx-auto text-slate-900 font-sans print-page overflow-hidden"
+        className="bg-white rounded-3xl p-3.5 sm:p-6 border border-slate-200/90 shadow-2xl max-w-4xl mx-auto text-slate-900 font-sans print-page overflow-hidden"
       >
         {/* Report Header */}
         <div className="flex flex-col sm:flex-row sm:items-start justify-between border-b-2 border-slate-900 pb-2.5 mb-2.5 gap-2">
@@ -730,13 +715,29 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               <div>
                 <div className="text-[9px] font-bold uppercase text-slate-500">Logged Travel</div>
                 <div className="text-sm sm:text-base font-black text-slate-900 mt-0.5">{formatNumber(monthlyPetrolStats.loggedTravelKm, 0)} km</div>
+                <div className="text-[8.5px] text-slate-400 font-normal">odometer log</div>
               </div>
               <div>
                 <div className="text-[9px] font-bold uppercase text-slate-500">Petrol Purchased</div>
                 <div className="text-sm sm:text-base font-black text-slate-900 mt-0.5">{formatNumber(monthlyPetrolStats.monthlyLitres, 1)} L</div>
+                <div className="text-[8.5px] text-slate-400 font-normal">total bought</div>
               </div>
               <div>
-                <div className="text-[9px] font-bold uppercase text-emerald-700">Average Mileage</div>
+                <div className="text-[9px] font-bold uppercase text-slate-500">Petrol Cost</div>
+                <div className="text-sm sm:text-base font-black text-slate-900 mt-0.5">{formatCurrency(monthlyPetrolStats.monthlyCost)}</div>
+                <div className="text-[8.5px] text-slate-400 font-normal">monthly spend</div>
+              </div>
+              <div>
+                <div className="text-[9px] font-bold uppercase text-slate-700">Avg Refill Rate</div>
+                <div className="text-sm sm:text-base font-black text-slate-800 mt-0.5">
+                  {monthlyPetrolStats.avgRefillCostPerKm > 0 ? `${formatNumber(monthlyPetrolStats.avgRefillCostPerKm, 2)} PKR` : '—'}
+                </div>
+                <div className="text-[8.5px] text-slate-400 font-normal">
+                  {monthlyPetrolStats.completedRefillsCount > 0 ? `${monthlyPetrolStats.completedRefillsCount} completed legs` : 'in progress'}
+                </div>
+              </div>
+              <div>
+                <div className="text-[9px] font-bold uppercase text-emerald-700">Verified Mileage</div>
                 <div className="text-sm sm:text-base font-black text-emerald-700 mt-0.5">
                   {monthlyPetrolStats.avgMileage > 0 ? (
                     `${formatNumber(monthlyPetrolStats.avgMileage, 1)} km/L`
@@ -745,17 +746,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                   )}
                 </div>
                 <div className="text-[8.5px] text-slate-400 font-normal">
-                  {monthlyPetrolStats.completedIntervalsCount > 0 ? `${monthlyPetrolStats.completedIntervalsCount} completed full-tank` : 'no full-tank interval'}
-                </div>
-              </div>
-              <div>
-                <div className="text-[9px] font-bold uppercase text-slate-500">Petrol Cost</div>
-                <div className="text-sm sm:text-base font-black text-slate-900 mt-0.5">{formatCurrency(monthlyPetrolStats.monthlyCost)}</div>
-              </div>
-              <div>
-                <div className="text-[9px] font-bold uppercase text-slate-500">Cost / KM</div>
-                <div className="text-sm sm:text-base font-black text-slate-800 mt-0.5">
-                  {monthlyPetrolStats.costPerKm > 0 ? `${formatNumber(monthlyPetrolStats.costPerKm, 2)} PKR` : '—'}
+                  {monthlyPetrolStats.completedIntervalsCount > 0 ? `${monthlyPetrolStats.completedIntervalsCount} full-tank` : 'no full-tank interval'}
                 </div>
               </div>
             </div>
@@ -763,26 +754,27 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
             {/* Refill Log Details */}
             <div>
               <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                Fuel Refill Logs — {formattedMonthName}
+                Fuel Refill Logs & Economy — {formattedMonthName}
               </h3>
               <div className="border border-slate-200 rounded-xl overflow-hidden">
                 <table className="w-full table-fixed text-left border-collapse text-[10.5px] sm:text-xs">
                   <thead>
                     <tr className="bg-slate-100 border-b border-slate-300 text-[9px] sm:text-[10px] font-black text-slate-600 uppercase">
-                      <th className="py-1.5 px-2 w-[13%]">Date</th>
-                      <th className="py-1.5 px-2 w-[14%]">Odometer</th>
-                      <th className="py-1.5 px-2 w-[10%]">Quantity</th>
-                      <th className="py-1.5 px-2 w-[10%]">Rate/L</th>
-                      <th className="py-1.5 px-2 text-right w-[13%]">Cost</th>
-                      <th className="py-1.5 px-2 text-center w-[13%]">Type</th>
-                      <th className="py-1.5 px-2 text-right w-[13%]">Distance</th>
-                      <th className="py-1.5 px-2 text-right w-[14%]">Mileage</th>
+                      <th className="py-1.5 px-2 w-[11%]">Date</th>
+                      <th className="py-1.5 px-2 w-[13%]">Odometer</th>
+                      <th className="py-1.5 px-2 w-[10%]">Fuel</th>
+                      <th className="py-1.5 px-2 w-[9%]">Rate</th>
+                      <th className="py-1.5 px-2 text-right w-[12%]">Cost</th>
+                      <th className="py-1.5 px-2 text-center w-[11%]">Type</th>
+                      <th className="py-1.5 px-2 text-right w-[12%]">Distance After</th>
+                      <th className="py-1.5 px-2 text-right w-[11%]">Refill Cost/KM</th>
+                      <th className="py-1.5 px-2 text-right w-[11%]">Verified KM/L</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
                     {monthlyPetrolRefills.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="py-4 text-center text-slate-400">No refill logs in this month.</td>
+                        <td colSpan={9} className="py-4 text-center text-slate-400">No refill logs in this month.</td>
                       </tr>
                     ) : (
                       monthlyPetrolRefills.map(r => (
@@ -804,19 +796,18 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                             </span>
                           </td>
                           <td className="py-1 px-2 text-right font-semibold truncate">
-                            {r.calculationType === 'completed' ? (
-                              `+${r.intervalDistance} km`
-                            ) : r.calculationType === 'baseline' ? (
-                              'Baseline'
-                            ) : r.stepDistance > 0 ? (
-                              `+${r.stepDistance} km`
+                            {r.isRefillSegmentComplete ? (
+                              r.displayDistanceUntilNext
                             ) : (
-                              '—'
+                              <span className="text-amber-700 font-bold">In Progress</span>
                             )}
+                          </td>
+                          <td className="py-1 px-2 text-right font-bold text-slate-800 truncate">
+                            {r.refillCostPerKm !== null ? `${formatNumber(r.refillCostPerKm, 2)}` : '—'}
                           </td>
                           <td className="py-1 px-2 text-right font-bold text-emerald-700 truncate">
                             {r.calculationType === 'completed' && r.mileageKmpl > 0 ? (
-                              `${formatNumber(r.mileageKmpl, 1)} km/L`
+                              `${formatNumber(r.mileageKmpl, 1)}`
                             ) : (
                               '—'
                             )}
@@ -831,6 +822,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                       <td className="py-1.5 px-2 text-right text-emerald-800 truncate">{formatCurrency(monthlyPetrolStats.monthlyCost)}</td>
                       <td></td>
                       <td className="py-1.5 px-2 text-right truncate">{formatNumber(monthlyPetrolStats.loggedTravelKm, 0)} km</td>
+                      <td className="py-1.5 px-2 text-right text-slate-800 truncate">
+                        {monthlyPetrolStats.avgRefillCostPerKm > 0 ? `${formatNumber(monthlyPetrolStats.avgRefillCostPerKm, 2)}` : '—'}
+                      </td>
                       <td className="py-1.5 px-2 text-right text-emerald-800 truncate">
                         {monthlyPetrolStats.avgMileage > 0 ? `${formatNumber(monthlyPetrolStats.avgMileage, 1)} km/L` : '—'}
                       </td>

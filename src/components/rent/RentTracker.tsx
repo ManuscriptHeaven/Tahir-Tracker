@@ -20,11 +20,15 @@ import {
   Edit2, 
   Trash2, 
   User, 
-  X,
-  Building,
-  History,
-  MessageSquare
+  X, 
+  Building, 
+  History, 
+  MessageSquare,
+  DollarSign
 } from 'lucide-react';
+import { PageHeader } from '../ui/PageHeader';
+import { MetricCard } from '../ui/MetricCard';
+import { EmptyState } from '../ui/EmptyState';
 
 interface RentTrackerProps {
   selectedMonth: string; // YYYY-MM
@@ -101,6 +105,8 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
   const totalOverallPayable = totalCurrentExpected + totalPreviousArrears;
   const totalNetOutstanding = Math.max(0, totalOverallPayable - totalCollected);
   const collectionRate = totalOverallPayable > 0 ? Math.round((totalCollected / totalOverallPayable) * 100) : 0;
+  const paidCount = portions.filter(p => getPortionFinancials(p, currentRecordMap.get(p.id)).status === 'paid').length;
+  const pendingCount = portions.length - paidCount;
 
   // Handle Save Portion
   const handleSavePortion = async (e: React.FormEvent) => {
@@ -220,338 +226,317 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
   return (
     <div className="space-y-6 pb-16">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <Home className="w-6 h-6 text-emerald-600" />
-            Rent Management
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500">
-            Portions, monthly dues, collection, and cumulative previous arrears tracking
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {onOpenReport && (
-            <button
-              onClick={onOpenReport}
-              className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-sm"
-            >
-              <FileText className="w-4 h-4 text-slate-600" />
-              Rent Report
-            </button>
-          )}
-          <button
-            onClick={() => {
-              resetPortionForm();
-              setIsPortionModalOpen(true);
-            }}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-md shadow-emerald-600/20"
-          >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            Manage Portions
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Rent Management"
+        subtitle="Portions, monthly dues, collection, and cumulative previous arrears tracking"
+        icon={Home}
+        primaryAction={{
+          label: 'Manage Portions',
+          icon: Plus,
+          onClick: () => {
+            resetPortionForm();
+            setIsPortionModalOpen(true);
+          }
+        }}
+        secondaryAction={onOpenReport ? {
+          label: 'Rent Report',
+          icon: FileText,
+          onClick: onOpenReport
+        } : undefined}
+      />
 
       {/* Monthly & Arrears Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-4 text-white shadow-md">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-100">
-            Collected Rent
-          </div>
-          <div className="text-2xl sm:text-3xl font-extrabold mt-1">
-            {formatCurrency(totalCollected)}
-          </div>
-          <div className="flex items-center justify-between text-xs mt-2 pt-2 border-t border-white/20 text-emerald-100 font-medium">
-            <span>Total Payable: {formatCurrency(totalOverallPayable)}</span>
-            <span>{collectionRate}%</span>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <MetricCard
+          title="Collected Rent"
+          value={formatCurrency(totalCollected)}
+          subtitle={`Total Payable: ${formatCurrency(totalOverallPayable)} (${collectionRate}%)`}
+          icon={DollarSign}
+          variant="accent"
+        />
 
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            Total Outstanding
-          </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-amber-600 mt-1">
-            {formatCurrency(totalNetOutstanding)}
-          </div>
-          <div className="text-xs text-slate-500 mt-2 pt-2 border-t border-slate-100 flex justify-between">
-            <span>Current: {formatCurrency(Math.max(0, totalCurrentExpected - totalCollected))}</span>
-            <span className="text-amber-700 font-bold">Arrears: {formatCurrency(totalPreviousArrears)}</span>
-          </div>
-        </div>
+        <MetricCard
+          title="Total Outstanding"
+          value={formatCurrency(totalNetOutstanding)}
+          subtitle={`Current: ${formatCurrency(Math.max(0, totalCurrentExpected - totalCollected))} • Arrears: ${formatCurrency(totalPreviousArrears)}`}
+          icon={AlertTriangle}
+          variant="warning"
+        />
 
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            Previous Arrears
-          </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-rose-700 mt-1">
-            {formatCurrency(totalPreviousArrears)}
-          </div>
-          <div className="text-xs text-slate-500 mt-2 pt-2 border-t border-slate-100">
-            Accumulated from past months
-          </div>
-        </div>
+        <MetricCard
+          title="Previous Arrears"
+          value={formatCurrency(totalPreviousArrears)}
+          subtitle="Accumulated from past months"
+          icon={History}
+          variant="danger"
+        />
 
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col justify-between">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            Collection Status
-          </div>
-          <div className="flex items-center gap-3 mt-1">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>{portions.filter(p => getPortionFinancials(p, currentRecordMap.get(p.id)).status === 'paid').length} Paid</span>
+        <div className="bg-[#0B1D2C] border border-cyan-500/20 rounded-2xl p-4 flex flex-col justify-between shadow-lg">
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Collection Status
             </div>
-            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600">
-              <Clock className="w-4 h-4" />
-              <span>{portions.filter(p => getPortionFinancials(p, currentRecordMap.get(p.id)).status !== 'paid').length} Pending</span>
+            <div className="flex items-center gap-3 mt-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-teal-400">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{paidCount} Paid</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400">
+                <Clock className="w-4 h-4" />
+                <span>{pendingCount} Pending</span>
+              </div>
             </div>
           </div>
-          <div className="w-full bg-slate-100 h-2 rounded-full mt-2 overflow-hidden">
-            <div className="bg-emerald-500 h-full rounded-full transition-all" style={{ width: `${collectionRate}%` }} />
+          <div className="mt-3">
+            <div className="flex justify-between text-[11px] font-bold text-slate-400 mb-1">
+              <span>Progress</span>
+              <span className="text-teal-300">{collectionRate}%</span>
+            </div>
+            <div className="w-full bg-[#071724] h-2 rounded-full overflow-hidden border border-slate-800">
+              <div 
+                className="bg-gradient-to-r from-teal-500 to-[#18E6BE] h-full rounded-full transition-all" 
+                style={{ width: `${Math.min(100, collectionRate)}%` }} 
+              />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Portions Grid for Selected Month */}
       {portions.length === 0 ? (
-        <div className="bg-white rounded-3xl p-8 sm:p-12 text-center border border-dashed border-slate-300 shadow-sm space-y-3">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
-            <Building className="w-7 h-7" />
-          </div>
-          <h3 className="font-bold text-slate-800 text-base">No Rental Portions Added</h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            Add your house portions or apartments along with tenant details to start tracking monthly rents and collections.
-          </p>
-          <button
-            onClick={() => {
+        <EmptyState
+          icon={Building}
+          title="No Rental Portions Added"
+          description="Add your house portions or apartments along with tenant details to start tracking monthly rents and collections."
+          action={{
+            label: 'Add First Portion',
+            onClick: () => {
               resetPortionForm();
               setIsPortionModalOpen(true);
-            }}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs inline-flex items-center gap-1.5 shadow-sm transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            Add First Portion
-          </button>
-        </div>
+            }
+          }}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {portions.map(portion => {
             const record = currentRecordMap.get(portion.id);
-          const fin = getPortionFinancials(portion, record);
+            const fin = getPortionFinancials(portion, record);
 
-          const isPaid = fin.status === 'paid';
-          const isPartial = fin.status === 'partially_paid';
-          const isOverdue = fin.status === 'overdue';
+            const isPaid = fin.status === 'paid';
+            const isPartial = fin.status === 'partially_paid';
+            const isOverdue = fin.status === 'overdue';
 
-          return (
-            <div
-              key={portion.id}
-              className={`bg-white rounded-3xl p-5 border transition-all shadow-sm flex flex-col justify-between gap-4 ${
-                isPaid
-                  ? 'border-emerald-200/80 hover:border-emerald-400'
-                  : isOverdue
-                  ? 'border-rose-200 hover:border-rose-400'
-                  : 'border-slate-200/90 hover:border-slate-300'
-              }`}
-            >
-              <div>
-                {/* Top Row: Portion Name & Status Badge */}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold ${
-                      isPaid
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : isOverdue
-                        ? 'bg-rose-100 text-rose-800'
-                        : 'bg-amber-100 text-amber-800'
-                    }`}>
-                      <Building className="w-5 h-5" />
+            return (
+              <div
+                key={portion.id}
+                className={`bg-[#0B1D2C] rounded-3xl p-5 border transition-all shadow-lg flex flex-col justify-between gap-4 ${
+                  isPaid
+                    ? 'border-teal-500/40 hover:border-teal-400/60'
+                    : isOverdue
+                    ? 'border-rose-500/40 hover:border-rose-400/60'
+                    : isPartial
+                    ? 'border-blue-500/40 hover:border-blue-400/60'
+                    : 'border-cyan-500/20 hover:border-cyan-500/40'
+                }`}
+              >
+                <div>
+                  {/* Top Row: Portion Name & Status Badge */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold border ${
+                        isPaid
+                          ? 'bg-teal-500/20 text-[#18E6BE] border-teal-500/30'
+                          : isOverdue
+                          ? 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                          : isPartial
+                          ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                          : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                      }`}>
+                        <Building className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-extrabold text-white text-base">{portion.portionName}</h3>
+                        <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-0.5">
+                          <User className="w-3.5 h-3.5 text-slate-500" />
+                          <span>{portion.tenantName}</span>
+                          {portion.tenantPhone && (
+                            <span className="text-slate-500">({portion.tenantPhone})</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
+
+                    {/* Status Badges */}
+                    <span className={`px-2.5 py-1 rounded-xl text-[11px] font-extrabold uppercase tracking-wide flex items-center gap-1 border ${
+                      isPaid
+                        ? 'bg-teal-500/20 text-[#18E6BE] border-teal-500/40'
+                        : isOverdue
+                        ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                        : isPartial
+                        ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                        : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                    }`}>
+                      {isPaid ? (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          PAID
+                        </>
+                      ) : isOverdue ? (
+                        <>
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                          OVERDUE
+                        </>
+                      ) : isPartial ? (
+                        <>
+                          <Clock className="w-3.5 h-3.5" />
+                          PARTIAL
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-3.5 h-3.5" />
+                          PENDING
+                        </>
+                      )}
+                    </span>
+                  </div>
+
+                  {/* Amount Breakdown Matrix including Previous Arrears */}
+                  <div className="grid grid-cols-4 gap-2 bg-[#071724] p-3 rounded-2xl mt-3.5 text-center border border-slate-800">
                     <div>
-                      <h3 className="font-extrabold text-slate-900 text-base">{portion.portionName}</h3>
-                      <div className="flex items-center gap-1.5 text-xs text-slate-600 mt-0.5">
-                        <User className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{portion.tenantName}</span>
-                        {portion.tenantPhone && (
-                          <span className="text-slate-400">({portion.tenantPhone})</span>
-                        )}
+                      <div className="text-[9px] text-slate-400 font-bold uppercase">Current Rent</div>
+                      <div className="font-bold text-slate-200 text-xs sm:text-sm mt-0.5">
+                        {formatCurrency(fin.currentExpected)}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-[9px] text-rose-400 font-bold uppercase flex items-center justify-center gap-0.5">
+                        <History className="w-2.5 h-2.5" />
+                        Arrears
+                      </div>
+                      <div className={`font-bold text-xs sm:text-sm mt-0.5 ${
+                        fin.previousArrears > 0 ? 'text-rose-400 font-black' : 'text-slate-400'
+                      }`}>
+                        {formatCurrency(fin.previousArrears)}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-[9px] text-slate-400 font-bold uppercase">Collected</div>
+                      <div className="font-bold text-[#18E6BE] text-xs sm:text-sm mt-0.5">
+                        {formatCurrency(fin.paid)}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-[9px] text-slate-400 font-bold uppercase">Remaining</div>
+                      <div className="font-extrabold text-white text-xs sm:text-sm mt-0.5">
+                        {formatCurrency(fin.netRemaining)}
                       </div>
                     </div>
                   </div>
 
-                  {/* Status Badges */}
-                  <span className={`px-2.5 py-1 rounded-xl text-xs font-extrabold uppercase tracking-wide flex items-center gap-1 ${
-                    isPaid
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : isOverdue
-                      ? 'bg-rose-100 text-rose-800'
-                      : isPartial
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-amber-100 text-amber-800'
-                  }`}>
-                    {isPaid ? (
-                      <>
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        PAID
-                      </>
-                    ) : isOverdue ? (
-                      <>
-                        <AlertTriangle className="w-3.5 h-3.5" />
-                        OVERDUE
-                      </>
-                    ) : isPartial ? (
-                      <>
-                        <Clock className="w-3.5 h-3.5" />
-                        PARTIAL
-                      </>
-                    ) : (
-                      <>
-                        <Clock className="w-3.5 h-3.5" />
-                        PENDING
-                      </>
-                    )}
-                  </span>
-                </div>
-
-                {/* Amount Breakdown Matrix including Previous Arrears */}
-                <div className="grid grid-cols-4 gap-2 bg-slate-50 p-3 rounded-2xl mt-3.5 text-center border border-slate-100">
-                  <div>
-                    <div className="text-[9px] text-slate-500 font-bold uppercase">Current Rent</div>
-                    <div className="font-bold text-slate-800 text-xs sm:text-sm mt-0.5">
-                      {formatCurrency(fin.currentExpected)}
+                  {/* Total Payable banner if Arrears exist */}
+                  {fin.previousArrears > 0 && (
+                    <div className="bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/30 mt-2.5 flex items-center justify-between text-xs text-amber-300">
+                      <span className="font-semibold">Total Due (Current + Arrears):</span>
+                      <strong className="font-black text-amber-200 text-sm">{formatCurrency(fin.totalDue)}</strong>
                     </div>
-                  </div>
+                  )}
 
-                  <div>
-                    <div className="text-[9px] text-rose-700 font-bold uppercase flex items-center justify-center gap-0.5">
-                      <History className="w-2.5 h-2.5" />
-                      Arrears
+                  {/* Payment Detail if recorded */}
+                  {record && (
+                    <div className="text-xs text-slate-400 mt-2.5 flex items-center justify-between pt-1">
+                      <span>
+                        {record.paymentDate ? `Paid on ${formatDate(record.paymentDate, 'short')}` : 'No payment date'} 
+                        {record.paymentMethod ? ` via ${record.paymentMethod}` : ''}
+                      </span>
+                      {record.notes && <span className="text-slate-400 font-medium italic">"{record.notes}"</span>}
                     </div>
-                    <div className={`font-bold text-xs sm:text-sm mt-0.5 ${
-                      fin.previousArrears > 0 ? 'text-rose-700 font-black' : 'text-slate-500'
-                    }`}>
-                      {formatCurrency(fin.previousArrears)}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-[9px] text-slate-500 font-bold uppercase">Collected</div>
-                    <div className="font-bold text-emerald-600 text-xs sm:text-sm mt-0.5">
-                      {formatCurrency(fin.paid)}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-[9px] text-slate-500 font-bold uppercase">Remaining</div>
-                    <div className="font-extrabold text-slate-900 text-xs sm:text-sm mt-0.5">
-                      {formatCurrency(fin.netRemaining)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Total Payable banner if Arrears exist */}
-                {fin.previousArrears > 0 && (
-                  <div className="bg-amber-50 p-2 rounded-xl border border-amber-200 mt-2 flex items-center justify-between text-xs text-amber-800">
-                    <span className="font-semibold">Total Due (Current + Arrears):</span>
-                    <strong className="font-black text-amber-900 text-sm">{formatCurrency(fin.totalDue)}</strong>
-                  </div>
-                )}
-
-                {/* Payment Detail if recorded */}
-                {record && (
-                  <div className="text-xs text-slate-500 mt-2 flex items-center justify-between">
-                    <span>
-                      {record.paymentDate ? `Paid on ${formatDate(record.paymentDate, 'short')}` : 'No payment date'} 
-                      {record.paymentMethod ? ` via ${record.paymentMethod}` : ''}
-                    </span>
-                    {record.notes && <span className="text-slate-400 font-medium">"{record.notes}"</span>}
-                  </div>
-                )}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => handleEditPortion(portion)}
-                    className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                    Edit
-                  </button>
-
-                  {portion.tenantPhone && (
-                    <button
-                      onClick={() => {
-                        const cleanPhone = portion.tenantPhone?.replace(/[^0-9]/g, '') || '';
-                        const phoneWithCountry = cleanPhone.startsWith('0') ? '92' + cleanPhone.slice(1) : cleanPhone;
-                        const msg = isPaid
-                          ? `Assalam-o-Alaikum ${portion.tenantName},\n\n${portion.portionName} ka ${getMonthYearFormatted(selectedMonth)} ka rent (${formatCurrency(record?.paidAmount || fin.totalDue)}) receive ho chuka hai.\nPayment Method: ${record?.paymentMethod || 'Cash'}\nDate: ${record?.paymentDate || ''}\n\nShukriya!`
-                          : `Assalam-o-Alaikum ${portion.tenantName},\n\n${portion.portionName} ka ${getMonthYearFormatted(selectedMonth)} ka rent (${formatCurrency(fin.totalDue)}) payable hai.\nBaraye meherbani payment clear karein.\n\nShukriya!`;
-                        window.open(`https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(msg)}`, '_blank');
-                      }}
-                      className="p-2 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
-                      title="Send WhatsApp Receipt / Reminder"
-                    >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      WhatsApp
-                    </button>
                   )}
                 </div>
 
-                <button
-                  onClick={() => handleOpenCollect(portion, record)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm ${
-                    isPaid
-                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-800'
-                      : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
-                  }`}
-                >
-                  <CreditCard className="w-3.5 h-3.5" />
-                  {isPaid ? 'Update Payment' : 'Collect Rent'}
-                </button>
+                {/* Action Buttons */}
+                <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-800">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleEditPortion(portion)}
+                      className="p-2 text-slate-400 hover:text-slate-200 hover:bg-[#102638] rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                      Edit
+                    </button>
+
+                    {portion.tenantPhone && (
+                      <button
+                        onClick={() => {
+                          const cleanPhone = portion.tenantPhone?.replace(/[^0-9]/g, '') || '';
+                          const phoneWithCountry = cleanPhone.startsWith('0') ? '92' + cleanPhone.slice(1) : cleanPhone;
+                          const msg = isPaid
+                            ? `Assalam-o-Alaikum ${portion.tenantName},\n\n${portion.portionName} ka ${getMonthYearFormatted(selectedMonth)} ka rent (${formatCurrency(record?.paidAmount || fin.totalDue)}) receive ho chuka hai.\nPayment Method: ${record?.paymentMethod || 'Cash'}\nDate: ${record?.paymentDate || ''}\n\nShukriya!`
+                            : `Assalam-o-Alaikum ${portion.tenantName},\n\n${portion.portionName} ka ${getMonthYearFormatted(selectedMonth)} ka rent (${formatCurrency(fin.totalDue)}) payable hai.\nBaraye meherbani payment clear karein.\n\nShukriya!`;
+                          window.open(`https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(msg)}`, '_blank');
+                        }}
+                        className="p-2 text-teal-400 hover:text-teal-300 hover:bg-teal-500/10 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors"
+                        title="Send WhatsApp Receipt / Reminder"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        WhatsApp
+                      </button>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => handleOpenCollect(portion, record)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-md ${
+                      isPaid
+                        ? 'bg-[#102638] hover:bg-slate-700 text-slate-200 border border-slate-700'
+                        : 'bg-gradient-to-r from-teal-500 to-[#18E6BE] hover:from-teal-400 hover:to-[#23F2CB] text-[#06131F] font-black shadow-teal-500/20'
+                    }`}
+                  >
+                    <CreditCard className="w-3.5 h-3.5" />
+                    {isPaid ? 'Update Payment' : 'Collect Rent'}
+                  </button>
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
       )}
 
       {/* MODAL: COLLECT RENT / UPDATE RECORD */}
       {collectModalData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-100 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-[#0B1D2C] rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-cyan-500/30 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div>
-                <h3 className="font-bold text-slate-900 text-lg">
+                <h3 className="font-bold text-white text-lg">
                   Collect Rent — {collectModalData.portion.portionName}
                 </h3>
-                <p className="text-xs text-slate-500">
-                  Tenant: <strong className="text-slate-800">{collectModalData.portion.tenantName}</strong> • {getMonthYearFormatted(selectedMonth)}
+                <p className="text-xs text-slate-400">
+                  Tenant: <strong className="text-teal-300">{collectModalData.portion.tenantName}</strong> • {getMonthYearFormatted(selectedMonth)}
                 </p>
               </div>
               <button
                 onClick={() => setCollectModalData(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full"
+                className="p-1.5 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCollectRent} className="space-y-4 mt-4">
+            <form onSubmit={handleCollectRent} className="space-y-4 mt-4 overflow-y-auto pr-1">
               {/* Detailed Breakdown with Editable Arrears */}
-              <div className="bg-slate-50 p-3.5 rounded-2xl space-y-2 text-xs border border-slate-200/80">
-                <div className="flex justify-between text-slate-600">
+              <div className="bg-[#071724] p-3.5 rounded-2xl space-y-2 text-xs border border-slate-800">
+                <div className="flex justify-between text-slate-300">
                   <span>Current Month Rent ({getMonthYearFormatted(selectedMonth).split(' ')[0]}):</span>
-                  <span className="font-bold text-slate-800">{formatCurrency(collectModalData.currentExpected)}</span>
+                  <span className="font-bold text-white">{formatCurrency(collectModalData.currentExpected)}</span>
                 </div>
                 
                 {/* Editable Arrears Field */}
-                <div className="pt-2 border-t border-slate-200/60">
+                <div className="pt-2 border-t border-slate-800">
                   <div className="flex items-center justify-between gap-2">
-                    <label className="text-xs font-bold text-rose-700 flex items-center gap-1">
+                    <label className="text-xs font-bold text-rose-400 flex items-center gap-1">
                       <History className="w-3 h-3" />
                       Arrears for this portion (PKR):
                     </label>
@@ -569,7 +554,7 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
                           setPayAmountInput(total.toString());
                         }
                       }}
-                      className="w-28 px-2 py-1 bg-white border border-rose-300 rounded-lg text-xs font-bold text-rose-800 text-right focus:outline-none focus:ring-1 focus:ring-rose-500"
+                      className="w-28 px-2 py-1 bg-[#0B1D2C] border border-rose-500/40 rounded-lg text-xs font-bold text-rose-300 text-right focus:outline-none focus:ring-1 focus:ring-rose-400"
                     />
                   </div>
                   <p className="text-[10px] text-slate-400 mt-0.5">
@@ -577,16 +562,16 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
                   </p>
                 </div>
 
-                <div className="flex justify-between text-slate-900 pt-2 border-t border-slate-200 font-extrabold text-sm">
+                <div className="flex justify-between text-white pt-2 border-t border-slate-800 font-extrabold text-sm">
                   <span>Total Amount Due:</span>
-                  <span className="text-emerald-700">
+                  <span className="text-[#18E6BE]">
                     {formatCurrency(collectModalData.currentExpected + (parseFloat(arrearsInput) || 0))}
                   </span>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-300 mb-1">
                   Amount Received (PKR) *
                 </label>
                 <input
@@ -596,13 +581,13 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
                   step="any"
                   value={payAmountInput}
                   onChange={(e) => setPayAmountInput(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-base font-bold text-white focus:ring-2 focus:ring-cyan-500/30 focus:border-[#18E6BE] transition-all"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
                     Payment Date
                   </label>
                   <input
@@ -610,29 +595,29 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
                     required
                     value={payDateInput}
                     onChange={(e) => setPayDateInput(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
+                    className="w-full px-2.5 py-2 bg-[#071724] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:border-[#18E6BE]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
                     Payment Method
                   </label>
                   <select
                     value={payMethodInput}
                     onChange={(e) => setPayMethodInput(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
+                    className="w-full px-2.5 py-2 bg-[#071724] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:border-[#18E6BE]"
                   >
-                    <option value="Cash">Cash</option>
-                    <option value="Bank Transfer">Bank Transfer</option>
-                    <option value="JazzCash">JazzCash</option>
-                    <option value="EasyPaisa">EasyPaisa</option>
-                    <option value="Cheque">Cheque</option>
+                    <option value="Cash" className="bg-[#0B1D2C]">Cash</option>
+                    <option value="Bank Transfer" className="bg-[#0B1D2C]">Bank Transfer</option>
+                    <option value="JazzCash" className="bg-[#0B1D2C]">JazzCash</option>
+                    <option value="EasyPaisa" className="bg-[#0B1D2C]">EasyPaisa</option>
+                    <option value="Cheque" className="bg-[#0B1D2C]">Cheque</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-300 mb-1">
                   Notes / Receipt Details
                 </label>
                 <input
@@ -640,7 +625,7 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
                   placeholder="e.g. Paid arrears + current rent"
                   value={payNotesInput}
                   onChange={(e) => setPayNotesInput(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-xs text-white focus:ring-2 focus:ring-cyan-500/30 focus:border-[#18E6BE]"
                 />
               </div>
 
@@ -648,13 +633,13 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
                 <button
                   type="button"
                   onClick={() => setCollectModalData(null)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20"
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-[#18E6BE] hover:from-teal-400 hover:to-[#23F2CB] text-[#06131F] font-bold text-xs sm:text-sm shadow-lg shadow-teal-500/20"
                 >
                   Save Payment Record
                 </button>
@@ -666,10 +651,10 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
 
       {/* MODAL: MANAGE PORTIONS */}
       {isPortionModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-100 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900 text-lg">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-[#0B1D2C] rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-cyan-500/30 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h3 className="font-bold text-white text-lg">
                 {editingPortion ? 'Edit Portion Details' : 'Add New Portion Unit'}
               </h3>
               <button
@@ -677,15 +662,15 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
                   setIsPortionModalOpen(false);
                   resetPortionForm();
                 }}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full"
+                className="p-1.5 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSavePortion} className="space-y-3 mt-4">
+            <form onSubmit={handleSavePortion} className="space-y-3 mt-4 overflow-y-auto pr-1">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-300 mb-1">
                   Portion Name *
                 </label>
                 <input
@@ -694,13 +679,13 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
                   placeholder="e.g. Portion 1, Upper Flat, Ground Floor"
                   value={portionName}
                   onChange={(e) => setPortionName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
+                  className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:border-[#18E6BE]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
                     Tenant Name *
                   </label>
                   <input
@@ -709,11 +694,11 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
                     placeholder="e.g. Ali Khan"
                     value={tenantName}
                     onChange={(e) => setTenantName(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
+                    className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:border-[#18E6BE]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
                     Tenant Phone
                   </label>
                   <input
@@ -721,14 +706,14 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
                     placeholder="0300-1234567"
                     value={tenantPhone}
                     onChange={(e) => setTenantPhone(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
+                    className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-xs font-semibold text-white focus:border-[#18E6BE]"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
                     Monthly Rent (PKR) *
                   </label>
                   <input
@@ -738,11 +723,11 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
                     step="any"
                     value={expectedRent}
                     onChange={(e) => setExpectedRent(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+                    className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-xs font-bold text-white focus:border-[#18E6BE]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
                     Due Day of Month *
                   </label>
                   <input
@@ -752,13 +737,13 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
                     max="31"
                     value={dueDay}
                     onChange={(e) => setDueDay(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+                    className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-xs font-bold text-white focus:border-[#18E6BE]"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-300 mb-1">
                   Opening / Previous Arrears (PKR)
                 </label>
                 <input
@@ -768,7 +753,7 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
                   placeholder="0"
                   value={initialArrears}
                   onChange={(e) => setInitialArrears(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+                  className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-xs font-bold text-white focus:border-[#18E6BE]"
                 />
                 <p className="text-[10px] text-slate-400 mt-0.5">
                   Initial arrears balance before tracking or carried forward.
@@ -785,7 +770,7 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
                       setIsPortionModalOpen(false);
                       resetPortionForm();
                     }}
-                    className="text-xs text-rose-600 hover:text-rose-700 font-semibold flex items-center gap-1"
+                    className="text-xs text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     Deactivate
@@ -798,13 +783,13 @@ export const RentTracker: React.FC<RentTrackerProps> = ({
                       setIsPortionModalOpen(false);
                       resetPortionForm();
                     }}
-                    className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-xl"
+                    className="px-3 py-1.5 text-xs text-slate-400 hover:text-white rounded-xl hover:bg-slate-800"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-1.5 bg-emerald-600 text-white rounded-xl font-bold text-xs shadow-md"
+                    className="px-4 py-1.5 bg-gradient-to-r from-teal-500 to-[#18E6BE] hover:from-teal-400 hover:to-[#23F2CB] text-[#06131F] font-bold text-xs rounded-xl shadow-md"
                   >
                     {editingPortion ? 'Save Changes' : 'Add Portion'}
                   </button>

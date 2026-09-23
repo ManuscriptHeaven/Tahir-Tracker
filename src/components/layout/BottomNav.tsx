@@ -6,7 +6,8 @@ import {
   Plus, 
   FileText,
   Home,
-  Settings
+  Settings,
+  WalletCards
 } from 'lucide-react';
 
 interface BottomNavProps {
@@ -24,17 +25,17 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
   if (isRentMode) {
     return (
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-xl px-4 pb-safe no-print">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#071724]/95 backdrop-blur-md border-t border-[rgba(70,150,180,0.18)] shadow-2xl px-4 pb-safe no-print md:hidden">
         <div className="max-w-md mx-auto flex items-center justify-around py-1.5">
           <button
             onClick={() => setActiveTab('rent')}
-            className={`flex-1 flex flex-col items-center justify-center py-1 transition-all duration-150 ${
+            className={`flex-1 flex flex-col items-center justify-center py-1 transition-all ${
               activeTab === 'rent'
-                ? 'text-emerald-600 font-bold'
-                : 'text-slate-500 hover:text-slate-800 font-medium'
+                ? 'text-[#18E6BE] font-bold'
+                : 'text-[#6F899B] hover:text-[#A9BDCC] font-medium'
             }`}
           >
-            <div className={`p-1.5 rounded-xl transition-colors ${activeTab === 'rent' ? 'bg-emerald-50 text-emerald-600' : ''}`}>
+            <div className={`p-1.5 rounded-xl transition-colors ${activeTab === 'rent' ? 'bg-[rgba(24,230,190,0.12)] text-[#18E6BE]' : ''}`}>
               <Home className="w-5 h-5 stroke-[2.2]" />
             </div>
             <span className="text-[11px] mt-0.5 leading-none tracking-tight">
@@ -44,33 +45,33 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
           <button
             onClick={() => setActiveTab('reports')}
-            className={`flex-1 flex flex-col items-center justify-center py-1 transition-all duration-150 ${
+            className={`flex-1 flex flex-col items-center justify-center py-1 transition-all ${
               activeTab === 'reports'
-                ? 'text-emerald-600 font-bold'
-                : 'text-slate-500 hover:text-slate-800 font-medium'
+                ? 'text-[#18E6BE] font-bold'
+                : 'text-[#6F899B] hover:text-[#A9BDCC] font-medium'
             }`}
           >
-            <div className={`p-1.5 rounded-xl transition-colors ${activeTab === 'reports' ? 'bg-emerald-50 text-emerald-600' : ''}`}>
+            <div className={`p-1.5 rounded-xl transition-colors ${activeTab === 'reports' ? 'bg-[rgba(24,230,190,0.12)] text-[#18E6BE]' : ''}`}>
               <FileText className="w-5 h-5 stroke-[2.2]" />
             </div>
             <span className="text-[11px] mt-0.5 leading-none tracking-tight">
-              Reports & Receipts
+              Reports
             </span>
           </button>
 
           <button
             onClick={() => setActiveTab('settings')}
-            className={`flex-1 flex flex-col items-center justify-center py-1 transition-all duration-150 ${
+            className={`flex-1 flex flex-col items-center justify-center py-1 transition-all ${
               activeTab === 'settings'
-                ? 'text-emerald-600 font-bold'
-                : 'text-slate-500 hover:text-slate-800 font-medium'
+                ? 'text-[#18E6BE] font-bold'
+                : 'text-[#6F899B] hover:text-[#A9BDCC] font-medium'
             }`}
           >
-            <div className={`p-1.5 rounded-xl transition-colors ${activeTab === 'settings' ? 'bg-emerald-50 text-emerald-600' : ''}`}>
+            <div className={`p-1.5 rounded-xl transition-colors ${activeTab === 'settings' ? 'bg-[rgba(24,230,190,0.12)] text-[#18E6BE]' : ''}`}>
               <Settings className="w-5 h-5 stroke-[2.2]" />
             </div>
             <span className="text-[11px] mt-0.5 leading-none tracking-tight">
-              Sync & Settings
+              Settings
             </span>
           </button>
         </div>
@@ -78,23 +79,21 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     );
   }
 
-  // Check if current active tab is one of the expenses / tracker tabs
   const isTrackerActive = ['utility', 'loans', 'milk', 'petrol', 'rent'].includes(activeTab);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-xl px-3 pb-safe no-print">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#071724]/95 backdrop-blur-md border-t border-[rgba(70,150,180,0.18)] shadow-2xl px-3 pb-safe no-print xl:hidden">
       <div className="max-w-md mx-auto flex items-center justify-between py-1 relative">
-        
         {/* 1. Home / Dashboard */}
         <button
           onClick={() => setActiveTab('dashboard')}
-          className={`flex-1 flex flex-col items-center justify-center py-1.5 transition-all duration-150 ${
+          className={`flex-1 flex flex-col items-center justify-center py-1.5 transition-all ${
             activeTab === 'dashboard' 
-              ? 'text-emerald-600 font-bold' 
-              : 'text-slate-500 hover:text-slate-800 font-medium'
+              ? 'text-[#18E6BE] font-bold' 
+              : 'text-[#6F899B] hover:text-[#A9BDCC] font-medium'
           }`}
         >
-          <div className={`p-1.5 rounded-xl transition-colors ${activeTab === 'dashboard' ? 'bg-emerald-50 text-emerald-600' : ''}`}>
+          <div className={`p-1.5 rounded-xl transition-colors ${activeTab === 'dashboard' ? 'bg-[rgba(24,230,190,0.12)] text-[#18E6BE]' : ''}`}>
             <LayoutDashboard className="w-5 h-5 stroke-[2.2]" />
           </div>
           <span className="text-[10px] mt-0.5 leading-none tracking-tight">
@@ -105,14 +104,14 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         {/* 2. Personal Finance */}
         <button
           onClick={() => setActiveTab('finance')}
-          className={`flex-1 flex flex-col items-center justify-center py-1.5 transition-all duration-150 ${
+          className={`flex-1 flex flex-col items-center justify-center py-1.5 transition-all ${
             activeTab === 'finance' 
-              ? 'text-emerald-600 font-bold' 
-              : 'text-slate-500 hover:text-slate-800 font-medium'
+              ? 'text-[#18E6BE] font-bold' 
+              : 'text-[#6F899B] hover:text-[#A9BDCC] font-medium'
           }`}
         >
-          <div className={`p-1.5 rounded-xl transition-colors ${activeTab === 'finance' ? 'bg-emerald-50 text-emerald-600' : ''}`}>
-            <span className="text-base leading-none">💰</span>
+          <div className={`p-1.5 rounded-xl transition-colors ${activeTab === 'finance' ? 'bg-[rgba(24,230,190,0.12)] text-[#18E6BE]' : ''}`}>
+            <WalletCards className="w-5 h-5 stroke-[2.2]" />
           </div>
           <span className="text-[10px] mt-0.5 leading-none tracking-tight">
             Finance
@@ -124,9 +123,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           <button
             onClick={onOpenQuickAdd}
             aria-label="Quick Add Transaction"
-            className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 active:scale-95 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 border-2 border-white transition-all transform duration-150"
+            className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#059669] to-[#18E6BE] hover:from-[#10b981] hover:to-[#23F2CB] active:scale-95 text-[#06131F] flex items-center justify-center shadow-[0_0_20px_rgba(24,230,190,0.4)] border-2 border-[#071724] transition-all transform duration-150"
           >
-            <Plus className="w-6 h-6 stroke-[2.8]" />
+            <Plus className="w-6 h-6 stroke-[3]" />
           </button>
         </div>
 
@@ -137,13 +136,13 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               setActiveTab('utility');
             }
           }}
-          className={`flex-1 flex flex-col items-center justify-center py-1.5 transition-all duration-150 ${
+          className={`flex-1 flex flex-col items-center justify-center py-1.5 transition-all ${
             isTrackerActive 
-              ? 'text-emerald-600 font-bold' 
-              : 'text-slate-500 hover:text-slate-800 font-medium'
+              ? 'text-[#18E6BE] font-bold' 
+              : 'text-[#6F899B] hover:text-[#A9BDCC] font-medium'
           }`}
         >
-          <div className={`p-1.5 rounded-xl transition-colors ${isTrackerActive ? 'bg-emerald-50 text-emerald-600' : ''}`}>
+          <div className={`p-1.5 rounded-xl transition-colors ${isTrackerActive ? 'bg-[rgba(24,230,190,0.12)] text-[#18E6BE]' : ''}`}>
             <Layers className="w-5 h-5 stroke-[2.2]" />
           </div>
           <span className="text-[10px] mt-0.5 leading-none tracking-tight">
@@ -154,20 +153,19 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         {/* 5. Reports */}
         <button
           onClick={() => setActiveTab('reports')}
-          className={`flex-1 flex flex-col items-center justify-center py-1.5 transition-all duration-150 ${
+          className={`flex-1 flex flex-col items-center justify-center py-1.5 transition-all ${
             activeTab === 'reports' 
-              ? 'text-emerald-600 font-bold' 
-              : 'text-slate-500 hover:text-slate-800 font-medium'
+              ? 'text-[#18E6BE] font-bold' 
+              : 'text-[#6F899B] hover:text-[#A9BDCC] font-medium'
           }`}
         >
-          <div className={`p-1.5 rounded-xl transition-colors ${activeTab === 'reports' ? 'bg-emerald-50 text-emerald-600' : ''}`}>
+          <div className={`p-1.5 rounded-xl transition-colors ${activeTab === 'reports' ? 'bg-[rgba(24,230,190,0.12)] text-[#18E6BE]' : ''}`}>
             <FileText className="w-5 h-5 stroke-[2.2]" />
           </div>
           <span className="text-[10px] mt-0.5 leading-none tracking-tight">
             Reports
           </span>
         </button>
-
       </div>
     </nav>
   );

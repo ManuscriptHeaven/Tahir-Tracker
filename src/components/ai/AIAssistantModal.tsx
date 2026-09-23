@@ -237,44 +237,44 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
   const getCategoryBadge = (category: string) => {
     switch (category) {
       case 'utility':
-        return { icon: Zap, color: 'bg-amber-100 text-amber-800 border-amber-200', label: 'Utility Bills' };
+        return { icon: Zap, color: 'bg-amber-500/20 text-amber-300 border-amber-500/40', label: 'Utility Bills' };
       case 'milk':
-        return { icon: Milk, color: 'bg-teal-100 text-teal-800 border-teal-200', label: 'Milk Tracker' };
+        return { icon: Milk, color: 'bg-teal-500/20 text-[#18E6BE] border-teal-500/40', label: 'Milk Tracker' };
       case 'loans':
-        return { icon: HandCoins, color: 'bg-rose-100 text-rose-800 border-rose-200', label: 'Loans & Udhaar' };
+        return { icon: HandCoins, color: 'bg-rose-500/20 text-rose-300 border-rose-500/40', label: 'Loans & Udhaar' };
       case 'petrol':
-        return { icon: Fuel, color: 'bg-orange-100 text-orange-800 border-orange-200', label: 'Petrol Fuel' };
+        return { icon: Fuel, color: 'bg-orange-500/20 text-orange-300 border-orange-500/40', label: 'Petrol Fuel' };
       case 'rent':
-        return { icon: Home, color: 'bg-emerald-100 text-emerald-800 border-emerald-200', label: 'Rent Management' };
+        return { icon: Home, color: 'bg-teal-500/20 text-teal-300 border-teal-500/40', label: 'Rent Management' };
       default:
-        return { icon: Sparkles, color: 'bg-indigo-100 text-indigo-800 border-indigo-200', label: 'Household' };
+        return { icon: Sparkles, color: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40', label: 'Household' };
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
       {/* Click outside to close */}
       <div className="fixed inset-0" onClick={onClose} />
 
       {/* Main Assistant Sheet / Modal */}
-      <div className="relative z-10 w-full max-w-2xl bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col h-[90vh] sm:h-[82vh] max-h-[750px] overflow-hidden border border-slate-200">
+      <div className="relative z-10 w-full max-w-2xl bg-[#0B1D2C] rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col h-[90vh] sm:h-[82vh] max-h-[750px] overflow-hidden border border-cyan-500/30">
         
         {/* Top Header */}
-        <div className="px-5 py-3.5 bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 text-white flex items-center justify-between shadow-md">
+        <div className="px-5 py-3.5 bg-[#071724] border-b border-slate-800 text-white flex items-center justify-between shadow-md">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shadow-inner">
-              <Sparkles className="w-5 h-5 animate-pulse text-amber-300" />
+            <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-[#18E6BE] shadow-inner">
+              <Sparkles className="w-5 h-5 animate-pulse text-[#18E6BE]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="font-black text-sm sm:text-base leading-tight">
+                <h2 className="font-black text-sm sm:text-base leading-tight text-white">
                   Tahir AI Assistant
                 </h2>
-                <span className="text-[9px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-500/40 text-emerald-100 border border-emerald-400/30">
+                <span className="text-[9px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-full bg-teal-500/20 text-[#18E6BE] border border-teal-500/30">
                   Voice & Approval
                 </span>
               </div>
-              <p className="text-[11px] text-emerald-100/90 leading-none mt-0.5">
+              <p className="text-[11px] text-slate-400 leading-none mt-0.5">
                 Speak or type commands in Roman Urdu / English
               </p>
             </div>
@@ -288,7 +288,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
                 setSpeechLanguage(nextLang);
                 speechService.setLanguage(nextLang);
               }}
-              className="px-2 py-1 bg-white/15 hover:bg-white/25 rounded-lg text-xs font-bold text-white transition-all"
+              className="px-2 py-1 bg-[#102638] hover:bg-slate-700 rounded-lg text-xs font-bold text-slate-200 border border-slate-700 transition-all cursor-pointer"
               title="Toggle Speech Recognition Language"
             >
               {speechLanguage === 'ur-PK' ? 'Urdu (PK)' : 'English'}
@@ -297,16 +297,16 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
             {/* Voice Feedback Toggle */}
             <button
               onClick={() => setVoiceFeedbackEnabled(!voiceFeedbackEnabled)}
-              className="p-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-white transition-all"
+              className="p-1.5 bg-[#102638] hover:bg-slate-700 rounded-lg text-slate-200 border border-slate-700 transition-all cursor-pointer"
               title={voiceFeedbackEnabled ? 'Voice Output ON' : 'Voice Output Muted'}
             >
-              {voiceFeedbackEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-white/60" />}
+              {voiceFeedbackEnabled ? <Volume2 className="w-4 h-4 text-[#18E6BE]" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
             </button>
 
             {/* Close */}
             <button
               onClick={onClose}
-              className="p-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-white transition-all ml-1"
+              className="p-1.5 bg-[#102638] hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white border border-slate-700 transition-all ml-1 cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -314,7 +314,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
         </div>
 
         {/* Chat / Message Feed */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 bg-slate-50">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 bg-[#071724]">
           
           {messages.map((msg) => {
             const isUser = msg.sender === 'user';
@@ -325,20 +325,20 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
                 className={`flex gap-2.5 ${isUser ? 'justify-end' : 'justify-start'}`}
               >
                 {!isUser && (
-                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex-shrink-0 flex items-center justify-center shadow-xs text-xs font-bold mt-1">
+                  <div className="w-8 h-8 rounded-xl bg-teal-500/20 text-[#18E6BE] border border-teal-500/30 flex-shrink-0 flex items-center justify-center shadow-xs text-xs font-bold mt-1">
                     TT
                   </div>
                 )}
 
                 <div className={`max-w-[85%] sm:max-w-[75%] space-y-2`}>
                   <div
-                    className={`p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed shadow-xs ${
+                    className={`p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed shadow-lg ${
                       isUser
-                        ? 'bg-emerald-600 text-white rounded-br-none font-medium'
-                        : 'bg-white text-slate-800 border border-slate-200/90 rounded-bl-none'
+                        ? 'bg-gradient-to-r from-teal-500 to-[#18E6BE] text-[#06131F] font-bold rounded-br-none'
+                        : 'bg-[#0B1D2C] text-slate-200 border border-cyan-500/20 rounded-bl-none'
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-3 text-[10px] opacity-70 mb-1">
+                    <div className="flex items-center justify-between gap-3 text-[10px] opacity-75 mb-1">
                       <span>{isUser ? 'Aap' : 'AI Assistant'}</span>
                       <span>{msg.timestamp}</span>
                     </div>
@@ -348,7 +348,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
                 </div>
 
                 {isUser && msg.isVoice && (
-                  <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex-shrink-0 flex items-center justify-center text-xs mt-1" title="Voice Input">
+                  <div className="w-6 h-6 rounded-full bg-teal-500/20 text-[#18E6BE] border border-teal-500/30 flex-shrink-0 flex items-center justify-center text-xs mt-1" title="Voice Input">
                     <Mic className="w-3.5 h-3.5" />
                   </div>
                 )}
@@ -358,10 +358,10 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
 
           {/* APPROVAL CARD (When AI detected an entry that needs user confirmation) */}
           {pendingProposal && (
-            <div className="bg-white border-2 border-emerald-500 rounded-3xl p-4 sm:p-5 shadow-xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="bg-[#0B1D2C] border-2 border-[#18E6BE] rounded-3xl p-4 sm:p-5 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
               
               {/* Card Header with Category Badge */}
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div className="flex items-center gap-2">
                   {(() => {
                     const badge = getCategoryBadge(pendingProposal.category);
@@ -373,14 +373,14 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
                       </span>
                     );
                   })()}
-                  <span className="text-xs font-bold text-slate-500">
+                  <span className="text-xs font-bold text-slate-400">
                     Confirmation Required
                   </span>
                 </div>
 
                 <button
                   onClick={() => setIsEditingFields(!isEditingFields)}
-                  className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold rounded-lg flex items-center gap-1 transition-colors"
+                  className="px-2 py-1 bg-[#102638] hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] font-bold rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
                 >
                   <Edit2 className="w-3 h-3" />
                   {isEditingFields ? 'Done Editing' : 'Edit Details'}
@@ -389,33 +389,33 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
 
               {/* Title & Summary */}
               <div>
-                <h3 className="font-black text-slate-900 text-sm sm:text-base">
+                <h3 className="font-black text-white text-sm sm:text-base">
                   {pendingProposal.title}
                 </h3>
-                <p className="text-xs text-slate-600 mt-1">
+                <p className="text-xs text-slate-300 mt-1">
                   {pendingProposal.urduSummary}
                 </p>
               </div>
 
               {/* Fields Table / Grid */}
-              <div className="bg-slate-50 rounded-2xl p-3 border border-slate-200 space-y-2">
+              <div className="bg-[#071724] rounded-2xl p-3 border border-slate-800 space-y-2">
                 <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                   Entry Breakdown
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   {pendingProposal.fields.map((f) => (
-                    <div key={f.key} className="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
-                      <div className="text-[10px] text-slate-500 font-semibold">{f.label}</div>
+                    <div key={f.key} className="bg-[#0B1D2C] p-2.5 rounded-xl border border-slate-800">
+                      <div className="text-[10px] text-slate-400 font-semibold">{f.label}</div>
                       {isEditingFields && (f.key === 'amount' || f.key === 'actualKg' || f.key === 'totalCost' || f.key === 'paidAmount' || f.key === 'odometerReading') ? (
                         <input
                           type="number"
                           value={editableFields[f.key] ?? f.value}
                           onChange={(e) => setEditableFields({ ...editableFields, [f.key]: Number(e.target.value) })}
-                          className="w-full mt-1 px-2 py-1 bg-amber-50 border border-amber-300 rounded-lg text-xs font-black text-slate-900 focus:outline-none"
+                          className="w-full mt-1 px-2 py-1 bg-[#071724] border border-[#18E6BE] rounded-lg text-xs font-black text-white focus:outline-none"
                         />
                       ) : (
-                        <div className="font-black text-slate-900 mt-0.5">
+                        <div className="font-black text-white mt-0.5">
                           {editableFields[f.key] !== undefined && (f.key === 'amount' || f.key === 'totalCost' || f.key === 'paidAmount')
                             ? `${Number(editableFields[f.key]).toLocaleString()} PKR`
                             : f.value}
@@ -431,7 +431,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
                 <button
                   onClick={handleRejectProposal}
                   disabled={isProcessing}
-                  className="flex-1 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-bold rounded-2xl text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all"
+                  className="flex-1 py-2.5 px-3 bg-[#102638] hover:bg-slate-700 active:bg-slate-800 border border-slate-700 text-slate-300 font-bold rounded-2xl text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                   <span>Nahi, Cancel</span>
@@ -440,7 +440,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
                 <button
                   onClick={handleApproveProposal}
                   disabled={isProcessing}
-                  className="flex-[2] py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-black rounded-2xl text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all"
+                  className="flex-[2] py-2.5 px-4 bg-gradient-to-r from-teal-500 to-[#18E6BE] hover:from-teal-400 hover:to-[#23F2CB] active:scale-98 text-[#06131F] font-black rounded-2xl text-xs sm:text-sm flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(24,230,190,0.3)] transition-all cursor-pointer"
                 >
                   <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
                   <span>{isProcessing ? 'Saving Entry...' : 'Haan, Confirm & Save'}</span>
@@ -451,19 +451,19 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
 
           {/* Listening soundwave animation */}
           {isListening && (
-            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between gap-3 animate-in fade-in">
+            <div className="p-4 bg-teal-500/10 border border-teal-500/30 rounded-2xl flex items-center justify-between gap-3 animate-in fade-in">
               <div className="flex items-center gap-3">
                 <div className="relative flex items-center justify-center">
-                  <span className="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-emerald-400 opacity-75"></span>
-                  <div className="relative w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center">
+                  <span className="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-[#18E6BE] opacity-75"></span>
+                  <div className="relative w-8 h-8 rounded-full bg-gradient-to-tr from-teal-500 to-[#18E6BE] text-[#06131F] flex items-center justify-center font-bold">
                     <Mic className="w-4 h-4" />
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-emerald-900">
+                  <div className="text-xs font-bold text-teal-300">
                     Aapki aawaz sun raha hoon...
                   </div>
-                  <div className="text-[11px] text-emerald-700">
+                  <div className="text-[11px] text-slate-400">
                     Bolein: &quot;Saleem bhai ka august k bill update kr do 2000&quot;
                   </div>
                 </div>
@@ -475,7 +475,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
                   <div
                     key={i}
                     style={{ height: `${height * 1.5}px` }}
-                    className="w-1 bg-emerald-500 rounded-full animate-pulse"
+                    className="w-1 bg-[#18E6BE] rounded-full animate-pulse"
                   />
                 ))}
               </div>
@@ -486,7 +486,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
         </div>
 
         {/* Example Quick Prompt Chips */}
-        <div className="px-4 py-2 bg-slate-100/80 border-t border-slate-200 overflow-x-auto flex items-center gap-1.5 scrollbar-none">
+        <div className="px-4 py-2 bg-[#0B1D2C] border-t border-slate-800 overflow-x-auto flex items-center gap-1.5 scrollbar-none">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
             Suggestions:
           </span>
@@ -494,7 +494,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
             <button
               key={idx}
               onClick={() => handleProcessPrompt(chip, false)}
-              className="px-2.5 py-1 bg-white hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 border border-slate-200/90 rounded-xl text-[11px] font-semibold text-slate-600 whitespace-nowrap transition-all shadow-2xs"
+              className="px-2.5 py-1 bg-[#102638] hover:bg-teal-500/20 hover:text-[#18E6BE] hover:border-teal-500/40 border border-slate-700/80 rounded-xl text-[11px] font-semibold text-slate-300 whitespace-nowrap transition-all shadow-xs cursor-pointer"
             >
               {chip}
             </button>
@@ -502,7 +502,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
         </div>
 
         {/* Bottom Input Controls (Mic + Text Input + Send) */}
-        <div className="p-3 sm:p-4 bg-white border-t border-slate-200">
+        <div className="p-3 sm:p-4 bg-[#071724] border-t border-slate-800">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -516,10 +516,10 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
             <button
               type="button"
               onClick={toggleListening}
-              className={`p-3 rounded-2xl flex items-center justify-center transition-all ${
+              className={`p-3 rounded-2xl flex items-center justify-center transition-all cursor-pointer ${
                 isListening
                   ? 'bg-rose-500 hover:bg-rose-600 text-white animate-pulse shadow-lg shadow-rose-500/30'
-                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20'
+                  : 'bg-gradient-to-tr from-teal-500 to-[#18E6BE] text-[#06131F] font-bold shadow-[0_0_15px_rgba(24,230,190,0.25)]'
               }`}
               title={isListening ? 'Stop Listening' : 'Click to Speak (Voice Command)'}
             >
@@ -534,13 +534,13 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder={isListening ? 'Bolte jayein...' : 'Likhein ya mic daba kar bolein...'}
-                className="w-full px-4 py-2.5 bg-slate-100 border border-slate-300/80 rounded-2xl text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all pr-10"
+                className="w-full px-4 py-2.5 bg-[#0B1D2C] border border-slate-700 rounded-2xl text-xs sm:text-sm font-medium text-white placeholder-slate-500 focus:outline-none focus:border-[#18E6BE] focus:ring-1 focus:ring-[#18E6BE] transition-all pr-10"
               />
               {inputValue && (
                 <button
                   type="button"
                   onClick={() => setInputValue('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -551,7 +551,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
             <button
               type="submit"
               disabled={!inputValue.trim() || isProcessing}
-              className="p-2.5 bg-slate-900 hover:bg-emerald-600 disabled:opacity-40 disabled:hover:bg-slate-900 text-white rounded-2xl transition-colors shadow-xs"
+              className="p-2.5 bg-[#102638] hover:bg-[#18E6BE] hover:text-[#06131F] border border-slate-700 disabled:opacity-40 disabled:hover:bg-[#102638] disabled:hover:text-slate-400 text-slate-200 rounded-2xl transition-colors shadow-xs cursor-pointer"
               title="Send Command"
             >
               <Send className="w-5 h-5" />

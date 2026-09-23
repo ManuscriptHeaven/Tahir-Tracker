@@ -2,7 +2,8 @@ import React from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
 import { 
-  formatCurrency 
+  formatCurrency, 
+  formatDate 
 } from '../../utils/formatters';
 import { 
   calculateAccountBalances, 
@@ -16,24 +17,21 @@ import {
   Wallet, 
   ArrowDownLeft, 
   ArrowUpRight, 
-  ArrowRightLeft, 
-  TrendingUp, 
   Sparkles, 
-  Mic, 
-  Plus, 
   ArrowRight, 
   ShieldCheck, 
   PieChart, 
-  Flame,
-  CheckCircle2
+  TrendingDown,
+  TrendingUp,
+  Target
 } from 'lucide-react';
 import { SmartQuickEntryBar } from './SmartQuickEntryBar';
-import { FinanceTransaction } from '../../types';
+import { FinanceTransaction, FinanceTransactionType } from '../../types';
 
 interface FinanceOverviewProps {
   selectedMonth: string; // YYYY-MM
   onOpenVoiceModal: () => void;
-  onOpenAddModal: (type?: 'expense' | 'income' | 'transfer') => void;
+  onOpenAddModal: (type?: FinanceTransactionType) => void;
   onNavigateToSubTab: (tab: 'transactions' | 'accounts' | 'budgets' | 'categories' | 'recurring' | 'goals' | 'reports') => void;
   onSelectTransactionToEdit: (tx: FinanceTransaction) => void;
 }
@@ -71,473 +69,409 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
     .sort((a, b) => new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime() || b.id.localeCompare(a.id))
     .slice(0, 6);
 
+  const isNetPositive = summary.netSavings >= 0;
+
   return (
-    <div className="space-y-6">
-      {/* 1. TOP FINANCIAL SUMMARY CARDS */}
+    <div className="space-y-6 pb-8 animate-in fade-in duration-300">
+      {/* 1. TOP OVERVIEW HERO METRICS (4 Cards) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Total Balance / Net Worth */}
-        <div 
-          onClick={() => onNavigateToSubTab('accounts')}
-          className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-sm hover:border-emerald-500/50 transition-all cursor-pointer group flex flex-col justify-between"
-        >
+        {/* Card 1: Selected Month Cash Flow */}
+        <div className="bg-[#0B1D2C] rounded-2xl p-5 border border-[rgba(70,150,180,0.18)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col justify-between relative overflow-hidden">
           <div>
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
-                Total Balance
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#6F899B]">
+                This Month's Cash Flow
               </span>
-              <div className="p-2 rounded-2xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                <Wallet className="w-4 h-4" />
+              <div className={`p-1.5 rounded-xl border ${
+                isNetPositive 
+                  ? 'bg-[rgba(20,230,170,0.12)] text-[#14E6AA] border-[rgba(20,230,170,0.25)]' 
+                  : 'bg-[rgba(255,98,123,0.12)] text-[#FF627B] border-[rgba(255,98,123,0.25)]'
+              }`}>
+                {isNetPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
               </div>
             </div>
-            <div className="mt-3">
-              <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                {formatCurrency(summary.totalLiquidBalance)}
+
+            <div className="mt-2.5">
+              <div className={`text-2xl sm:text-[28px] font-extrabold tracking-tight tabular-nums ${
+                isNetPositive ? 'text-[#14E6AA]' : 'text-[#FF627B]'
+              }`}>
+                {isNetPositive ? '+' : ''}{formatCurrency(summary.netSavings)}
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-2">
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-                <span>
-                  {summary.incomeDifference >= 0 ? '+' : ''}{formatCurrency(summary.netSavings)} this month
+              <div className="flex items-center gap-1.5 text-xs mt-1 text-[#A9BDCC]">
+                <span className={`font-semibold ${isNetPositive ? 'text-[#14E6AA]' : 'text-[#FF627B]'}`}>
+                  {isNetPositive ? 'Surplus this month' : 'Shortfall this month'}
                 </span>
               </div>
             </div>
           </div>
-          <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>{accounts.filter(a => a.isActive).length} Active Accounts</span>
-            <span className="text-emerald-700 font-bold group-hover:underline">View All →</span>
+
+          <div className="mt-4 pt-3 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between text-xs text-[#6F899B]">
+            <span>Income: <strong className="text-[#14E6AA]">{formatCurrency(summary.monthlyIncome)}</strong></span>
+            <span>Expenses: <strong className="text-[#FF627B]">{formatCurrency(summary.monthlyExpenses)}</strong></span>
           </div>
         </div>
 
-        {/* Card 2: Monthly Income */}
+        {/* Card 2: Current Liquid Assets / Balance */}
         <div 
-          onClick={() => onOpenAddModal('income')}
-          className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-sm hover:border-teal-500/50 transition-all cursor-pointer group flex flex-col justify-between"
+          onClick={() => onNavigateToSubTab('accounts')}
+          className="bg-[#0B1D2C] rounded-2xl p-5 border border-[rgba(70,150,180,0.18)] hover:border-[rgba(55,210,190,0.35)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col justify-between cursor-pointer transition-all hover:-translate-y-0.5 group"
         >
           <div>
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#6F899B]">
+                Current Balance
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-[#102638] border border-[rgba(70,150,180,0.2)] flex items-center justify-center text-[#18E6BE] group-hover:bg-[#18E6BE] group-hover:text-[#06131F] transition-colors">
+                <Wallet className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-2.5">
+              <div className="text-2xl sm:text-[28px] font-extrabold text-[#F4F8FB] tracking-tight tabular-nums">
+                {formatCurrency(summary.totalLiquidBalance)}
+              </div>
+              <div className="text-xs text-[#6F899B] mt-1">
+                {accounts.filter(a => a.isActive).length} active accounts
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 pt-3 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between text-xs text-[#18E6BE] font-bold group-hover:underline">
+            <span>View accounts</span>
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+          </div>
+        </div>
+
+        {/* Card 3: Monthly Income */}
+        <div 
+          onClick={() => onOpenAddModal('income')}
+          className="bg-[#0B1D2C] rounded-2xl p-5 border border-[rgba(70,150,180,0.18)] hover:border-[rgba(20,230,170,0.35)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col justify-between cursor-pointer transition-all hover:-translate-y-0.5 group"
+        >
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#6F899B]">
                 Monthly Income
               </span>
-              <div className="p-2 rounded-2xl bg-teal-50 text-teal-600 group-hover:bg-teal-600 group-hover:text-white transition-colors">
+              <div className="w-8 h-8 rounded-xl bg-[rgba(20,230,170,0.12)] border border-[rgba(20,230,170,0.25)] flex items-center justify-center text-[#14E6AA]">
                 <ArrowDownLeft className="w-4 h-4" />
               </div>
             </div>
-            <div className="mt-3">
-              <div className="text-2xl sm:text-3xl font-black text-teal-700 tracking-tight">
+            <div className="mt-2.5">
+              <div className="text-2xl sm:text-[28px] font-extrabold text-[#14E6AA] tracking-tight tabular-nums">
                 {formatCurrency(summary.monthlyIncome)}
               </div>
-              <div className="text-xs text-slate-500 mt-2">
-                {summary.selectedMonth} Incoming
+              <div className="text-xs text-[#6F899B] mt-1">
+                {summary.selectedMonth} incoming
               </div>
             </div>
           </div>
-          <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>+ Add Income</span>
-            <span className="text-teal-700 font-bold group-hover:underline">+ Record →</span>
+          <div className="mt-4 pt-3 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between text-xs text-[#14E6AA] font-bold group-hover:underline">
+            <span>View income</span>
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
 
-        {/* Card 3: Monthly Expenses */}
+        {/* Card 4: Monthly Expenses */}
         <div 
-          onClick={() => onOpenAddModal('expense')}
-          className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-sm hover:border-rose-500/50 transition-all cursor-pointer group flex flex-col justify-between"
+          onClick={() => onNavigateToSubTab('budgets')}
+          className="bg-[#0B1D2C] rounded-2xl p-5 border border-[rgba(70,150,180,0.18)] hover:border-[rgba(255,98,123,0.35)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col justify-between cursor-pointer transition-all hover:-translate-y-0.5 group"
         >
           <div>
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#6F899B]">
                 Monthly Expenses
               </span>
-              <div className="p-2 rounded-2xl bg-rose-50 text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-colors">
+              <div className="w-8 h-8 rounded-xl bg-[rgba(255,98,123,0.12)] border border-[rgba(255,98,123,0.25)] flex items-center justify-center text-[#FF627B]">
                 <ArrowUpRight className="w-4 h-4" />
               </div>
             </div>
-            <div className="mt-3">
-              <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+            <div className="mt-2.5">
+              <div className="text-2xl sm:text-[28px] font-extrabold text-[#FF627B] tracking-tight tabular-nums">
                 {formatCurrency(summary.monthlyExpenses)}
               </div>
-              <div className="text-xs text-slate-500 mt-2">
-                <strong className="text-rose-600 font-bold">{summary.expensePercentage}%</strong> of monthly income
+              <div className="text-xs text-[#6F899B] mt-1">
+                <strong className="text-[#FF627B] font-bold">{summary.expensePercentage}%</strong> of income
               </div>
             </div>
           </div>
-          <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>+ Add Expense</span>
-            <span className="text-rose-600 font-bold group-hover:underline">+ Spend →</span>
-          </div>
-        </div>
-
-        {/* Card 4: Net Savings & Savings Rate */}
-        <div 
-          onClick={() => onNavigateToSubTab('reports')}
-          className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-sm hover:border-indigo-500/50 transition-all cursor-pointer group flex flex-col justify-between"
-        >
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
-                Net Savings
-              </span>
-              <div className="p-2 rounded-2xl bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                <TrendingUp className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="mt-3">
-              <div className="text-2xl sm:text-3xl font-black text-indigo-700 tracking-tight">
-                {formatCurrency(summary.netSavings)}
-              </div>
-              <div className="text-xs text-slate-500 mt-2">
-                <strong className="text-emerald-700 font-bold">{summary.savingsRate}%</strong> Savings Rate
-              </div>
-            </div>
-          </div>
-          <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>Financial Target</span>
-            <span className="text-indigo-700 font-bold group-hover:underline">Reports →</span>
+          <div className="mt-4 pt-3 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between text-xs text-[#FF627B] font-bold group-hover:underline">
+            <span>View budget</span>
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
       </div>
 
-      {/* 2. PROMINENT QUICK ACTIONS BAR */}
-      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 rounded-3xl p-4 sm:p-5 text-white shadow-lg shadow-emerald-700/20 flex flex-col sm:flex-row items-center justify-between gap-4">
-        {/* Voice Entry Button */}
-        <button
-          onClick={onOpenVoiceModal}
-          className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-white text-emerald-800 font-black text-sm flex items-center justify-center gap-2.5 shadow-md hover:bg-emerald-50 active:scale-95 transition-all transform"
-        >
-          <div className="w-7 h-7 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
-            <Mic className="w-4 h-4" />
-          </div>
-          <span>🎙️ Add by Voice (Urdu / English)</span>
-        </button>
-
-        {/* Quick Buttons: Expense, Income, Transfer */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <button
-            onClick={() => onOpenAddModal('expense')}
-            className="flex-1 sm:flex-initial px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Expense</span>
-          </button>
-
-          <button
-            onClick={() => onOpenAddModal('income')}
-            className="flex-1 sm:flex-initial px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Income</span>
-          </button>
-
-          <button
-            onClick={() => onOpenAddModal('transfer')}
-            className="flex-1 sm:flex-initial px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
-          >
-            <ArrowRightLeft className="w-3.5 h-3.5" />
-            <span>Transfer</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 3. SMART QUICK TEXT ENTRY BAR */}
+      {/* 2. RECORD A TRANSACTION (Quick Entry Bar) */}
       <SmartQuickEntryBar 
         onOpenVoiceModal={onOpenVoiceModal}
+        onOpenAddModal={onOpenAddModal}
         onTransactionSaved={() => {}}
       />
 
-      {/* 4. FINANCIAL HEALTH SCORE & AI INSIGHTS ROW */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Health Score Card */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+      {/* 3. FINANCIAL HEALTH, INSIGHTS & SAVINGS GOALS ROW (3 Columns) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Column 1: Financial Health Score (4 cols) */}
+        <div className="lg:col-span-4 bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] p-5 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
+          <div className="flex items-center justify-between border-b border-[rgba(70,150,180,0.12)] pb-3 mb-3">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-emerald-600" />
-              <h3 className="font-black text-slate-800 text-sm">Financial Health Score</h3>
+              <ShieldCheck className="w-5 h-5 text-[#18E6BE]" />
+              <h3 className="font-bold text-sm sm:text-base text-[#F4F8FB]">
+                Financial Health Score
+              </h3>
             </div>
-            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-              healthScore.grade === 'Excellent' 
-                ? 'bg-emerald-100 text-emerald-800' 
-                : healthScore.grade === 'Good' 
-                ? 'bg-teal-100 text-teal-800' 
-                : 'bg-amber-100 text-amber-800'
+            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+              healthScore.grade === 'Excellent'
+                ? 'bg-[rgba(20,230,170,0.12)] text-[#14E6AA] border-[rgba(20,230,170,0.28)]'
+                : healthScore.grade === 'Good'
+                ? 'bg-[rgba(24,230,190,0.12)] text-[#18E6BE] border-[rgba(24,230,190,0.28)]'
+                : 'bg-[rgba(247,183,51,0.12)] text-[#F7B733] border-[rgba(247,183,51,0.28)]'
             }`}>
               {healthScore.grade}
             </span>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="relative w-20 h-20 rounded-full flex items-center justify-center bg-slate-50 border-4 border-emerald-500 shadow-inner">
-              <span className="text-2xl font-black text-slate-900">{healthScore.score}</span>
-              <span className="text-[10px] text-slate-400 absolute bottom-2">/ 100</span>
+          <div className="flex items-center gap-5 my-2">
+            {/* Circular Gauge */}
+            <div className="relative w-20 h-20 shrink-0 flex items-center justify-center">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  fill="transparent"
+                  stroke="#102638"
+                  strokeWidth="10"
+                />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  fill="transparent"
+                  stroke="#18E6BE"
+                  strokeWidth="10"
+                  strokeDasharray={`${(healthScore.score / 100) * 251.2} 251.2`}
+                  strokeLinecap="round"
+                  className="transition-all duration-700"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-black text-[#F4F8FB] tracking-tight">{healthScore.score}</span>
+              </div>
             </div>
 
-            <div className="flex-1 space-y-1.5 text-xs text-slate-600">
-              <div className="flex justify-between">
+            {/* Metrics List */}
+            <div className="flex-1 space-y-1.5 text-xs">
+              <div className="flex justify-between items-center text-[#A9BDCC]">
                 <span>Savings Rate:</span>
-                <strong className="text-slate-800">{healthScore.savingsRate}%</strong>
+                <strong className="text-[#14E6AA] font-bold">{healthScore.savingsRate}%</strong>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center text-[#A9BDCC]">
                 <span>Budget Adherence:</span>
-                <strong className="text-slate-800">{healthScore.budgetAdherenceRate}%</strong>
+                <strong className="text-[#F4F8FB] font-bold">{healthScore.budgetAdherenceRate}%</strong>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center text-[#A9BDCC]">
                 <span>Expense Ratio:</span>
-                <strong className="text-slate-800">{healthScore.expenseToIncomeRatio}%</strong>
+                <strong className={healthScore.expenseToIncomeRatio > 100 ? 'text-[#FF627B]' : 'text-[#F4F8FB]'}>
+                  {healthScore.expenseToIncomeRatio}%
+                </strong>
               </div>
             </div>
           </div>
 
-          <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200/80 text-[11px] text-slate-600">
-            💡 {healthScore.recommendations[0]}
+          <div className="mt-3 bg-[#091A28] p-2.5 rounded-xl border border-[rgba(70,150,180,0.15)] text-[11px] text-[#A9BDCC] leading-relaxed">
+            💡 {healthScore.recommendations[0] || "You're doing well! Try to save at least 20% of your income."}
           </div>
         </div>
 
-        {/* AI Financial Insights */}
-        <div className="lg:col-span-2 bg-white rounded-3xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        {/* Column 2: Spending Insights (4 cols) */}
+        <div className="lg:col-span-4 bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] p-5 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
+          <div className="flex items-center justify-between border-b border-[rgba(70,150,180,0.12)] pb-3 mb-3">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-amber-500" />
-              <h3 className="font-black text-slate-800 text-sm">AI Financial Insights</h3>
+              <Sparkles className="w-5 h-5 text-[#F7B733]" />
+              <h3 className="font-bold text-sm sm:text-base text-[#F4F8FB]">
+                Spending Insights
+              </h3>
             </div>
-            <span className="text-[10px] font-bold text-slate-400">
-              Live Data Analysis
-            </span>
+            <button
+              onClick={() => onNavigateToSubTab('reports')}
+              className="text-xs font-semibold text-[#18E6BE] hover:underline"
+            >
+              View All
+            </button>
           </div>
 
-          <div className="space-y-2.5 my-3">
+          <div className="space-y-2.5 my-auto py-1">
             {aiInsights.length > 0 ? (
-              aiInsights.slice(0, 3).map((insight) => (
+              aiInsights.slice(0, 2).map((insight) => (
                 <div
                   key={insight.id}
-                  className={`p-3 rounded-2xl border flex items-start gap-2.5 text-xs ${
-                    insight.type === 'increase' 
-                      ? 'bg-rose-50/70 border-rose-200 text-rose-900' 
-                      : insight.type === 'achievement' 
-                      ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900' 
-                      : insight.type === 'budget_warning' 
-                      ? 'bg-amber-50/70 border-amber-200 text-amber-900' 
-                      : 'bg-slate-50 border-slate-200 text-slate-800'
+                  className={`p-3 rounded-xl border flex items-start gap-2.5 text-xs ${
+                    insight.type === 'increase' || insight.type === 'budget_warning'
+                      ? 'bg-[rgba(255,98,123,0.08)] border-[rgba(255,98,123,0.25)] text-[#F4F8FB]'
+                      : insight.type === 'achievement'
+                      ? 'bg-[rgba(20,230,170,0.08)] border-[rgba(20,230,170,0.25)] text-[#F4F8FB]'
+                      : 'bg-[#102638] border-[rgba(70,150,180,0.2)] text-[#F4F8FB]'
                   }`}
                 >
                   <span className="text-base shrink-0">{insight.icon || '💡'}</span>
                   <div className="flex-1">
-                    <div className="font-black">{insight.title}</div>
-                    <p className="text-[11px] mt-0.5 opacity-90">{insight.message}</p>
+                    <div className="font-bold">{insight.title}</div>
+                    <p className="text-[11px] text-[#A9BDCC] mt-0.5 leading-snug">{insight.message}</p>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="py-6 text-center text-xs text-slate-400">
-                Log a few more daily transactions to generate intelligent AI observations!
+              <div className="p-4 text-center text-xs text-[#6F899B] bg-[#091A28] rounded-xl border border-[rgba(70,150,180,0.14)]">
+                Spending habits are currently within standard targets.
               </div>
             )}
           </div>
 
-          <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-            <span className="text-slate-400">Personalized to your spending habits</span>
+          <div className="mt-3 pt-2.5 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between text-xs text-[#6F899B]">
+            <span>Personalized from real data</span>
             <button
               onClick={() => onNavigateToSubTab('reports')}
-              className="text-emerald-700 font-bold hover:underline"
+              className="text-[#18E6BE] font-bold hover:underline"
             >
-              Full Reports & Trends →
+              Reports →
+            </button>
+          </div>
+        </div>
+
+        {/* Column 3: Savings Goals (4 cols) */}
+        <div className="lg:col-span-4 bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] p-5 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
+          <div className="flex items-center justify-between border-b border-[rgba(70,150,180,0.12)] pb-3 mb-3">
+            <div className="flex items-center gap-2">
+              <Target className="w-5 h-5 text-[#18E6BE]" />
+              <h3 className="font-bold text-sm sm:text-base text-[#F4F8FB]">
+                Savings Goals
+              </h3>
+            </div>
+            <button
+              onClick={() => onNavigateToSubTab('goals')}
+              className="text-xs font-semibold text-[#18E6BE] hover:underline"
+            >
+              See All →
+            </button>
+          </div>
+
+          <div className="space-y-3 my-auto py-1">
+            {goals.filter(g => g.status === 'in_progress').length > 0 ? (
+              goals.filter(g => g.status === 'in_progress').slice(0, 2).map(goal => {
+                const percent = goal.targetAmount > 0 ? Math.round((goal.currentAmount / goal.targetAmount) * 100) : 0;
+                return (
+                  <div key={goal.id} className="p-3 bg-[#102638] rounded-xl border border-[rgba(70,150,180,0.18)] space-y-1.5">
+                    <div className="flex items-center justify-between text-xs font-bold text-[#F4F8FB]">
+                      <span>{goal.icon || '🎯'} {goal.name}</span>
+                      <span className="text-[#18E6BE]">{percent}%</span>
+                    </div>
+                    <div className="w-full bg-[#091A28] h-2 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#059669] to-[#18E6BE] rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(100, percent)}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-[#6F899B]">
+                      <span>{formatCurrency(goal.currentAmount)}</span>
+                      <span>Target: {formatCurrency(goal.targetAmount)}</span>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="p-4 text-center text-xs text-[#6F899B] bg-[#091A28] rounded-xl border border-[rgba(70,150,180,0.14)]">
+                No active savings goals yet.
+              </div>
+            )}
+          </div>
+
+          <div className="mt-3 pt-2.5 border-t border-[rgba(70,150,180,0.12)]">
+            <button
+              onClick={() => onNavigateToSubTab('goals')}
+              className="w-full py-2 bg-[#102638] hover:bg-[#122B3E] text-[#18E6BE] border border-[rgba(24,230,190,0.2)] rounded-xl text-xs font-bold transition-all text-center"
+            >
+              + Add Goal / Contribute
             </button>
           </div>
         </div>
       </div>
 
-      {/* 5. SPENDING BY CATEGORY & BUDGET STATUS ROW */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Category Spending Breakdown */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between">
+      {/* 4. LOWER ROW: SPENDING BY CATEGORY & RECENT TRANSACTIONS */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Spending by Category (6 cols) */}
+        <div className="lg:col-span-6 bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] p-5 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
           <div>
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center justify-between border-b border-[rgba(70,150,180,0.12)] pb-3 mb-4">
               <div className="flex items-center gap-2">
-                <PieChart className="w-5 h-5 text-emerald-600" />
-                <h3 className="font-black text-slate-800 text-sm">Spending by Category</h3>
+                <PieChart className="w-5 h-5 text-[#18E6BE]" />
+                <h3 className="font-bold text-sm sm:text-base text-[#F4F8FB]">
+                  Spending by Category
+                </h3>
               </div>
               <button
                 onClick={() => onNavigateToSubTab('categories')}
-                className="text-xs font-bold text-emerald-700 hover:underline"
+                className="text-xs font-semibold text-[#18E6BE] hover:underline"
               >
                 Categories →
               </button>
             </div>
 
-            <div className="space-y-3 mt-4">
+            <div className="space-y-3.5">
               {categorySpending.length > 0 ? (
                 categorySpending.slice(0, 5).map(cat => (
                   <div key={cat.categoryId} className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2 font-bold text-slate-800">
+                      <div className="flex items-center gap-2 font-bold text-[#F4F8FB]">
                         <span>{cat.icon}</span>
                         <span>{cat.categoryName}</span>
                       </div>
-                      <div className="flex items-center gap-2 font-black">
-                        <span>{formatCurrency(cat.totalAmount)}</span>
-                        <span className="text-[10px] text-slate-400 font-normal">({cat.percentage}%)</span>
+                      <div className="flex items-center gap-2 font-extrabold tabular-nums">
+                        <span className="text-[#F4F8FB]">{formatCurrency(cat.totalAmount)}</span>
+                        <span className="text-[10px] text-[#6F899B] font-normal">({cat.percentage}%)</span>
                       </div>
                     </div>
-                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div className="w-full bg-[#091A28] h-2 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${cat.percentage}%`, backgroundColor: cat.color }}
+                        style={{ width: `${cat.percentage}%`, backgroundColor: cat.color || '#18E6BE' }}
                       />
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="py-8 text-center text-xs text-slate-400">
+                <div className="py-8 text-center text-xs text-[#6F899B]">
                   No expenses recorded for this month yet.
                 </div>
               )}
             </div>
           </div>
 
-          <div className="pt-3 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>Total Expense: {formatCurrency(summary.monthlyExpenses)}</span>
+          <div className="pt-3 mt-4 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between text-xs text-[#6F899B]">
+            <span>Total Expense: <strong className="text-[#FF627B]">{formatCurrency(summary.monthlyExpenses)}</strong></span>
             <button
               onClick={() => onNavigateToSubTab('transactions')}
-              className="text-emerald-700 font-bold hover:underline"
+              className="text-[#18E6BE] font-bold hover:underline"
             >
               View Transactions →
             </button>
           </div>
         </div>
 
-        {/* Monthly Budgets Adherence */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between">
+        {/* Recent Transactions (6 cols) */}
+        <div className="lg:col-span-6 bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] p-5 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
           <div>
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <Flame className="w-5 h-5 text-amber-500" />
-                <h3 className="font-black text-slate-800 text-sm">Budget Adherence</h3>
-              </div>
-              <button
-                onClick={() => onNavigateToSubTab('budgets')}
-                className="text-xs font-bold text-emerald-700 hover:underline"
-              >
-                Budgets →
-              </button>
-            </div>
-
-            <div className="space-y-3 mt-4">
-              {budgetAdherence.length > 0 ? (
-                budgetAdherence.slice(0, 4).map(b => (
-                  <div key={b.budget.id} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-1.5 font-bold text-slate-800">
-                        <span>{b.icon}</span>
-                        <span>{b.categoryName}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900">{formatCurrency(b.spentAmount)}</span>
-                        <span className="text-slate-400">/ {formatCurrency(b.budgetAmount)}</span>
-                        <span className={`text-[10px] font-black px-1.5 py-0.2 rounded ${
-                          b.status === 'exceeded' 
-                            ? 'bg-rose-100 text-rose-800' 
-                            : b.status === 'critical' 
-                            ? 'bg-amber-100 text-amber-800' 
-                            : 'bg-emerald-100 text-emerald-800'
-                        }`}>
-                          {b.percentage}%
-                        </span>
-                      </div>
-                    </div>
-                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          b.status === 'exceeded' ? 'bg-rose-500' : b.status === 'critical' ? 'bg-amber-500' : 'bg-emerald-500'
-                        }`}
-                        style={{ width: `${Math.min(100, b.percentage)}%` }}
-                      />
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="py-8 text-center text-xs text-slate-400">
-                  No monthly budgets configured yet.
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="pt-3 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>{budgetAdherence.filter(b => b.status === 'normal').length} on track</span>
-            <button
-              onClick={() => onNavigateToSubTab('budgets')}
-              className="text-emerald-700 font-bold hover:underline"
-            >
-              Manage Budgets →
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* 6. SAVINGS GOALS & RECENT TRANSACTIONS */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Goals Progress */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-indigo-600" />
-                <h3 className="font-black text-slate-800 text-sm">Savings Goals</h3>
-              </div>
-              <button
-                onClick={() => onNavigateToSubTab('goals')}
-                className="text-xs font-bold text-emerald-700 hover:underline"
-              >
-                Goals →
-              </button>
-            </div>
-
-            <div className="space-y-3 mt-4">
-              {goals.filter(g => g.status === 'in_progress').map(goal => {
-                const percent = goal.targetAmount > 0 ? Math.round((goal.currentAmount / goal.targetAmount) * 100) : 0;
-                return (
-                  <div key={goal.id} className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-1.5">
-                    <div className="flex items-center justify-between text-xs font-bold text-slate-800">
-                      <span>{goal.icon || '🎯'} {goal.name}</span>
-                      <span className="text-emerald-700">{percent}%</span>
-                    </div>
-                    <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-500"
-                        style={{ width: `${Math.min(100, percent)}%` }}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between text-[11px] text-slate-500">
-                      <span>Saved: {formatCurrency(goal.currentAmount)}</span>
-                      <span>Target: {formatCurrency(goal.targetAmount)}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="pt-3 mt-4 border-t border-slate-100">
-            <button
-              onClick={() => onNavigateToSubTab('goals')}
-              className="w-full py-2 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 rounded-xl text-xs font-bold transition-all text-center"
-            >
-              + Add Goal / Contribute
-            </button>
-          </div>
-        </div>
-
-        {/* Recent Transactions List */}
-        <div className="lg:col-span-2 bg-white rounded-3xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-black text-slate-800 text-sm">Recent Transactions</h3>
+            <div className="flex items-center justify-between border-b border-[rgba(70,150,180,0.12)] pb-3 mb-3">
+              <h3 className="font-bold text-sm sm:text-base text-[#F4F8FB]">
+                Recent Transactions
+              </h3>
               <button
                 onClick={() => onNavigateToSubTab('transactions')}
-                className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1"
+                className="text-xs font-semibold text-[#18E6BE] hover:underline flex items-center gap-1"
               >
                 <span>View All ({summary.transactionCount})</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            <div className="divide-y divide-slate-100 mt-2">
+            <div className="divide-y divide-[rgba(70,150,180,0.1)]">
               {recentTransactions.length > 0 ? (
                 recentTransactions.map(tx => {
                   const isIncome = tx.transactionType === 'income';
@@ -547,57 +481,56 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
                     <div
                       key={tx.id}
                       onClick={() => onSelectTransactionToEdit(tx)}
-                      className="py-2.5 flex items-center justify-between hover:bg-slate-50 px-2 rounded-xl cursor-pointer transition-colors"
+                      className="py-2.5 flex items-center justify-between hover:bg-[#102638] px-2 rounded-xl cursor-pointer transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-2xl flex items-center justify-center text-base ${
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm border ${
                           isIncome 
-                            ? 'bg-teal-50 text-teal-700' 
+                            ? 'bg-[rgba(20,230,170,0.12)] text-[#14E6AA] border-[rgba(20,230,170,0.25)]' 
                             : isTransfer 
-                            ? 'bg-blue-50 text-blue-700' 
-                            : 'bg-rose-50 text-rose-700'
+                            ? 'bg-[rgba(57,175,255,0.12)] text-[#39AFFF] border-[rgba(57,175,255,0.25)]' 
+                            : 'bg-[rgba(255,98,123,0.12)] text-[#FF627B] border-[rgba(255,98,123,0.25)]'
                         }`}>
                           {isIncome ? '💵' : isTransfer ? '⇄' : '🛍️'}
                         </div>
                         <div>
-                          <div className="font-bold text-slate-900 text-xs sm:text-sm">
+                          <div className="font-bold text-xs sm:text-sm text-[#F4F8FB]">
                             {tx.description || tx.categoryName}
                           </div>
-                          <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
+                          <div className="flex items-center gap-1.5 text-[10px] text-[#6F899B]">
                             <span>{tx.categoryName || 'General'}</span>
                             <span>•</span>
                             <span>{tx.accountName || 'Cash'}</span>
                             <span>•</span>
-                            <span>{tx.transactionDate}</span>
+                            <span>{formatDate(tx.transactionDate, 'short')}</span>
                             {tx.source === 'voice' && (
-                              <span className="text-emerald-600 font-bold">🎙️ Voice</span>
+                              <span className="text-[#18E6BE] font-bold">🎙️ Voice</span>
                             )}
                           </div>
                         </div>
                       </div>
 
-                      <div className={`text-xs sm:text-sm font-black ${
-                        isIncome ? 'text-teal-700' : isTransfer ? 'text-blue-700' : 'text-slate-900'
+                      <div className={`text-xs sm:text-sm font-extrabold tabular-nums ${
+                        isIncome ? 'text-[#14E6AA]' : isTransfer ? 'text-[#39AFFF]' : 'text-[#FF627B]'
                       }`}>
-                        {isIncome ? '+' : isTransfer ? '⇄ ' : '-'}
-                        {formatCurrency(tx.amount)}
+                        {isIncome ? '+' : isTransfer ? '⇄ ' : '-'}{formatCurrency(tx.amount)}
                       </div>
                     </div>
                   );
                 })
               ) : (
-                <div className="py-8 text-center text-xs text-slate-400">
+                <div className="py-8 text-center text-xs text-[#6F899B]">
                   No transactions recorded for this month yet.
                 </div>
               )}
             </div>
           </div>
 
-          <div className="pt-3 mt-2 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-xs text-slate-400">Click any transaction to edit</span>
+          <div className="pt-3 mt-2 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between">
+            <span className="text-xs text-[#6F899B]">Click any transaction to edit</span>
             <button
               onClick={() => onOpenAddModal('expense')}
-              className="text-xs font-bold text-emerald-700 hover:underline"
+              className="text-xs font-bold text-[#18E6BE] hover:underline"
             >
               + New Transaction
             </button>

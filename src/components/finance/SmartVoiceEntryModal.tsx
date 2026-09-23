@@ -181,7 +181,7 @@ export const SmartVoiceEntryModal: React.FC<SmartVoiceEntryModalProps> = ({
         });
       }
 
-      // Audio Confirmation
+      // Audio Feedback
       if (audioFeedback) {
         const first = parsedTransactions[0];
         const speechMsg = `${first.amount} rupees ${first.category} saved`;
@@ -225,38 +225,38 @@ export const SmartVoiceEntryModal: React.FC<SmartVoiceEntryModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
       <div className="fixed inset-0" onClick={onClose} />
 
-      <div className="relative z-10 w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-in slide-in-from-bottom duration-200 max-h-[92vh] flex flex-col">
+      <div className="relative z-10 w-full max-w-lg bg-[#0B1D2C] rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden border border-cyan-500/30 animate-in slide-in-from-bottom duration-200 max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 p-4 sm:p-5 text-white flex items-center justify-between">
+        <div className="bg-[#102638] p-4 sm:p-5 border-b border-slate-800 text-white flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center shadow-inner">
-              <Sparkles className="w-5 h-5 text-amber-300 fill-amber-300" />
+            <div className="w-10 h-10 rounded-xl bg-[#071724] border border-cyan-500/30 flex items-center justify-center shadow-inner">
+              <Sparkles className="w-5 h-5 text-[#18E6BE]" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-black tracking-tight">
+              <h2 className="text-base sm:text-lg font-bold tracking-tight text-slate-100">
                 Smart Voice Entry
               </h2>
-              <p className="text-xs text-emerald-100">
+              <p className="text-xs text-slate-400">
                 Speak in Urdu, Roman Urdu or English
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             {/* Language Switch */}
-            <div className="flex bg-black/20 p-0.5 rounded-xl text-[11px] font-bold">
+            <div className="flex bg-[#071724] p-0.5 rounded-lg border border-slate-700 text-[11px] font-medium">
               <button
                 onClick={() => handleLanguageChange('ur-PK')}
-                className={`px-2 py-1 rounded-lg transition-all ${language === 'ur-PK' ? 'bg-white text-emerald-800 shadow-xs' : 'text-emerald-100 hover:text-white'}`}
+                className={`px-2 py-1 rounded-md transition-all ${language === 'ur-PK' ? 'bg-[#18E6BE] text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'}`}
               >
-                اردو / Urdu
+                اردو
               </button>
               <button
                 onClick={() => handleLanguageChange('en-US')}
-                className={`px-2 py-1 rounded-lg transition-all ${language === 'en-US' ? 'bg-white text-emerald-800 shadow-xs' : 'text-emerald-100 hover:text-white'}`}
+                className={`px-2 py-1 rounded-md transition-all ${language === 'en-US' ? 'bg-[#18E6BE] text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'}`}
               >
                 EN
               </button>
@@ -264,15 +264,15 @@ export const SmartVoiceEntryModal: React.FC<SmartVoiceEntryModalProps> = ({
 
             <button
               onClick={() => setAudioFeedback(!audioFeedback)}
-              className="p-2 rounded-xl text-white/80 hover:bg-white/15 transition-colors"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-[#071724] transition-colors"
               title={audioFeedback ? 'Mute voice feedback' : 'Enable voice feedback'}
             >
-              {audioFeedback ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-white/50" />}
+              {audioFeedback ? <Volume2 className="w-4 h-4 text-cyan-400" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
             </button>
 
             <button
               onClick={onClose}
-              className="p-2 rounded-xl text-white/80 hover:bg-white/15 transition-colors"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-[#071724] transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -286,20 +286,20 @@ export const SmartVoiceEntryModal: React.FC<SmartVoiceEntryModalProps> = ({
             <div className="relative inline-block">
               {isListening && (
                 <>
-                  <div className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping" />
-                  <div className="absolute -inset-3 rounded-full bg-emerald-500/10 animate-pulse" />
+                  <div className="absolute inset-0 rounded-full bg-cyan-500/20 animate-ping" />
+                  <div className="absolute -inset-3 rounded-full bg-cyan-500/10 animate-pulse" />
                 </>
               )}
               <button
                 onClick={toggleListening}
-                className={`relative z-10 w-20 h-20 rounded-full flex items-center justify-center transition-all transform active:scale-95 shadow-xl ${
+                className={`relative z-10 w-20 h-20 rounded-full flex items-center justify-center transition-all transform active:scale-95 shadow-xl border ${
                   isListening
-                    ? 'bg-gradient-to-tr from-rose-500 to-red-600 text-white shadow-rose-500/30'
-                    : 'bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-emerald-500/30 hover:scale-105'
+                    ? 'bg-rose-500 text-white border-rose-400 shadow-rose-500/30'
+                    : 'bg-gradient-to-tr from-[#18E6BE] to-teal-400 text-slate-950 border-cyan-400 shadow-[#18E6BE]/30 hover:scale-105'
                 }`}
               >
                 {isListening ? (
-                  <Mic className="w-9 h-9 animate-bounce" />
+                  <Mic className="w-9 h-9 animate-bounce text-white" />
                 ) : (
                   <Mic className="w-9 h-9" />
                 )}
@@ -307,7 +307,7 @@ export const SmartVoiceEntryModal: React.FC<SmartVoiceEntryModalProps> = ({
             </div>
 
             <div className="mt-3">
-              <p className="text-xs font-bold text-slate-700">
+              <p className="text-xs font-bold text-slate-200">
                 {isListening ? '🎙️ Listening... Speak naturally now' : 'Tap microphone to start speaking'}
               </p>
               <p className="text-[11px] text-slate-400 mt-0.5">
@@ -318,20 +318,20 @@ export const SmartVoiceEntryModal: React.FC<SmartVoiceEntryModalProps> = ({
 
           {/* Speech Error Banner */}
           {speechError && (
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-2 text-xs text-amber-800">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+            <div className="p-3 bg-amber-950/40 border border-amber-600/40 rounded-xl flex items-center gap-2 text-xs text-amber-200">
+              <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
               <span>{speechError}</span>
             </div>
           )}
 
           {/* Live Transcript / Editable Input Box */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center justify-between">
+            <label className="text-xs font-medium text-slate-300 uppercase tracking-wider flex items-center justify-between">
               <span>Heard / Spoken Input</span>
               {transcript && (
                 <button
                   onClick={() => setTranscript('')}
-                  className="text-[11px] text-rose-600 hover:underline lowercase font-normal"
+                  className="text-[11px] text-rose-400 hover:underline lowercase font-normal"
                 >
                   clear
                 </button>
@@ -344,11 +344,11 @@ export const SmartVoiceEntryModal: React.FC<SmartVoiceEntryModalProps> = ({
                 value={transcript || interimText}
                 onChange={(e) => setTranscript(e.target.value)}
                 placeholder="Spoken words will appear here, or type naturally..."
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 text-sm font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all shadow-inner"
+                className="w-full px-4 py-3 bg-[#071724] border border-slate-700 rounded-xl text-slate-100 text-sm font-medium focus:outline-none focus:border-cyan-400 transition-all placeholder-slate-500 shadow-inner"
               />
               {isListening && interimText && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-[10px] text-cyan-300 font-bold bg-[#102638] px-2 py-0.5 rounded-md border border-cyan-500/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
                   Live
                 </div>
               )}
@@ -359,18 +359,12 @@ export const SmartVoiceEntryModal: React.FC<SmartVoiceEntryModalProps> = ({
           {parsedTransactions.length > 0 ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#18E6BE]" />
                   AI Understood ({parsedTransactions.length} Transaction{parsedTransactions.length > 1 ? 's' : ''})
                 </span>
                 {parsedTransactions[0].confidence > 0 && (
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    parsedTransactions[0].confidence >= 0.85 
-                      ? 'bg-emerald-100 text-emerald-800' 
-                      : parsedTransactions[0].confidence >= 0.7 
-                      ? 'bg-amber-100 text-amber-800' 
-                      : 'bg-slate-100 text-slate-700'
-                  }`}>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
                     {Math.round(parsedTransactions[0].confidence * 100)}% Confidence
                   </span>
                 )}
@@ -384,19 +378,13 @@ export const SmartVoiceEntryModal: React.FC<SmartVoiceEntryModalProps> = ({
                 return (
                   <div
                     key={idx}
-                    className={`p-4 rounded-3xl border transition-all shadow-sm ${
-                      isIncome 
-                        ? 'bg-gradient-to-br from-teal-50/70 to-emerald-50/70 border-teal-200' 
-                        : isTransfer 
-                        ? 'bg-gradient-to-br from-blue-50/70 to-indigo-50/70 border-blue-200' 
-                        : 'bg-gradient-to-br from-rose-50/50 via-white to-slate-50 border-slate-200'
-                    }`}
+                    className="p-4 rounded-xl border border-slate-700 bg-[#102638] transition-all shadow-sm"
                   >
                     <div className="flex items-start justify-between">
                       {/* Type Badge & Amount */}
-                      <div className="flex items-center gap-2">
-                        <div className={`p-2 rounded-2xl text-white ${
-                          isIncome ? 'bg-teal-600' : isTransfer ? 'bg-blue-600' : 'bg-rose-500'
+                      <div className="flex items-center gap-2.5">
+                        <div className={`p-2 rounded-lg text-white ${
+                          isIncome ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40' : isTransfer ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40' : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
                         }`}>
                           {isIncome ? (
                             <ArrowDownLeft className="w-5 h-5" />
@@ -407,10 +395,10 @@ export const SmartVoiceEntryModal: React.FC<SmartVoiceEntryModalProps> = ({
                           )}
                         </div>
                         <div>
-                          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                             {tx.transaction_type}
                           </span>
-                          <div className="text-xl sm:text-2xl font-black text-slate-900">
+                          <div className="text-xl sm:text-2xl font-bold text-slate-100">
                             {formatCurrency(tx.amount)}
                           </div>
                         </div>
@@ -418,7 +406,7 @@ export const SmartVoiceEntryModal: React.FC<SmartVoiceEntryModalProps> = ({
 
                       <button
                         onClick={() => setEditingIndex(isEditing ? null : idx)}
-                        className="text-xs font-bold text-emerald-700 hover:text-emerald-900 bg-white/80 px-2.5 py-1 rounded-xl border border-slate-200 shadow-2xs"
+                        className="text-xs font-semibold text-cyan-300 hover:text-white bg-[#071724] px-2.5 py-1 rounded-lg border border-cyan-500/30 transition-colors"
                       >
                         {isEditing ? 'Done' : 'Edit'}
                       </button>
@@ -426,42 +414,42 @@ export const SmartVoiceEntryModal: React.FC<SmartVoiceEntryModalProps> = ({
 
                     {/* Details Grid / Quick Edit */}
                     {!isEditing ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-200/60 text-xs">
-                        <div className="flex items-center gap-1.5 text-slate-700">
-                          <Tag className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span className="font-bold truncate">{tx.category}</span>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-800 text-xs">
+                        <div className="flex items-center gap-1.5 text-slate-300">
+                          <Tag className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                          <span className="font-semibold truncate">{tx.category}</span>
                         </div>
 
-                        <div className="flex items-center gap-1.5 text-slate-700">
-                          <Wallet className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <div className="flex items-center gap-1.5 text-slate-300">
+                          <Wallet className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                           <span className="truncate">{tx.account} {isTransfer && `→ ${tx.transfer_to_account || 'Bank'}`}</span>
                         </div>
 
-                        <div className="flex items-center gap-1.5 text-slate-700 col-span-2 sm:col-span-1">
-                          <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <div className="flex items-center gap-1.5 text-slate-300 col-span-2 sm:col-span-1">
+                          <Calendar className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                           <span>{tx.transaction_date}</span>
                         </div>
                       </div>
                     ) : (
                       /* Inline Edit Form */
-                      <div className="space-y-2.5 mt-3 pt-3 border-t border-slate-200">
+                      <div className="space-y-2.5 mt-3 pt-3 border-t border-slate-800">
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="text-[10px] font-bold text-slate-500">Amount (PKR)</label>
+                            <label className="text-[10px] font-medium text-slate-400">Amount (PKR)</label>
                             <input
                               type="number"
                               value={tx.amount}
                               onChange={(e) => handleFieldChange(idx, 'amount', Number(e.target.value))}
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold"
+                              className="w-full px-2.5 py-1.5 bg-[#071724] border border-slate-700 rounded-lg text-xs font-bold text-slate-100 focus:outline-none focus:border-cyan-400"
                             />
                           </div>
 
                           <div>
-                            <label className="text-[10px] font-bold text-slate-500">Type</label>
+                            <label className="text-[10px] font-medium text-slate-400">Type</label>
                             <select
                               value={tx.transaction_type}
                               onChange={(e) => handleFieldChange(idx, 'transaction_type', e.target.value)}
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold"
+                              className="w-full px-2.5 py-1.5 bg-[#071724] border border-slate-700 rounded-lg text-xs font-medium text-slate-100 focus:outline-none focus:border-cyan-400"
                             >
                               <option value="expense">Expense</option>
                               <option value="income">Income</option>
@@ -472,11 +460,11 @@ export const SmartVoiceEntryModal: React.FC<SmartVoiceEntryModalProps> = ({
 
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="text-[10px] font-bold text-slate-500">Category</label>
+                            <label className="text-[10px] font-medium text-slate-400">Category</label>
                             <select
                               value={tx.categoryId}
                               onChange={(e) => handleFieldChange(idx, 'categoryId', e.target.value)}
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold"
+                              className="w-full px-2.5 py-1.5 bg-[#071724] border border-slate-700 rounded-lg text-xs font-medium text-slate-100 focus:outline-none focus:border-cyan-400"
                             >
                               {categories
                                 .filter(c => c.type === (tx.transaction_type === 'income' ? 'income' : 'expense'))
@@ -487,11 +475,11 @@ export const SmartVoiceEntryModal: React.FC<SmartVoiceEntryModalProps> = ({
                           </div>
 
                           <div>
-                            <label className="text-[10px] font-bold text-slate-500">Account</label>
+                            <label className="text-[10px] font-medium text-slate-400">Account</label>
                             <select
                               value={tx.accountId}
                               onChange={(e) => handleFieldChange(idx, 'accountId', e.target.value)}
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold"
+                              className="w-full px-2.5 py-1.5 bg-[#071724] border border-slate-700 rounded-lg text-xs font-medium text-slate-100 focus:outline-none focus:border-cyan-400"
                             >
                               {accounts.map(a => (
                                 <option key={a.id} value={a.id}>{a.icon || '💳'} {a.name}</option>
@@ -502,11 +490,11 @@ export const SmartVoiceEntryModal: React.FC<SmartVoiceEntryModalProps> = ({
 
                         {isTransfer && (
                           <div>
-                            <label className="text-[10px] font-bold text-slate-500">Transfer To Account</label>
+                            <label className="text-[10px] font-medium text-slate-400">Transfer To Account</label>
                             <select
                               value={tx.transfer_to_account_id}
                               onChange={(e) => handleFieldChange(idx, 'transfer_to_account_id', e.target.value)}
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold"
+                              className="w-full px-2.5 py-1.5 bg-[#071724] border border-slate-700 rounded-lg text-xs font-medium text-slate-100 focus:outline-none focus:border-cyan-400"
                             >
                               {accounts.map(a => (
                                 <option key={a.id} value={a.id}>{a.icon || '💳'} {a.name}</option>
@@ -516,12 +504,12 @@ export const SmartVoiceEntryModal: React.FC<SmartVoiceEntryModalProps> = ({
                         )}
 
                         <div>
-                          <label className="text-[10px] font-bold text-slate-500">Date</label>
+                          <label className="text-[10px] font-medium text-slate-400">Date</label>
                           <input
                             type="date"
                             value={tx.transaction_date}
                             onChange={(e) => handleFieldChange(idx, 'transaction_date', e.target.value)}
-                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold"
+                            className="w-full px-2.5 py-1.5 bg-[#071724] border border-slate-700 rounded-lg text-xs font-medium text-slate-100 focus:outline-none focus:border-cyan-400"
                           />
                         </div>
                       </div>
@@ -532,25 +520,25 @@ export const SmartVoiceEntryModal: React.FC<SmartVoiceEntryModalProps> = ({
             </div>
           ) : (
             /* Helpful Voice Prompts Examples */
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 space-y-2">
-              <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+            <div className="bg-[#071724] rounded-xl p-4 border border-slate-800 space-y-2">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
                 Try Saying Any of These:
               </h4>
-              <div className="space-y-1.5 text-xs text-slate-600">
-                <p className="flex items-center gap-1.5 cursor-pointer hover:text-emerald-700" onClick={() => setTranscript('Aaj 500 rupees lunch pe kharch kiye')}>
-                  <span className="text-emerald-600 font-bold">🍔</span> &ldquo;Aaj 500 rupees lunch pe kharch kiye&rdquo;
+              <div className="space-y-1.5 text-xs text-slate-300">
+                <p className="flex items-center gap-2 cursor-pointer hover:text-cyan-300 transition-colors" onClick={() => setTranscript('Aaj 500 rupees lunch pe kharch kiye')}>
+                  <span>🍔</span> &ldquo;Aaj 500 rupees lunch pe kharch kiye&rdquo;
                 </p>
-                <p className="flex items-center gap-1.5 cursor-pointer hover:text-emerald-700" onClick={() => setTranscript('Kal petrol ke 3000 rupay diye')}>
-                  <span className="text-blue-600 font-bold">🚗</span> &ldquo;Kal petrol ke 3000 rupay diye&rdquo;
+                <p className="flex items-center gap-2 cursor-pointer hover:text-cyan-300 transition-colors" onClick={() => setTranscript('Kal petrol ke 3000 rupay diye')}>
+                  <span>🚗</span> &ldquo;Kal petrol ke 3000 rupay diye&rdquo;
                 </p>
-                <p className="flex items-center gap-1.5 cursor-pointer hover:text-emerald-700" onClick={() => setTranscript('Mujhe 50 hazar payment receive hui')}>
-                  <span className="text-teal-600 font-bold">💵</span> &ldquo;Mujhe 50 hazar payment receive hui&rdquo;
+                <p className="flex items-center gap-2 cursor-pointer hover:text-cyan-300 transition-colors" onClick={() => setTranscript('Mujhe 50 hazar payment receive hui')}>
+                  <span>💵</span> &ldquo;Mujhe 50 hazar payment receive hui&rdquo;
                 </p>
-                <p className="flex items-center gap-1.5 cursor-pointer hover:text-emerald-700" onClick={() => setTranscript('Aaj 1200 ki grocery ki cash se')}>
-                  <span className="text-amber-600 font-bold">🛒</span> &ldquo;Aaj 1200 ki grocery ki cash se&rdquo;
+                <p className="flex items-center gap-2 cursor-pointer hover:text-cyan-300 transition-colors" onClick={() => setTranscript('Aaj 1200 ki grocery ki cash se')}>
+                  <span>🛒</span> &ldquo;Aaj 1200 ki grocery ki cash se&rdquo;
                 </p>
-                <p className="flex items-center gap-1.5 cursor-pointer hover:text-emerald-700" onClick={() => setTranscript('Spent 2500 rupees on dinner using my credit card')}>
-                  <span className="text-indigo-600 font-bold">💳</span> &ldquo;Spent 2500 rupees on dinner using my credit card&rdquo;
+                <p className="flex items-center gap-2 cursor-pointer hover:text-cyan-300 transition-colors" onClick={() => setTranscript('Spent 2500 rupees on dinner using my credit card')}>
+                  <span>💳</span> &ldquo;Spent 2500 rupees on dinner using my credit card&rdquo;
                 </p>
               </div>
             </div>
@@ -558,18 +546,18 @@ export const SmartVoiceEntryModal: React.FC<SmartVoiceEntryModalProps> = ({
 
           {/* Success Banner */}
           {saveSuccessMessage && (
-            <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center gap-2 text-xs font-bold text-emerald-800 animate-in fade-in">
-              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+            <div className="p-3 bg-teal-950/40 border border-teal-500/40 rounded-xl flex items-center gap-2 text-xs font-bold text-teal-200 animate-in fade-in">
+              <Check className="w-4 h-4 text-[#18E6BE] shrink-0" />
               <span>{saveSuccessMessage}</span>
             </div>
           )}
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 sm:p-5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
+        <div className="p-4 sm:p-5 bg-[#071724] border-t border-slate-800 flex items-center justify-between gap-3">
           <button
             onClick={onClose}
-            className="flex-1 py-3 px-4 rounded-2xl bg-white border border-slate-300 text-slate-700 font-bold text-xs sm:text-sm hover:bg-slate-100 transition-colors shadow-2xs"
+            className="flex-1 py-2.5 px-4 rounded-xl bg-[#102638] border border-slate-700 text-slate-300 font-semibold text-xs sm:text-sm hover:text-white transition-colors"
           >
             Cancel
           </button>
@@ -577,14 +565,14 @@ export const SmartVoiceEntryModal: React.FC<SmartVoiceEntryModalProps> = ({
           <button
             onClick={handleConfirmAndSave}
             disabled={parsedTransactions.length === 0 || isSaving || parsedTransactions.every(t => t.amount <= 0)}
-            className="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-98 disabled:opacity-50 text-white font-bold text-xs sm:text-sm transition-all shadow-md shadow-emerald-600/25 flex items-center justify-center gap-2"
+            className="flex-1 py-2.5 px-4 rounded-xl bg-[#18E6BE] hover:bg-[#23F2CB] active:scale-95 disabled:opacity-50 text-slate-950 font-bold text-xs sm:text-sm transition-all shadow-md shadow-[#18E6BE]/20 flex items-center justify-center gap-2"
           >
             {isSaving ? (
               <span>Saving...</span>
             ) : (
               <>
-                <Check className="w-4 h-4 stroke-[3]" />
-                <span>Confirm ✓</span>
+                <Check className="w-4 h-4 stroke-[2.5]" />
+                <span>Confirm & Save</span>
               </>
             )}
           </button>

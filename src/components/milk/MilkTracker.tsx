@@ -27,6 +27,8 @@ import {
   Wallet,
   MessageSquare
 } from 'lucide-react';
+import { PageHeader } from '../ui/PageHeader';
+import { MetricCard } from '../ui/MetricCard';
 
 interface MilkTrackerProps {
   selectedMonth: string; // YYYY-MM
@@ -255,7 +257,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
         currency: 'PKR',
         milkDefaultRate: rate,
         rentDueDayDefault: 10,
-        theme: 'light'
+        theme: 'dark'
       });
     }
     setIsRateModalOpen(false);
@@ -444,146 +446,111 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
 
   return (
     <div className="space-y-6 pb-16">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <Milk className="w-6 h-6 text-emerald-600" />
-            Milk Management
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500">
-            Safe tap-to-manage delivery calendar, missed logs, and monthly billing
-          </p>
-        </div>
+      {/* 1. PAGE HEADER */}
+      <PageHeader
+        icon={Milk}
+        title="Milk Tracking"
+        subtitle="Safe tap-to-manage delivery calendar, missed logs, and monthly billing."
+        primaryAction={{
+          label: currentMonthRecord ? "Update Settlement" : "Record Settlement",
+          onClick: handleOpenPaymentModal
+        }}
+        secondaryAction={{
+          label: `Rate: ${ratePerKg} PKR/kg`,
+          icon: Settings2,
+          onClick: () => {
+            setNewRateInput(ratePerKg.toString());
+            setIsRateModalOpen(true);
+          }
+        }}
+      >
+        <button
+          onClick={() => setIsConsumersModalOpen(true)}
+          className="px-3.5 py-2 rounded-xl bg-[#102638] hover:bg-[#16344d] text-cyan-300 font-semibold text-xs flex items-center gap-1.5 transition-all border border-cyan-500/20"
+        >
+          <Plus className="w-3.5 h-3.5 text-[#18E6BE]" />
+          <span>Manage People</span>
+        </button>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        {onOpenReport && (
           <button
-            onClick={() => {
-              setNewRateInput(ratePerKg.toString());
-              setIsRateModalOpen(true);
-            }}
-            className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-sm"
+            onClick={onOpenReport}
+            className="px-3.5 py-2 rounded-xl bg-[#102638] hover:bg-[#16344d] text-cyan-300 font-semibold text-xs flex items-center gap-1.5 transition-all border border-cyan-500/20"
           >
-            <Settings2 className="w-3.5 h-3.5" />
-            <span>Rate: <strong className="text-emerald-700">{ratePerKg} PKR/kg</strong></span>
+            <FileText className="w-3.5 h-3.5 text-[#18E6BE]" />
+            <span>Milk Report</span>
           </button>
+        )}
+      </PageHeader>
 
-          <button
-            onClick={() => setIsConsumersModalOpen(true)}
-            className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-sm"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Manage People
-          </button>
-
-          {onOpenReport && (
-            <button
-              onClick={onOpenReport}
-              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-md shadow-emerald-600/20"
-            >
-              <FileText className="w-4 h-4" />
-              Milk Report
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Main Monthly Stat Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      {/* 2. MAIN MONTHLY STAT CARDS (4 CARDS MATCHING PANEL 5) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Card 1: Total Bill */}
-        <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-4 text-white shadow-md">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-100">
-            Total Milk Bill
-          </div>
-          <div className="text-xl sm:text-2xl font-extrabold mt-1">
-            {formatCurrency(totalMonthlyAmount)}
-          </div>
-          <div className="text-[11px] text-emerald-100 mt-1">
-            @ {ratePerKg} PKR / KG
-          </div>
-        </div>
+        <MetricCard
+          title="Total Milk Bill"
+          value={formatCurrency(totalMonthlyAmount)}
+          subtitle={`@ ${ratePerKg} PKR / KG`}
+          icon={Milk}
+          variant="default"
+        />
 
         {/* Card 2: Paid Amount */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-            Paid Amount
-          </div>
-          <div className="text-xl sm:text-2xl font-extrabold text-emerald-700 mt-1">
-            {formatCurrency(paidAmount)}
-          </div>
-          <div className="text-[11px] text-slate-500 mt-1 truncate">
-            {currentMonthRecord?.paymentDate 
-              ? `Paid on ${formatDate(currentMonthRecord.paymentDate, 'short')}` 
-              : paidAmount > 0 
-              ? 'Recorded' 
-              : 'No payment yet'}
-          </div>
-        </div>
+        <MetricCard
+          title="Paid Amount"
+          value={formatCurrency(paidAmount)}
+          subtitle={currentMonthRecord?.paymentDate 
+            ? `Paid on ${formatDate(currentMonthRecord.paymentDate, 'short')}` 
+            : paidAmount > 0 
+            ? 'Recorded' 
+            : 'No payment yet'}
+          icon={CheckCircle2}
+          variant="success"
+        />
 
         {/* Card 3: Remaining Balance */}
-        <div className={`rounded-2xl p-4 border shadow-sm ${
-          remainingAmount === 0 
-            ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900' 
-            : 'bg-white border-slate-200 text-slate-900'
-        }`}>
-          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-            Remaining Balance
-          </div>
-          <div className={`text-xl sm:text-2xl font-extrabold mt-1 ${
-            remainingAmount === 0 ? 'text-emerald-700' : 'text-rose-600'
-          }`}>
-            {formatCurrency(remainingAmount)}
-          </div>
-          <div className="text-[11px] font-semibold mt-1">
-            {remainingAmount === 0 ? (
-              <span className="text-emerald-700">All Cleared (Nil)</span>
-            ) : paymentStatus === 'partial' ? (
-              <span className="text-amber-600">Partial Balance Due</span>
-            ) : (
-              <span className="text-rose-600">Pending Full Payment</span>
-            )}
-          </div>
-        </div>
+        <MetricCard
+          title="Remaining Balance"
+          value={formatCurrency(remainingAmount)}
+          subtitle={remainingAmount === 0 ? 'All Cleared (Nil)' : paymentStatus === 'partial' ? 'Partial Balance Due' : 'Pending Full Payment'}
+          icon={Wallet}
+          variant={remainingAmount === 0 ? 'success' : 'danger'}
+        />
 
         {/* Card 4: Supplied Milk */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-            Supplied Milk
-          </div>
-          <div className="text-xl sm:text-2xl font-extrabold text-slate-800 mt-1">
-            {totalSuppliedKg} <span className="text-sm font-semibold text-slate-500">KG</span>
-          </div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            Missed: {totalMissedDays} Days ({totalMissedKg} KG)
-          </div>
-        </div>
+        <MetricCard
+          title="Supplied Milk"
+          value={`${totalSuppliedKg} KG`}
+          subtitle={`Missed: ${totalMissedDays}d (${totalMissedKg}kg)`}
+          icon={Calendar}
+          variant="accent"
+        />
       </div>
 
-      {/* Monthly Settlement & Payment Action Banner */}
-      <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-          <div className="flex items-center gap-2.5">
-            <div className={`p-2.5 rounded-xl ${
-              paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-700' :
-              paymentStatus === 'partial' ? 'bg-amber-100 text-amber-700' :
-              'bg-rose-100 text-rose-700'
+      {/* 3. MONTHLY SETTLEMENT & PAYMENT ACTION BANNER */}
+      <div className="bg-[#0B1D2C] rounded-2xl p-4 sm:p-5 border border-slate-700/50 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className={`p-2.5 rounded-xl border ${
+              paymentStatus === 'paid' ? 'bg-teal-500/20 text-teal-300 border-teal-500/40' :
+              paymentStatus === 'partial' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' :
+              'bg-rose-500/20 text-rose-300 border-rose-500/40'
             }`}>
               <Wallet className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-slate-800 text-sm sm:text-base">
+                <h3 className="font-bold text-slate-100 text-sm sm:text-base">
                   Monthly Settlement & Milk Bill ({getMonthYearFormatted(selectedMonth)})
                 </h3>
-                <span className={`text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full ${
-                  paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-800' :
-                  paymentStatus === 'partial' ? 'bg-amber-100 text-amber-800' :
-                  'bg-rose-100 text-rose-800'
+                <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${
+                  paymentStatus === 'paid' ? 'bg-teal-500/20 text-teal-300 border-teal-500/40' :
+                  paymentStatus === 'partial' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' :
+                  'bg-rose-500/20 text-rose-300 border-rose-500/40'
                 }`}>
                   {paymentStatus === 'paid' ? 'Paid / Cleared' : paymentStatus === 'partial' ? 'Partially Paid' : 'Unpaid'}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-400 mt-0.5">
                 {currentMonthRecord?.paymentDate 
                   ? `Last recorded on ${formatDate(currentMonthRecord.paymentDate, 'short')} via ${currentMonthRecord.paymentMethod || 'Cash'}`
                   : 'Record payments made to the milkman and track carryover remaining'}
@@ -594,117 +561,117 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={handleOpenPaymentModal}
-              className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
+              className="px-3.5 py-2 rounded-xl bg-[#18E6BE] hover:bg-[#23F2CB] text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-[#18E6BE]/20 transition-all active:scale-95"
             >
-              <CreditCard className="w-3.5 h-3.5" />
+              <CreditCard className="w-3.5 h-3.5 stroke-[2.5]" />
               <span>{currentMonthRecord ? 'Update Payment' : 'Record Payment'}</span>
             </button>
 
             {paymentStatus !== 'paid' && totalPayable > 0 && (
               <button
                 onClick={handleMarkAsFullyPaid}
-                className="px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95"
+                className="px-3 py-2 rounded-xl bg-[#102638] hover:bg-[#16344d] text-teal-300 border border-teal-500/30 font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95"
                 title="Mark the entire bill as paid"
               >
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#18E6BE]" />
                 <span>Mark Fully Paid</span>
               </button>
             )}
 
             <button
               onClick={handleSendWhatsAppReceipt}
-              className="p-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+              className="p-2 rounded-xl bg-[#102638] hover:bg-[#16344d] text-teal-300 border border-teal-500/30 font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95"
               title="Share payment summary on WhatsApp"
             >
-              <MessageSquare className="w-3.5 h-3.5" />
+              <MessageSquare className="w-3.5 h-3.5 text-[#18E6BE]" />
               <span className="hidden sm:inline">WhatsApp</span>
             </button>
           </div>
         </div>
 
         {/* Financial Flow Breakdown Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-3 text-center">
-          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-            <div className="text-[10px] font-bold text-slate-400 uppercase">Month Milk Bill</div>
-            <div className="text-sm sm:text-base font-extrabold text-slate-800 mt-0.5">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-1 text-center">
+          <div className="bg-[#071724] p-2.5 rounded-xl border border-slate-800">
+            <div className="text-[10px] font-semibold text-slate-400 uppercase">Month Milk Bill</div>
+            <div className="text-sm sm:text-base font-bold text-slate-100 mt-0.5">
               {formatCurrency(totalMonthlyAmount)}
             </div>
-            <div className="text-[10px] text-slate-400">{totalSuppliedKg} KG × {ratePerKg}</div>
+            <div className="text-[10px] text-slate-500">{totalSuppliedKg} KG × {ratePerKg}</div>
           </div>
 
-          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-            <div className="text-[10px] font-bold text-slate-400 uppercase">Previous Remaining</div>
-            <div className="text-sm sm:text-base font-extrabold text-slate-700 mt-0.5">
+          <div className="bg-[#071724] p-2.5 rounded-xl border border-slate-800">
+            <div className="text-[10px] font-semibold text-slate-400 uppercase">Previous Remaining</div>
+            <div className="text-sm sm:text-base font-bold text-slate-300 mt-0.5">
               {formatCurrency(previousRemaining)}
             </div>
-            <div className="text-[10px] text-slate-400">Past arrears</div>
+            <div className="text-[10px] text-slate-500">Past arrears</div>
           </div>
 
-          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-            <div className="text-[10px] font-bold text-slate-400 uppercase">Total Payable</div>
-            <div className="text-sm sm:text-base font-extrabold text-slate-900 mt-0.5">
+          <div className="bg-[#071724] p-2.5 rounded-xl border border-slate-800">
+            <div className="text-[10px] font-semibold text-slate-400 uppercase">Total Payable</div>
+            <div className="text-sm sm:text-base font-bold text-cyan-300 mt-0.5">
               {formatCurrency(totalPayable)}
             </div>
-            <div className="text-[10px] text-slate-400">Bill + Arrears</div>
+            <div className="text-[10px] text-slate-500">Bill + Arrears</div>
           </div>
 
-          <div className="bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-100">
-            <div className="text-[10px] font-bold text-emerald-700 uppercase">Paid Amount</div>
-            <div className="text-sm sm:text-base font-black text-emerald-800 mt-0.5">
+          <div className="bg-[#071724] p-2.5 rounded-xl border border-teal-500/30">
+            <div className="text-[10px] font-semibold text-teal-400 uppercase">Paid Amount</div>
+            <div className="text-sm sm:text-base font-bold text-teal-300 mt-0.5">
               {formatCurrency(paidAmount)}
             </div>
-            <div className="text-[10px] text-emerald-600 font-semibold truncate">
+            <div className="text-[10px] text-teal-500 font-medium truncate">
               {currentMonthRecord?.paymentMethod || (paidAmount > 0 ? 'Recorded' : 'Unpaid')}
             </div>
           </div>
 
           <div className={`p-2.5 rounded-xl border col-span-2 sm:col-span-1 ${
             remainingAmount === 0 
-              ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
-              : 'bg-rose-50 text-rose-800 border-rose-200'
+              ? 'bg-teal-950/30 text-teal-300 border-teal-500/40' 
+              : 'bg-rose-950/30 text-rose-300 border-rose-500/40'
           }`}>
             <div className="text-[10px] font-bold uppercase tracking-wider">Remaining Balance</div>
-            <div className="text-sm sm:text-base font-black mt-0.5">
+            <div className="text-sm sm:text-base font-bold mt-0.5">
               {formatCurrency(remainingAmount)}
             </div>
-            <div className="text-[10px] font-semibold truncate">
+            <div className="text-[10px] font-medium truncate">
               {remainingAmount === 0 ? 'Nil (Cleared)' : 'Baqaya to pay'}
             </div>
           </div>
         </div>
 
         {currentMonthRecord?.notes && (
-          <div className="mt-3 text-xs bg-slate-50 p-2 rounded-xl text-slate-600 border border-slate-100 flex items-center gap-1.5">
-            <span className="font-semibold text-slate-500">Note:</span>
+          <div className="text-xs bg-[#071724] p-2.5 rounded-xl text-slate-300 border border-slate-800 flex items-center gap-1.5">
+            <span className="font-semibold text-slate-400">Note:</span>
             <span>"{currentMonthRecord.notes}"</span>
           </div>
         )}
       </div>
 
-      {/* Person-wise breakdown cards */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-        <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
+      {/* 4. PERSON-WISE BREAKDOWN CARDS */}
+      <div className="bg-[#0B1D2C] rounded-2xl p-4 sm:p-5 border border-slate-700/50 shadow-sm">
+        <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">
           Person-Wise Quota & Monthly Bill ({getMonthYearFormatted(selectedMonth)})
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {consumers.map(c => {
             const stat = consumerStats[c.id] || { suppliedKg: 0, missedDays: 0, missedKg: 0, cost: 0 };
             return (
-              <div key={c.id} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 flex flex-col justify-between">
+              <div key={c.id} className="p-3.5 bg-[#071724] rounded-xl border border-slate-800 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900 text-sm">{c.name}</span>
-                    <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-md">
+                    <span className="font-bold text-slate-100 text-sm">{c.name}</span>
+                    <span className="text-xs bg-[#102638] text-cyan-300 border border-cyan-500/30 font-bold px-2 py-0.5 rounded-md">
                       {c.defaultDailyKg} kg/day
                     </span>
                   </div>
-                  <div className="mt-2 text-lg font-extrabold text-slate-900">
+                  <div className="mt-2 text-lg font-bold text-slate-100">
                     {formatCurrency(stat.cost)}
                   </div>
                 </div>
-                <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 pt-2 border-t border-slate-200/60">
-                  <span>Supplied: <strong className="text-slate-800">{stat.suppliedKg} KG</strong></span>
-                  <span className="text-amber-700 font-medium">Missed: {stat.missedDays}d ({stat.missedKg}kg)</span>
+                <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-800">
+                  <span>Supplied: <strong className="text-slate-200">{stat.suppliedKg} KG</strong></span>
+                  <span className="text-rose-400 font-medium">Missed: {stat.missedDays}d ({stat.missedKg}kg)</span>
                 </div>
               </div>
             );
@@ -712,15 +679,15 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
         </div>
       </div>
 
-      {/* Action shortcuts & Instructions Banner */}
-      <div className="flex items-center justify-between gap-2 flex-wrap bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-2 text-xs text-slate-600">
-          <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
-            <ShieldCheck className="w-4 h-4" />
+      {/* 5. SAFE TAP PROTECTION & ACTION SHORTCUTS BANNER */}
+      <div className="flex items-center justify-between gap-2 flex-wrap bg-[#0B1D2C] p-3.5 rounded-2xl border border-slate-700/50 shadow-sm">
+        <div className="flex items-center gap-2.5 text-xs text-slate-300">
+          <div className="w-7 h-7 rounded-lg bg-[#102638] text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold">
+            <ShieldCheck className="w-4 h-4 text-[#18E6BE]" />
           </div>
           <div>
-            <span className="font-bold text-slate-800">Safe Tap Protection Active</span>
-            <span className="hidden sm:inline text-slate-500"> • Tap any day row below to open the Day Delivery Sheet and update records safely without accidental toggles.</span>
+            <span className="font-bold text-slate-100">Safe Tap Protection Active</span>
+            <span className="hidden sm:inline text-slate-400"> • Tap any day row below to open the Day Delivery Sheet and update records safely without accidental toggles.</span>
           </div>
         </div>
 
@@ -728,32 +695,32 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
           {isTodayInSelectedMonth && (
             <button
               onClick={handleMarkTodayAllSupplied}
-              className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center gap-1.5 transition-colors border border-emerald-200"
+              className="px-3 py-1.5 rounded-xl bg-teal-950/60 hover:bg-teal-900/70 text-teal-300 text-xs font-bold flex items-center gap-1.5 transition-colors border border-teal-500/40"
             >
-              <Check className="w-3.5 h-3.5" />
-              Mark Today Done
+              <Check className="w-3.5 h-3.5 text-[#18E6BE]" />
+              <span>Mark Today Done</span>
             </button>
           )}
           <button
             onClick={handleMarkEntireMonthSupplied}
-            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+            className="px-3 py-1.5 rounded-xl bg-[#102638] hover:bg-[#16344d] text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-slate-700"
           >
-            <CheckCheck className="w-3.5 h-3.5" />
-            Fill Month
+            <CheckCheck className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Fill Month</span>
           </button>
         </div>
       </div>
 
-      {/* Daily Attendance & Delivery Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+      {/* 6. DAILY ATTENDANCE & DELIVERY TABLE */}
+      <div className="bg-[#0B1D2C] rounded-2xl border border-slate-700/50 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-emerald-600" />
-            <h3 className="font-bold text-slate-800 text-sm sm:text-base">
+            <Calendar className="w-4 h-4 text-cyan-400" />
+            <h3 className="font-bold text-slate-100 text-sm sm:text-base">
               Daily Delivery Log — {getMonthYearFormatted(selectedMonth)}
             </h3>
           </div>
-          <span className="text-xs font-semibold text-slate-500">
+          <span className="text-xs font-medium text-slate-400">
             {monthDays.length} Days Total
           </span>
         </div>
@@ -761,7 +728,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs sm:text-sm">
             <thead>
-              <tr className="bg-slate-50 text-slate-600 border-b border-slate-200 text-[11px] sm:text-xs uppercase font-bold tracking-wider">
+              <tr className="bg-[#102638] text-slate-400 border-b border-slate-700/60 text-[11px] sm:text-xs uppercase font-semibold tracking-wider">
                 <th className="py-3 px-3 sm:px-4 w-28">Date</th>
                 {consumers.map(c => (
                   <th key={c.id} className="py-3 px-3 sm:px-4 text-center">
@@ -773,7 +740,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                 <th className="py-3 px-2 sm:px-3 text-center w-12">Edit</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
+            <tbody className="divide-y divide-slate-800 font-medium text-slate-200">
               {monthDays.map(day => {
                 let dayTotalKg = 0;
                 const isToday = day.dateStr === todayStr;
@@ -784,20 +751,20 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                     onClick={() => handleOpenDayModal(day)}
                     className={`transition-colors cursor-pointer group ${
                       isToday 
-                        ? 'bg-emerald-50/50 hover:bg-emerald-50' 
-                        : 'hover:bg-slate-50/80'
+                        ? 'bg-[#102638]/70 hover:bg-[#102638]' 
+                        : 'hover:bg-[#102638]/40'
                     }`}
                   >
                     <td className="py-3 px-3 sm:px-4 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-slate-900">{day.day} {getMonthYearFormatted(selectedMonth).split(' ')[0]}</span>
+                        <span className="font-bold text-slate-100">{day.day} {getMonthYearFormatted(selectedMonth).split(' ')[0]}</span>
                         {isToday && (
-                          <span className="px-1.5 py-0.2 rounded bg-emerald-600 text-white text-[9px] font-extrabold uppercase">
+                          <span className="px-1.5 py-0.5 rounded bg-[#18E6BE] text-slate-950 text-[9px] font-black uppercase">
                             Today
                           </span>
                         )}
                       </div>
-                      <div className="text-[10px] text-slate-400 font-semibold uppercase">{day.dayOfWeek}</div>
+                      <div className="text-[10px] text-slate-500 font-semibold uppercase">{day.dayOfWeek}</div>
                     </td>
 
                     {consumers.map(c => {
@@ -817,16 +784,16 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                         <td key={c.id} className="py-3 px-2 sm:px-4 text-center">
                           <div className="inline-flex items-center justify-center">
                             {isMissed ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-rose-50 text-rose-700 font-bold text-xs border border-rose-200/80">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-rose-500/20 text-rose-300 font-bold text-xs border border-rose-500/40">
                                 <XIcon className="w-3.5 h-3.5 stroke-[2.5]" />
                                 <span>Missed</span>
                               </span>
                             ) : isCustom ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-blue-50 text-blue-800 font-bold text-xs border border-blue-200/80">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-cyan-500/20 text-cyan-300 font-bold text-xs border border-cyan-500/40">
                                 <span>{actualKg} KG</span>
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-800 font-bold text-xs border border-emerald-200/80">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-teal-500/20 text-teal-300 font-bold text-xs border border-teal-500/40">
                                 <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                                 <span>{actualKg} KG</span>
                               </span>
@@ -836,16 +803,16 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                       );
                     })}
 
-                    <td className="py-3 px-3 sm:px-4 text-right font-bold text-slate-900">
+                    <td className="py-3 px-3 sm:px-4 text-right font-bold text-slate-100">
                       {dayTotalKg} KG
                     </td>
 
-                    <td className="py-3 px-3 sm:px-4 text-right font-bold text-emerald-700">
+                    <td className="py-3 px-3 sm:px-4 text-right font-bold text-teal-400">
                       {formatCurrency(dayTotalKg * ratePerKg)}
                     </td>
 
                     <td className="py-3 px-2 sm:px-3 text-center">
-                      <div className="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-emerald-100 group-hover:text-emerald-700 flex items-center justify-center text-slate-400 transition-colors mx-auto">
+                      <div className="w-7 h-7 rounded-lg bg-[#071724] group-hover:bg-[#102638] group-hover:text-cyan-300 flex items-center justify-center text-slate-500 transition-colors mx-auto border border-slate-800">
                         <ChevronRight className="w-4 h-4" />
                       </div>
                     </td>
@@ -853,24 +820,24 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                 );
               })}
             </tbody>
-            <tfoot className="bg-slate-100 font-extrabold text-slate-900 border-t-2 border-slate-300">
+            <tfoot className="bg-[#071724] font-bold text-slate-100 border-t border-slate-700">
               <tr>
                 <td className="py-3.5 px-3 sm:px-4">Monthly Total</td>
                 {consumers.map(c => {
                   const stat = consumerStats[c.id];
                   return (
                     <td key={c.id} className="py-3.5 px-3 sm:px-4 text-center">
-                      <div className="text-sm font-black">{stat?.suppliedKg || 0} KG</div>
-                      <div className="text-[11px] text-slate-500 font-semibold">
+                      <div className="text-sm font-bold text-slate-100">{stat?.suppliedKg || 0} KG</div>
+                      <div className="text-[11px] text-slate-400 font-medium">
                         {formatCurrency(stat?.cost || 0)}
                       </div>
                     </td>
                   );
                 })}
-                <td className="py-3.5 px-3 sm:px-4 text-right text-base text-slate-900 font-black">
+                <td className="py-3.5 px-3 sm:px-4 text-right text-base text-slate-100 font-bold">
                   {totalSuppliedKg} KG
                 </td>
-                <td className="py-3.5 px-3 sm:px-4 text-right text-base text-emerald-700 font-black">
+                <td className="py-3.5 px-3 sm:px-4 text-right text-base text-teal-400 font-bold">
                   {formatCurrency(totalMonthlyAmount)}
                 </td>
                 <td></td>
@@ -880,28 +847,28 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
         </div>
       </div>
 
-      {/* MODAL: SAFE DAY DELIVERY MANAGER SHEET */}
+      {/* 7. MODAL: SAFE DAY DELIVERY MANAGER SHEET */}
       {selectedDayForEdit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+          <div className="bg-[#0B1D2C] rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-cyan-500/30 animate-in fade-in zoom-in duration-200 max-h-[90vh] flex flex-col">
             {/* Sheet Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
-                  <Calendar className="w-5 h-5" />
+                <div className="w-10 h-10 rounded-xl bg-[#102638] text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold">
+                  <Calendar className="w-5 h-5 text-[#18E6BE]" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base sm:text-lg leading-tight">
+                  <h3 className="font-bold text-slate-100 text-base sm:text-lg leading-tight">
                     Delivery for {selectedDayForEdit.day} {getMonthYearFormatted(selectedMonth)}
                   </h3>
-                  <p className="text-xs text-slate-500 font-medium">
+                  <p className="text-xs text-slate-400 font-medium">
                     {selectedDayForEdit.dayOfWeek} • Select delivery status for each person
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setSelectedDayForEdit(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100"
+                className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-[#102638]"
               >
                 <XIcon className="w-5 h-5" />
               </button>
@@ -922,21 +889,21 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                 return (
                   <div 
                     key={consumer.id}
-                    className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2.5"
+                    className="p-3.5 bg-[#071724] rounded-xl border border-slate-800 space-y-2.5"
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="font-bold text-slate-900 text-sm">{consumer.name}</div>
-                        <div className="text-[11px] text-slate-500">Default Quota: <strong className="text-slate-700">{consumer.defaultDailyKg} kg/day</strong></div>
+                        <div className="font-bold text-slate-100 text-sm">{consumer.name}</div>
+                        <div className="text-[11px] text-slate-400">Default Quota: <strong className="text-slate-200">{consumer.defaultDailyKg} kg/day</strong></div>
                       </div>
 
                       <div className="text-right">
-                        <span className={`text-xs font-black px-2.5 py-0.5 rounded-lg ${
+                        <span className={`text-xs font-bold px-2.5 py-0.5 rounded-lg border ${
                           isMissed 
-                            ? 'bg-rose-100 text-rose-800' 
+                            ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' 
                             : isCustom 
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-emerald-100 text-emerald-800'
+                            ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                            : 'bg-teal-500/20 text-teal-300 border-teal-500/40'
                         }`}>
                           {isMissed ? '0 KG (Missed)' : `${currentKg} KG`}
                         </span>
@@ -944,18 +911,18 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                     </div>
 
                     {/* Segmented Selection Buttons */}
-                    <div className="grid grid-cols-3 gap-1.5 bg-white p-1 rounded-xl border border-slate-200">
+                    <div className="grid grid-cols-3 gap-1.5 bg-[#0B1D2C] p-1 rounded-xl border border-slate-700">
                       {/* 1. SUPPLIED */}
                       <button
                         type="button"
                         onClick={() => handleSetStatusInModal(selectedDayForEdit.dateStr, consumer, 'supplied')}
                         className={`py-2 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${
                           isSupplied
-                            ? 'bg-emerald-600 text-white shadow-sm'
-                            : 'text-slate-600 hover:bg-slate-100'
+                            ? 'bg-teal-500/20 text-teal-300 border border-teal-500/50 shadow-sm'
+                            : 'text-slate-400 hover:text-slate-200'
                         }`}
                       >
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        <Check className="w-3.5 h-3.5 stroke-[3] text-teal-400" />
                         <span>Full ({consumer.defaultDailyKg}kg)</span>
                       </button>
 
@@ -965,11 +932,11 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                         onClick={() => handleSetStatusInModal(selectedDayForEdit.dateStr, consumer, 'missed')}
                         className={`py-2 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${
                           isMissed
-                            ? 'bg-rose-600 text-white shadow-sm'
-                            : 'text-slate-600 hover:bg-slate-100'
+                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/50 shadow-sm'
+                            : 'text-slate-400 hover:text-slate-200'
                         }`}
                       >
-                        <XIcon className="w-3.5 h-3.5 stroke-[3]" />
+                        <XIcon className="w-3.5 h-3.5 stroke-[3] text-rose-400" />
                         <span>Missed (0kg)</span>
                       </button>
 
@@ -982,21 +949,21 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                         }}
                         className={`py-2 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${
                           isCustom
-                            ? 'bg-blue-600 text-white shadow-sm'
-                            : 'text-slate-600 hover:bg-slate-100'
+                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-sm'
+                            : 'text-slate-400 hover:text-slate-200'
                         }`}
                       >
-                        <Edit2 className="w-3.5 h-3.5" />
+                        <Edit2 className="w-3.5 h-3.5 text-cyan-400" />
                         <span>Custom KG</span>
                       </button>
                     </div>
 
                     {/* Inline Custom Input & Quick Steppers when Custom is selected */}
                     {isCustom && (
-                      <div className="space-y-2 pt-2 bg-blue-50/70 p-3 rounded-xl border border-blue-200/80">
+                      <div className="space-y-2 pt-2 bg-[#102638] p-3 rounded-xl border border-cyan-500/30">
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
-                            <label className="text-xs font-black text-slate-800 whitespace-nowrap">
+                            <label className="text-xs font-bold text-slate-200 whitespace-nowrap">
                               Delivered Today (KG):
                             </label>
                             <input
@@ -1019,7 +986,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                                 setCustomInputs(prev => ({ ...prev, [consumer.id]: validNum.toString() }));
                                 handleSetStatusInModal(selectedDayForEdit.dateStr, consumer, 'custom', validNum);
                               }}
-                              className="w-24 px-2.5 py-1.5 bg-white border border-blue-300 rounded-lg text-sm font-black text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-center"
+                              className="w-24 px-2.5 py-1.5 bg-[#071724] border border-cyan-500/40 rounded-lg text-sm font-bold text-slate-100 text-center focus:outline-none focus:border-cyan-400"
                             />
                           </div>
 
@@ -1035,7 +1002,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                                   setCustomInputs(prev => ({ ...prev, [consumer.id]: newVal.toString() }));
                                   handleSetStatusInModal(selectedDayForEdit.dateStr, consumer, 'custom', newVal);
                                 }}
-                                className="px-2 py-1 bg-white hover:bg-blue-100 border border-blue-200 text-blue-800 rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer"
+                                className="px-2 py-1 bg-[#071724] hover:bg-[#0c2236] border border-slate-700 text-cyan-300 rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer"
                               >
                                 {step > 0 ? `+${step}` : step} kg
                               </button>
@@ -1044,14 +1011,14 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                         </div>
 
                         {/* Live calculation explanation */}
-                        <div className="flex items-center justify-between text-[11px] font-bold bg-white/90 px-2.5 py-1.5 rounded-lg border border-blue-100">
-                          <span className="text-emerald-700">
+                        <div className="flex items-center justify-between text-[11px] font-bold bg-[#071724] px-2.5 py-1.5 rounded-lg border border-slate-800">
+                          <span className="text-teal-400">
                             ✓ Delivered: {currentKg} KG
                           </span>
-                          <span className="text-amber-700">
-                            ✕ Missed / Cut: {Math.max(0, parseFloat((consumer.defaultDailyKg - currentKg).toFixed(2)))} KG
+                          <span className="text-rose-400">
+                            ✕ Missed: {Math.max(0, parseFloat((consumer.defaultDailyKg - currentKg).toFixed(2)))} KG
                           </span>
-                          <span className="text-slate-400">
+                          <span className="text-slate-500">
                             (Quota: {consumer.defaultDailyKg}kg)
                           </span>
                         </div>
@@ -1063,11 +1030,11 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
             </div>
 
             {/* Modal Footer */}
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+            <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={() => handleMarkDayAllSupplied(selectedDayForEdit.dateStr)}
-                className="px-3 py-2 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-200 transition-colors cursor-pointer"
+                className="px-3 py-2 text-xs font-bold text-teal-300 bg-teal-950/60 hover:bg-teal-900/70 rounded-xl border border-teal-500/30 transition-colors cursor-pointer"
               >
                 Mark All Supplied (✓)
               </button>
@@ -1098,7 +1065,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                   }
                   setSelectedDayForEdit(null);
                 }}
-                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
+                className="px-5 py-2 bg-[#18E6BE] hover:bg-[#23F2CB] text-slate-950 rounded-xl text-xs font-bold shadow-md shadow-[#18E6BE]/20 transition-all cursor-pointer"
               >
                 Done & Save
               </button>
@@ -1107,12 +1074,12 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
         </div>
       )}
 
-      {/* MODAL: MANAGE CONSUMERS */}
+      {/* 8. MODAL: MANAGE CONSUMERS */}
       {isConsumersModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-100 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900 text-lg">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+          <div className="bg-[#0B1D2C] rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-cyan-500/30 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h3 className="font-bold text-slate-100 text-lg">
                 Manage Milk Consumers
               </h3>
               <button
@@ -1120,15 +1087,15 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                   setIsConsumersModalOpen(false);
                   setEditingConsumer(null);
                 }}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full"
+                className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-[#102638]"
               >
                 <XIcon className="w-5 h-5" />
               </button>
             </div>
 
             {/* Add / Edit Form */}
-            <form onSubmit={handleSaveConsumer} className="bg-slate-50 p-3.5 rounded-2xl my-3 border border-slate-200/60 space-y-3">
-              <div className="text-xs font-bold text-slate-700">
+            <form onSubmit={handleSaveConsumer} className="bg-[#071724] p-3.5 rounded-xl my-3 border border-slate-800 space-y-3">
+              <div className="text-xs font-bold text-slate-300">
                 {editingConsumer ? `Edit ${editingConsumer.name}` : 'Add New Person'}
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -1139,7 +1106,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                     placeholder="Name (e.g. Saleem)"
                     value={newConsumerName}
                     onChange={(e) => setNewConsumerName(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500/20"
+                    className="w-full px-3 py-2 bg-[#0B1D2C] border border-slate-700 rounded-xl text-xs font-medium text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400"
                   />
                 </div>
                 <div>
@@ -1151,7 +1118,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                     placeholder="KG/day (e.g. 3)"
                     value={newConsumerQuota}
                     onChange={(e) => setNewConsumerQuota(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500/20"
+                    className="w-full px-3 py-2 bg-[#0B1D2C] border border-slate-700 rounded-xl text-xs font-medium text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400"
                   />
                 </div>
               </div>
@@ -1164,14 +1131,14 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                       setNewConsumerName('');
                       setNewConsumerQuota('1');
                     }}
-                    className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-200 rounded-lg"
+                    className="px-3 py-1.5 text-xs text-slate-300 hover:text-white bg-[#102638] rounded-xl border border-slate-700"
                   >
                     Cancel Edit
                   </button>
                 )}
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-emerald-600 text-white rounded-xl font-bold text-xs shadow-sm hover:bg-emerald-700"
+                  className="px-4 py-1.5 bg-[#18E6BE] hover:bg-[#23F2CB] text-slate-950 rounded-xl font-bold text-xs shadow-md shadow-[#18E6BE]/20"
                 >
                   {editingConsumer ? 'Update Person' : '+ Add Person'}
                 </button>
@@ -1180,14 +1147,14 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
 
             {/* Active List */}
             <div className="flex-1 overflow-y-auto pr-1 space-y-2">
-              <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                 Current People ({consumers.length})
               </div>
               {consumers.map(c => (
-                <div key={c.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                <div key={c.id} className="p-3 bg-[#071724] rounded-xl border border-slate-800 flex items-center justify-between">
                   <div>
-                    <div className="font-bold text-slate-900 text-sm">{c.name}</div>
-                    <div className="text-xs text-emerald-700 font-semibold">{c.defaultDailyKg} kg / day quota</div>
+                    <div className="font-bold text-slate-100 text-sm">{c.name}</div>
+                    <div className="text-xs text-teal-400 font-semibold">{c.defaultDailyKg} kg / day quota</div>
                   </div>
                   <div className="flex items-center gap-1">
                     <button
@@ -1196,14 +1163,14 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                         setNewConsumerName(c.name);
                         setNewConsumerQuota(c.defaultDailyKg.toString());
                       }}
-                      className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-200 rounded-lg"
+                      className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-[#102638] rounded-lg"
                       title="Edit"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => handleDeleteConsumer(c.id)}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
+                      className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg"
                       title="Delete"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -1213,10 +1180,10 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
               ))}
             </div>
 
-            <div className="pt-3 border-t border-slate-100 flex justify-end">
+            <div className="pt-3 border-t border-slate-800 flex justify-end">
               <button
                 onClick={() => setIsConsumersModalOpen(false)}
-                className="px-4 py-1.5 bg-slate-900 text-white rounded-xl text-xs font-bold"
+                className="px-4 py-1.5 bg-[#102638] hover:bg-[#16344d] text-slate-200 rounded-xl text-xs font-bold border border-slate-700"
               >
                 Done
               </button>
@@ -1225,17 +1192,17 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
         </div>
       )}
 
-      {/* MODAL: SET RATE */}
+      {/* 9. MODAL: SET RATE */}
       {isRateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl max-w-xs w-full p-5 shadow-2xl border border-slate-100">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900 text-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+          <div className="bg-[#0B1D2C] rounded-2xl max-w-xs w-full p-5 shadow-2xl border border-cyan-500/30">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <h3 className="font-bold text-slate-100 text-sm">
                 Set Milk Rate (PKR / KG)
               </h3>
               <button
                 onClick={() => setIsRateModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-700"
+                className="p-1 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-[#102638]"
               >
                 <XIcon className="w-4 h-4" />
               </button>
@@ -1250,23 +1217,23 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                   step="any"
                   value={newRateInput}
                   onChange={(e) => setNewRateInput(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-lg font-extrabold text-slate-900 text-center focus:ring-2 focus:ring-emerald-500/20"
+                  className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-lg font-bold text-slate-100 text-center focus:outline-none focus:border-cyan-400"
                 />
                 <span className="text-[11px] text-slate-400 text-center block mt-1">
                   Default is 260 PKR / KG
                 </span>
               </div>
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsRateModalOpen(false)}
-                  className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-xl"
+                  className="px-3 py-1.5 text-xs text-slate-300 hover:text-white bg-[#102638] rounded-xl border border-slate-700"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-emerald-600 text-white rounded-xl font-bold text-xs shadow-md"
+                  className="px-4 py-1.5 bg-[#18E6BE] hover:bg-[#23F2CB] text-slate-950 rounded-xl font-bold text-xs shadow-md shadow-[#18E6BE]/20"
                 >
                   Save Rate
                 </button>
@@ -1276,27 +1243,27 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
         </div>
       )}
 
-      {/* MODAL: RECORD / UPDATE MILK PAYMENT & REMAINING */}
+      {/* 10. MODAL: RECORD / UPDATE MILK PAYMENT & REMAINING */}
       {isPaymentModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+          <div className="bg-[#0B1D2C] rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-cyan-500/30 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700">
-                  <CreditCard className="w-5 h-5" />
+                <div className="p-2 rounded-xl bg-[#102638] text-cyan-400 border border-cyan-500/30">
+                  <CreditCard className="w-5 h-5 text-[#18E6BE]" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-sm sm:text-base">
+                  <h3 className="font-bold text-slate-100 text-sm sm:text-base">
                     Record Milk Payment
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-400">
                     {getMonthYearFormatted(selectedMonth)} Account
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsPaymentModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100"
+                className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-[#102638]"
               >
                 <XIcon className="w-4 h-4" />
               </button>
@@ -1304,22 +1271,22 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
 
             <form onSubmit={handleSavePayment} className="space-y-4 mt-4">
               {/* Overview Summary Box */}
-              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 grid grid-cols-3 gap-2 text-center">
+              <div className="bg-[#071724] p-3.5 rounded-xl border border-slate-800 grid grid-cols-3 gap-2 text-center">
                 <div>
-                  <div className="text-[10px] font-bold uppercase text-slate-500">Milk Bill</div>
-                  <div className="text-xs sm:text-sm font-extrabold text-slate-800 mt-0.5">
+                  <div className="text-[10px] font-semibold uppercase text-slate-400">Milk Bill</div>
+                  <div className="text-xs sm:text-sm font-bold text-slate-100 mt-0.5">
                     {formatCurrency(totalMonthlyAmount)}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] font-bold uppercase text-slate-500">Past Arrears</div>
-                  <div className="text-xs sm:text-sm font-extrabold text-slate-700 mt-0.5">
+                  <div className="text-[10px] font-semibold uppercase text-slate-400">Past Arrears</div>
+                  <div className="text-xs sm:text-sm font-bold text-slate-300 mt-0.5">
                     {formatCurrency(parseFloat(paymentForm.previousRemaining) || 0)}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] font-bold uppercase text-emerald-700">Total Due</div>
-                  <div className="text-xs sm:text-sm font-black text-emerald-700 mt-0.5">
+                  <div className="text-[10px] font-semibold uppercase text-teal-400">Total Due</div>
+                  <div className="text-xs sm:text-sm font-bold text-teal-300 mt-0.5">
                     {formatCurrency(totalMonthlyAmount + (parseFloat(paymentForm.previousRemaining) || 0))}
                   </div>
                 </div>
@@ -1327,22 +1294,22 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
 
               {/* Previous Remaining / Arrears Input */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-medium text-slate-300 mb-1">
                   Previous Remaining (Past Arrears)
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">PKR</span>
+                  <span className="absolute left-3 top-2.5 text-xs text-slate-500 font-bold">PKR</span>
                   <input
                     type="number"
                     min="0"
                     step="any"
                     value={paymentForm.previousRemaining}
                     onChange={(e) => handlePrevRemainingChange(e.target.value)}
-                    className="w-full pl-12 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/20"
+                    className="w-full pl-12 pr-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-sm font-bold text-slate-100 placeholder-slate-600 focus:outline-none focus:border-cyan-400"
                     placeholder="0"
                   />
                 </div>
-                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                <span className="text-[10px] text-slate-500 mt-0.5 block">
                   Defaults to remaining balance of previous month ({prevMonthStr})
                 </span>
               </div>
@@ -1350,19 +1317,19 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
               {/* Paid Amount Input */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-slate-700">
+                  <label className="text-xs font-medium text-slate-300">
                     Paid Amount (This Month) *
                   </label>
                   <button
                     type="button"
                     onClick={() => handlePaidAmountChange(String(totalMonthlyAmount + (parseFloat(paymentForm.previousRemaining) || 0)))}
-                    className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 underline"
+                    className="text-[11px] font-bold text-cyan-400 hover:text-cyan-300 underline"
                   >
                     Set Full ({formatCurrency(totalMonthlyAmount + (parseFloat(paymentForm.previousRemaining) || 0))})
                   </button>
                 </div>
                 <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">PKR</span>
+                  <span className="absolute left-3 top-2.5 text-xs text-slate-500 font-bold">PKR</span>
                   <input
                     type="number"
                     min="0"
@@ -1370,7 +1337,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                     required
                     value={paymentForm.paidAmount}
                     onChange={(e) => handlePaidAmountChange(e.target.value)}
-                    className="w-full pl-12 pr-3 py-2.5 bg-emerald-50/50 border border-emerald-300 rounded-xl text-base font-black text-emerald-900 focus:ring-2 focus:ring-emerald-500/20"
+                    className="w-full pl-12 pr-3 py-2 bg-[#071724] border border-cyan-500/40 rounded-xl text-base font-bold text-[#18E6BE] placeholder-slate-600 focus:outline-none focus:border-cyan-400"
                     placeholder="e.g. 15000"
                     autoFocus
                   />
@@ -1379,22 +1346,22 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
 
               {/* Remaining Balance (Calculated / Override) */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-medium text-slate-300 mb-1">
                   Remaining Balance (Baqaya)
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">PKR</span>
+                  <span className="absolute left-3 top-2.5 text-xs text-slate-500 font-bold">PKR</span>
                   <input
                     type="number"
                     min="0"
                     step="any"
                     value={paymentForm.remainingAmount}
                     onChange={(e) => setPaymentForm(prev => ({ ...prev, remainingAmount: e.target.value }))}
-                    className="w-full pl-12 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/20"
+                    className="w-full pl-12 pr-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-sm font-bold text-slate-100 placeholder-slate-600 focus:outline-none focus:border-cyan-400"
                     placeholder="0"
                   />
                 </div>
-                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                <span className="text-[10px] text-slate-500 mt-0.5 block">
                   Automatically calculated as (Total Due - Paid). You can manually adjust if needed.
                 </span>
               </div>
@@ -1402,7 +1369,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
               {/* Payment Date & Method */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-medium text-slate-300 mb-1">
                     Payment Date
                   </label>
                   <input
@@ -1410,18 +1377,18 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                     required
                     value={paymentForm.paymentDate}
                     onChange={(e) => setPaymentForm(prev => ({ ...prev, paymentDate: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500/20"
+                    className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-xs font-medium text-slate-200 focus:outline-none focus:border-cyan-400"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-medium text-slate-300 mb-1">
                     Payment Method
                   </label>
                   <select
                     value={paymentForm.paymentMethod}
                     onChange={(e) => setPaymentForm(prev => ({ ...prev, paymentMethod: e.target.value as any }))}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500/20"
+                    className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-xs font-medium text-slate-200 focus:outline-none focus:border-cyan-400"
                   >
                     <option value="Cash">Cash</option>
                     <option value="Easypaisa">Easypaisa</option>
@@ -1433,7 +1400,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
 
               {/* Notes */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-medium text-slate-300 mb-1">
                   Notes (Optional)
                 </label>
                 <input
@@ -1441,22 +1408,22 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                   value={paymentForm.notes}
                   onChange={(e) => setPaymentForm(prev => ({ ...prev, notes: e.target.value }))}
                   placeholder="e.g. Paid to milkman Aslam in cash"
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:ring-2 focus:ring-emerald-500/20"
+                  className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-400"
                 />
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsPaymentModalOpen(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                  className="px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white bg-[#102638] rounded-xl border border-slate-700 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl font-bold text-xs shadow-md shadow-emerald-600/20 transition-all"
+                  className="px-5 py-2 bg-[#18E6BE] hover:bg-[#23F2CB] active:scale-95 text-slate-950 rounded-xl font-bold text-xs shadow-md shadow-[#18E6BE]/20 transition-all"
                 >
                   Save Payment Record
                 </button>

@@ -84,56 +84,56 @@ export const PersonManagementModal: React.FC<PersonManagementModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <User className="w-5 h-5 text-emerald-600" />
-            Manage Persons & Monthly Contribution
+    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-[#0B1D2C] rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200 border border-cyan-500/30">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <h2 className="text-base sm:text-lg font-bold text-slate-100 flex items-center gap-2">
+            <User className="w-5 h-5 text-[#18E6BE]" />
+            <span>Manage Persons & Monthly Contribution</span>
           </h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            className="p-1 rounded-lg text-slate-400 hover:bg-[#102638] hover:text-slate-200"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* List of Persons */}
-        <div className="space-y-3 max-h-60 overflow-y-auto">
+        <div className="space-y-2.5 max-h-60 overflow-y-auto">
           {persons.map(p => {
             const isSelected = p.id === selectedPersonId;
 
             return (
               <div
                 key={p.id}
-                className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                className={`p-3.5 rounded-xl border transition-all flex items-center justify-between gap-3 ${
                   isSelected
-                    ? 'border-emerald-500 bg-emerald-50/50'
-                    : 'border-slate-200 bg-slate-50'
+                    ? 'border-cyan-400 bg-[#102638]'
+                    : 'border-slate-800 bg-[#071724]'
                 }`}
               >
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-800 text-sm">{p.name}</span>
+                    <span className="font-bold text-slate-100 text-sm">{p.name}</span>
                     {isSelected && (
-                      <span className="text-[10px] bg-emerald-600 text-white font-bold px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] bg-[#18E6BE] text-slate-950 font-bold px-2 py-0.5 rounded-full">
                         Active Selection
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-slate-500 mt-0.5">
-                    Expected Monthly Contribution: <strong className="text-slate-700">{formatCurrency(p.monthlyExpectedContribution)}</strong>
+                  <div className="text-xs text-slate-400 mt-0.5">
+                    Expected Contribution: <strong className="text-slate-200">{formatCurrency(p.monthlyExpectedContribution)}</strong>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => onSelectPerson(p.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                       isSelected
-                        ? 'bg-emerald-600 text-white shadow-sm'
-                        : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100'
+                        ? 'bg-[#18E6BE] text-slate-950 shadow-sm'
+                        : 'bg-[#102638] border border-slate-700 text-slate-300 hover:text-white'
                     }`}
                   >
                     Select
@@ -141,7 +141,7 @@ export const PersonManagementModal: React.FC<PersonManagementModalProps> = ({
 
                   <button
                     onClick={() => handleStartEdit(p)}
-                    className="p-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200 rounded-lg"
+                    className="p-1.5 text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-[#102638] rounded-lg transition-colors"
                   >
                     Edit
                   </button>
@@ -151,15 +151,26 @@ export const PersonManagementModal: React.FC<PersonManagementModalProps> = ({
           })}
         </div>
 
+        {/* Add New Person Trigger */}
+        {!isAddingNew && !editingPersonId && (
+          <button
+            onClick={handleStartAdd}
+            className="w-full py-2.5 bg-[#102638] hover:bg-[#16344d] text-cyan-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-cyan-500/20 transition-colors"
+          >
+            <UserPlus className="w-4 h-4 text-[#18E6BE]" />
+            <span>+ Add New Person Profile</span>
+          </button>
+        )}
+
         {/* Add/Edit Form */}
-        {(isAddingNew || editingPersonId) ? (
-          <form onSubmit={handleSave} className="bg-slate-100/80 p-4 rounded-2xl border border-slate-200 space-y-3">
-            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+        {(isAddingNew || editingPersonId) && (
+          <form onSubmit={handleSave} className="bg-[#071724] p-4 rounded-xl border border-cyan-500/30 space-y-3">
+            <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
               {isAddingNew ? 'Add New Person' : 'Edit Person & Default Expected Contribution'}
             </h3>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
+              <label className="block text-xs font-medium text-slate-300 mb-1">
                 Person Name
               </label>
               <input
@@ -167,13 +178,13 @@ export const PersonManagementModal: React.FC<PersonManagementModalProps> = ({
                 value={name}
                 onChange={e => setName(e.target.value)}
                 placeholder="e.g. Saleem, Tayyab"
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 bg-[#0B1D2C] border border-slate-700 rounded-xl text-sm font-semibold text-slate-100 focus:outline-none focus:border-cyan-400"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
+              <label className="block text-xs font-medium text-slate-300 mb-1">
                 Expected Monthly Contribution (PKR)
               </label>
               <input
@@ -182,10 +193,10 @@ export const PersonManagementModal: React.FC<PersonManagementModalProps> = ({
                 onChange={e => setExpectedContribution(e.target.value === '' ? '' : Number(e.target.value))}
                 placeholder="e.g. 9500"
                 min="0"
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 bg-[#0B1D2C] border border-slate-700 rounded-xl text-sm font-semibold text-slate-100 focus:outline-none focus:border-cyan-400"
                 required
               />
-              <p className="text-[11px] text-slate-500 mt-1">
+              <p className="text-[11px] text-slate-400 mt-1">
                 Note: Updating this default expected contribution will not alter historical monthly records.
               </p>
             </div>
@@ -197,29 +208,30 @@ export const PersonManagementModal: React.FC<PersonManagementModalProps> = ({
                   setIsAddingNew(false);
                   setEditingPersonId(null);
                 }}
-                className="px-3.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl"
+                className="px-3.5 py-1.5 bg-[#102638] hover:bg-[#16344d] text-slate-300 text-xs font-semibold rounded-xl border border-slate-700 transition-colors"
               >
                 Cancel
               </button>
 
               <button
                 type="submit"
-                className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center gap-1 shadow-sm"
+                className="px-4 py-1.5 bg-[#18E6BE] hover:bg-[#23F2CB] text-slate-950 text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-md shadow-[#18E6BE]/20"
               >
-                <Save className="w-3.5 h-3.5" />
-                Save Details
+                <Save className="w-4 h-4 stroke-[2.5]" />
+                <span>Save Profile</span>
               </button>
             </div>
           </form>
-        ) : (
-          <button
-            onClick={handleStartAdd}
-            className="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-2xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all"
-          >
-            <UserPlus className="w-4 h-4" />
-            Add Person
-          </button>
         )}
+
+        <div className="flex items-center justify-end pt-2 border-t border-slate-800">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-[#102638] hover:bg-[#16344d] text-slate-300 font-semibold text-xs rounded-xl border border-slate-700 transition-colors"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   );

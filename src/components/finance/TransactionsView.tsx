@@ -30,7 +30,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   const [typeFilter, setTypeFilter] = useState<'all' | FinanceTransactionType>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
-  const [dateFilter, setDateFilter] = useState<string>('month'); // 'month' | 'all' | custom date
+  const [dateFilter, setDateFilter] = useState<string>('month');
 
   const accounts = useLiveQuery(() => db.finance_accounts.toArray()) || [];
   const categories = useLiveQuery(() => db.finance_categories.toArray()) || [];
@@ -79,7 +79,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
     }).sort((a, b) => new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime() || b.id.localeCompare(a.id));
   }, [allTransactions, selectedMonth, dateFilter, typeFilter, selectedCategory, selectedAccount, searchTerm]);
 
-  // Group transactions by date relative labels (TODAY, YESTERDAY, specific date)
+  // Group transactions by date relative labels
   const groupedTransactions = useMemo(() => {
     const today = getTodayLocalDateStr();
     const yesterday = addDaysLocalDate(today, -1);
@@ -98,7 +98,6 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
       if (dateStr === today) label = 'TODAY';
       else if (dateStr === yesterday) label = 'YESTERDAY';
       else {
-        // Format e.g. "Monday, 31 August 2026"
         const d = new Date(dateStr);
         label = d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
       }
@@ -147,21 +146,22 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
       {/* 1. SMART QUICK ENTRY BAR */}
       <SmartQuickEntryBar
         onOpenVoiceModal={onOpenVoiceModal}
+        onOpenAddModal={onOpenAddModal}
         onTransactionSaved={() => {}}
       />
 
       {/* 2. SEARCH & FILTER CONTROLS */}
-      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-sm space-y-3.5">
+      <div className="bg-[#0B1D2C] rounded-2xl p-4 sm:p-5 border border-[rgba(70,150,180,0.18)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] space-y-3.5">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           {/* Search Input */}
           <div className="relative w-full sm:w-72">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-[#6F899B] absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search description, category, amount..."
-              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500"
+              className="w-full pl-9 pr-3 py-2 bg-[#091A28] border border-[rgba(70,150,180,0.2)] rounded-xl text-xs sm:text-sm font-semibold text-[#F4F8FB] placeholder-[#6F899B] focus:outline-none focus:border-[#18E6BE]"
             />
           </div>
 
@@ -169,16 +169,16 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               onClick={onOpenVoiceModal}
-              className="flex-1 sm:flex-initial px-3.5 py-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition-all"
+              className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-[#102638] hover:bg-[#122B3E] text-[#18E6BE] border border-[rgba(24,230,190,0.25)] font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
             >
               <span>🎙️ Voice</span>
             </button>
 
             <button
               onClick={() => onOpenAddModal('expense')}
-              className="flex-1 sm:flex-initial px-3.5 py-2 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition-all"
+              className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-[#18E6BE] hover:bg-[#23F2CB] text-[#06131F] font-bold text-xs flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(24,230,190,0.25)] active:scale-95 transition-all"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
               <span>+ Transaction</span>
             </button>
           </div>
@@ -197,8 +197,8 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
               onClick={() => setTypeFilter(tab.id)}
               className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                 typeFilter === tab.id
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  ? 'bg-[rgba(24,230,190,0.12)] text-[#18E6BE] border border-[rgba(24,230,190,0.3)] shadow-[0_0_10px_rgba(24,230,190,0.2)]'
+                  : 'bg-[#102638] text-[#A9BDCC] hover:bg-[#122B3E] hover:text-[#F4F8FB]'
               }`}
             >
               {tab.label}
@@ -207,13 +207,13 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         </div>
 
         {/* Dropdown Filters: Category, Account, Date */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-[rgba(70,150,180,0.12)] text-xs">
           <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase">Category</label>
+            <label className="text-[10px] font-bold text-[#6F899B] uppercase">Category</label>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full mt-0.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700"
+              className="w-full mt-0.5 px-2.5 py-1.5 bg-[#091A28] border border-[rgba(70,150,180,0.2)] rounded-xl font-bold text-[#F4F8FB]"
             >
               <option value="all">All Categories</option>
               {categories.map(c => (
@@ -223,11 +223,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase">Account</label>
+            <label className="text-[10px] font-bold text-[#6F899B] uppercase">Account</label>
             <select
               value={selectedAccount}
               onChange={(e) => setSelectedAccount(e.target.value)}
-              className="w-full mt-0.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700"
+              className="w-full mt-0.5 px-2.5 py-1.5 bg-[#091A28] border border-[rgba(70,150,180,0.2)] rounded-xl font-bold text-[#F4F8FB]"
             >
               <option value="all">All Accounts</option>
               {accounts.map(a => (
@@ -237,11 +237,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           </div>
 
           <div className="col-span-2 sm:col-span-1">
-            <label className="text-[10px] font-bold text-slate-400 uppercase">Time Range</label>
+            <label className="text-[10px] font-bold text-[#6F899B] uppercase">Time Range</label>
             <select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="w-full mt-0.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700"
+              className="w-full mt-0.5 px-2.5 py-1.5 bg-[#091A28] border border-[rgba(70,150,180,0.2)] rounded-xl font-bold text-[#F4F8FB]"
             >
               <option value="month">Current Month ({selectedMonth})</option>
               <option value="all">All Time</option>
@@ -250,11 +250,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         </div>
 
         {/* Quick Filter Totals Banner */}
-        <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100 text-slate-500">
+        <div className="flex items-center justify-between text-xs pt-2 border-t border-[rgba(70,150,180,0.12)] text-[#6F899B]">
           <span>Found {filteredTransactions.length} records</span>
           <div className="flex items-center gap-3">
-            <span>Income: <strong className="text-teal-700">+{formatCurrency(totalFilteredIncome)}</strong></span>
-            <span>Expense: <strong className="text-rose-600">-{formatCurrency(totalFilteredExpense)}</strong></span>
+            <span>Income: <strong className="text-[#14E6AA]">+{formatCurrency(totalFilteredIncome)}</strong></span>
+            <span>Expense: <strong className="text-[#FF627B]">-{formatCurrency(totalFilteredExpense)}</strong></span>
           </div>
         </div>
       </div>
@@ -265,16 +265,16 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           groupedTransactions.map(group => (
             <div key={group.date} className="space-y-2">
               <div className="flex items-center gap-2 px-1">
-                <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-[#6F899B]">
                   {group.label}
                 </h4>
-                <div className="flex-1 h-px bg-slate-200" />
-                <span className="text-[10px] text-slate-400 font-bold">
+                <div className="flex-1 h-px bg-[rgba(70,150,180,0.15)]" />
+                <span className="text-[10px] text-[#6F899B] font-bold">
                   {group.transactions.length} item{group.transactions.length > 1 ? 's' : ''}
                 </span>
               </div>
 
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm divide-y divide-slate-100 overflow-hidden">
+              <div className="bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] divide-y divide-[rgba(70,150,180,0.1)] overflow-hidden">
                 {group.transactions.map(tx => {
                   const isIncome = tx.transactionType === 'income';
                   const isTransfer = tx.transactionType === 'transfer';
@@ -284,38 +284,38 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                     <div
                       key={tx.id}
                       onClick={() => onSelectTransactionToEdit(tx)}
-                      className="p-3.5 sm:p-4 flex items-center justify-between hover:bg-slate-50 cursor-pointer transition-colors group"
+                      className="p-3.5 sm:p-4 flex items-center justify-between hover:bg-[#102638] cursor-pointer transition-colors group"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         {/* Icon */}
-                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0 ${
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-base shrink-0 border ${
                           isIncome 
-                            ? 'bg-teal-50 text-teal-700' 
+                            ? 'bg-[rgba(20,230,170,0.12)] text-[#14E6AA] border-[rgba(20,230,170,0.25)]' 
                             : isTransfer 
-                            ? 'bg-blue-50 text-blue-700' 
-                            : 'bg-rose-50 text-rose-700'
+                            ? 'bg-[rgba(57,175,255,0.12)] text-[#39AFFF] border-[rgba(57,175,255,0.25)]' 
+                            : 'bg-[rgba(255,98,123,0.12)] text-[#FF627B] border-[rgba(255,98,123,0.25)]'
                         }`}>
                           {category?.icon || (isIncome ? '💵' : isTransfer ? '⇄' : '🛍️')}
                         </div>
 
                         {/* Title & Subtitle */}
                         <div className="min-w-0">
-                          <div className="font-black text-slate-900 text-sm truncate group-hover:text-emerald-700 transition-colors">
+                          <div className="font-bold text-[#F4F8FB] text-sm truncate group-hover:text-[#18E6BE] transition-colors">
                             {tx.description}
                           </div>
-                          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5 flex-wrap">
-                            <span className="font-semibold">{tx.categoryName || 'General'}</span>
+                          <div className="flex items-center gap-1.5 text-[11px] text-[#6F899B] mt-0.5 flex-wrap">
+                            <span className="font-semibold text-[#A9BDCC]">{tx.categoryName || 'General'}</span>
                             <span>•</span>
-                            <span className="px-1.5 py-0.2 bg-slate-100 text-slate-700 rounded-md font-bold text-[10px]">
+                            <span className="px-1.5 py-0.5 bg-[#091A28] border border-[rgba(70,150,180,0.15)] text-[#A9BDCC] rounded-md font-bold text-[10px]">
                               {tx.accountName || 'Cash'} {isTransfer && `→ ${tx.transferToAccountName || 'Bank'}`}
                             </span>
                             {tx.source === 'voice' && (
-                              <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded font-bold">
+                              <span className="text-[10px] text-[#18E6BE] bg-[rgba(24,230,190,0.12)] border border-[rgba(24,230,190,0.25)] px-1.5 py-0.5 rounded font-bold">
                                 🎙️ Voice
                               </span>
                             )}
                             {tx.attachmentNote && (
-                              <span className="text-[10px] text-slate-400 flex items-center gap-0.5">
+                              <span className="text-[10px] text-[#6F899B] flex items-center gap-0.5">
                                 <FileText className="w-3 h-3" />
                                 {tx.attachmentNote}
                               </span>
@@ -327,17 +327,17 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                       {/* Amount & Actions */}
                       <div className="flex items-center gap-3 shrink-0 ml-2">
                         <div className="text-right">
-                          <div className={`text-sm sm:text-base font-black ${
+                          <div className={`text-sm sm:text-base font-extrabold tabular-nums ${
                             isIncome 
-                              ? 'text-teal-700' 
+                              ? 'text-[#14E6AA]' 
                               : isTransfer 
-                              ? 'text-blue-700' 
-                              : 'text-slate-900'
+                              ? 'text-[#39AFFF]' 
+                              : 'text-[#FF627B]'
                           }`}>
                             {isIncome ? '+' : isTransfer ? '⇄ ' : '-'}
                             {formatCurrency(tx.amount)}
                           </div>
-                          <div className="text-[10px] text-slate-400">
+                          <div className="text-[10px] text-[#6F899B]">
                             {tx.transactionDate}
                           </div>
                         </div>
@@ -346,14 +346,14 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                         <div className="hidden sm:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={(e) => handleDuplicate(tx, e)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors"
+                            className="p-1.5 rounded-lg text-[#6F899B] hover:text-[#F4F8FB] hover:bg-[#122B3E] transition-colors"
                             title="Duplicate"
                           >
                             <Copy className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={(e) => handleDelete(tx.id, e)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                            className="p-1.5 rounded-lg text-[#6F899B] hover:text-[#FF627B] hover:bg-[rgba(255,98,123,0.1)] transition-colors"
                             title="Delete"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -367,17 +367,17 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             </div>
           ))
         ) : (
-          <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-xl">
+          <div className="bg-[#0B1D2C] rounded-2xl p-12 text-center border border-[rgba(70,150,180,0.18)] space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-[#102638] text-[#6F899B] flex items-center justify-center mx-auto text-xl">
               🔍
             </div>
-            <h3 className="font-black text-slate-800 text-base">No Transactions Found</h3>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            <h3 className="font-bold text-[#F4F8FB] text-base">No Transactions Found</h3>
+            <p className="text-xs text-[#6F899B] max-w-sm mx-auto">
               No transactions match your search or filters for this month.
             </p>
             <button
               onClick={() => onOpenAddModal('expense')}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-2xl text-xs font-bold shadow-sm hover:bg-emerald-500 transition-all"
+              className="px-4 py-2 bg-[#18E6BE] hover:bg-[#23F2CB] text-[#06131F] rounded-xl text-xs font-bold shadow-[0_0_15px_rgba(24,230,190,0.25)] transition-all"
             >
               + Add Transaction Now
             </button>

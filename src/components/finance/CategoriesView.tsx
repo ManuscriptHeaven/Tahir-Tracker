@@ -21,7 +21,7 @@ export const CategoriesView: React.FC = () => {
   const [name, setName] = useState('');
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [icon, setIcon] = useState('🍔');
-  const [color, setColor] = useState('#10b981');
+  const [color, setColor] = useState('#18E6BE');
 
   const filteredCategories = categories.filter(c => c.type === activeTab);
 
@@ -35,7 +35,7 @@ export const CategoriesView: React.FC = () => {
     setName('');
     setType(activeTab);
     setIcon(activeTab === 'income' ? '💵' : '🍔');
-    setColor('#10b981');
+    setColor('#18E6BE');
     setIsModalOpen(true);
   };
 
@@ -44,7 +44,7 @@ export const CategoriesView: React.FC = () => {
     setName(cat.name);
     setType(cat.type);
     setIcon(cat.icon || '📦');
-    setColor(cat.color || '#10b981');
+    setColor(cat.color || '#18E6BE');
     setIsModalOpen(true);
   };
 
@@ -92,38 +92,38 @@ export const CategoriesView: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* 1. HEADER WITH TABS & CREATE BUTTON */}
-      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl w-full sm:w-auto">
+      <div className="bg-[#0B1D2C] rounded-2xl p-4 sm:p-5 border border-[rgba(70,150,180,0.18)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 bg-[#091A28] p-1 rounded-xl w-full sm:w-auto border border-[rgba(70,150,180,0.18)]">
           <button
             onClick={() => setActiveTab('expense')}
-            className={`flex-1 sm:flex-initial py-2 px-4 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all ${
+            className={`flex-1 sm:flex-initial py-2 px-4 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
               activeTab === 'expense'
-                ? 'bg-rose-500 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-[rgba(255,98,123,0.15)] text-[#FF627B] border border-[rgba(255,98,123,0.3)] shadow-sm'
+                : 'text-[#6F899B] hover:text-[#F4F8FB]'
             }`}
           >
-            <ArrowUpRight className="w-4 h-4" />
+            <ArrowUpRight className="w-4 h-4 text-[#FF627B]" />
             <span>Expense Categories ({categories.filter(c => c.type === 'expense').length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('income')}
-            className={`flex-1 sm:flex-initial py-2 px-4 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all ${
+            className={`flex-1 sm:flex-initial py-2 px-4 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
               activeTab === 'income'
-                ? 'bg-teal-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-[rgba(20,230,170,0.15)] text-[#14E6AA] border border-[rgba(20,230,170,0.3)] shadow-sm'
+                : 'text-[#6F899B] hover:text-[#F4F8FB]'
             }`}
           >
-            <ArrowDownLeft className="w-4 h-4" />
+            <ArrowDownLeft className="w-4 h-4 text-[#14E6AA]" />
             <span>Income Categories ({categories.filter(c => c.type === 'income').length})</span>
           </button>
         </div>
 
         <button
           onClick={handleOpenAdd}
-          className="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-2xl flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+          className="w-full sm:w-auto px-4 py-2.5 bg-[#18E6BE] hover:bg-[#23F2CB] text-[#06131F] font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(24,230,190,0.25)] active:scale-95 transition-all"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 stroke-[3]" />
           <span>+ Add Custom Category</span>
         </button>
       </div>
@@ -133,17 +133,17 @@ export const CategoriesView: React.FC = () => {
         {filteredCategories.map(cat => (
           <div
             key={cat.id}
-            className="p-4 bg-white rounded-3xl border border-slate-200 shadow-sm hover:border-emerald-500/50 transition-all flex items-center justify-between group"
+            className="p-4 bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] hover:border-[rgba(55,210,190,0.35)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] transition-all flex items-center justify-between group"
           >
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-slate-50 flex items-center justify-center text-xl shadow-inner border border-slate-100">
+              <div className="w-10 h-10 rounded-xl bg-[#102638] flex items-center justify-center text-xl border border-[rgba(70,150,180,0.2)]">
                 {cat.icon}
               </div>
               <div>
-                <h4 className="font-black text-slate-900 text-sm">
+                <h4 className="font-bold text-[#F4F8FB] text-sm group-hover:text-[#18E6BE] transition-colors">
                   {cat.name}
                 </h4>
-                <span className="text-[10px] text-slate-400 capitalize">
+                <span className="text-[10px] text-[#6F899B] capitalize">
                   {cat.isDefault ? 'Default' : 'Custom'} Category
                 </span>
               </div>
@@ -152,7 +152,7 @@ export const CategoriesView: React.FC = () => {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => handleOpenEdit(cat)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                className="p-1.5 rounded-lg text-[#6F899B] hover:text-[#F4F8FB] hover:bg-[#102638]"
                 title="Edit"
               >
                 <Edit3 className="w-4 h-4" />
@@ -160,7 +160,7 @@ export const CategoriesView: React.FC = () => {
               {!cat.isDefault && (
                 <button
                   onClick={() => handleDeleteCategory(cat.id)}
-                  className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                  className="p-1.5 rounded-lg text-[#6F899B] hover:text-[#FF627B] hover:bg-[rgba(255,98,123,0.1)]"
                   title="Delete"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -173,17 +173,17 @@ export const CategoriesView: React.FC = () => {
 
       {/* 3. ADD / EDIT CATEGORY MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
           <div className="fixed inset-0" onClick={() => setIsModalOpen(false)} />
 
-          <div className="relative z-10 w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-200 p-5 sm:p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-black text-slate-900">
+          <div className="relative z-10 w-full max-w-md bg-[#071724] rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden border border-[rgba(70,150,180,0.2)] p-5 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-[rgba(70,150,180,0.14)] pb-3">
+              <h3 className="text-base font-bold text-[#F4F8FB]">
                 {categoryToEdit ? 'Edit Category' : 'Create Custom Category'}
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1 rounded-xl text-slate-400 hover:bg-slate-100"
+                className="p-1 rounded-lg text-[#6F899B] hover:text-[#F4F8FB] hover:bg-[#0B1D2C]"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -191,25 +191,27 @@ export const CategoriesView: React.FC = () => {
 
             <form onSubmit={handleSaveCategory} className="space-y-3.5">
               <div>
-                <label className="text-xs font-bold text-slate-600">Category Name *</label>
+                <label className="text-xs font-bold text-[#A9BDCC]">Category Name *</label>
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Gym & Protein, Online Courses..."
-                  className="w-full mt-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full mt-1 px-3.5 py-2.5 bg-[#091A28] border border-[rgba(70,150,180,0.2)] rounded-xl text-xs sm:text-sm font-bold text-[#F4F8FB] placeholder-[#6F899B] focus:outline-none focus:border-[#18E6BE]"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-600">Category Type</label>
+                <label className="text-xs font-bold text-[#A9BDCC]">Category Type</label>
                 <div className="grid grid-cols-2 gap-2 mt-1">
                   <button
                     type="button"
                     onClick={() => setType('expense')}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold ${
-                      type === 'expense' ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-700'
+                    className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                      type === 'expense'
+                        ? 'bg-[rgba(255,98,123,0.15)] text-[#FF627B] border-[rgba(255,98,123,0.35)] shadow-xs'
+                        : 'bg-[#091A28] border-[rgba(70,150,180,0.2)] text-[#6F899B]'
                     }`}
                   >
                     Expense
@@ -217,8 +219,10 @@ export const CategoriesView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setType('income')}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold ${
-                      type === 'income' ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-700'
+                    className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                      type === 'income'
+                        ? 'bg-[rgba(20,230,170,0.15)] text-[#14E6AA] border-[rgba(20,230,170,0.35)] shadow-xs'
+                        : 'bg-[#091A28] border-[rgba(70,150,180,0.2)] text-[#6F899B]'
                     }`}
                   >
                     Income
@@ -227,15 +231,15 @@ export const CategoriesView: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-600">Icon Emoji</label>
-                <div className="grid grid-cols-5 gap-2 mt-1.5 max-h-36 overflow-y-auto p-1 bg-slate-50 rounded-2xl border border-slate-100">
+                <label className="text-xs font-bold text-[#A9BDCC]">Choose Icon</label>
+                <div className="grid grid-cols-5 gap-2 mt-1 max-h-36 overflow-y-auto p-1 bg-[#091A28] rounded-xl border border-[rgba(70,150,180,0.18)]">
                   {popularEmojis.map(em => (
                     <button
                       key={em}
                       type="button"
                       onClick={() => setIcon(em)}
-                      className={`p-2 rounded-xl text-xl border transition-all ${
-                        icon === em ? 'bg-emerald-100 border-emerald-500 scale-110' : 'bg-white border-slate-200'
+                      className={`p-2 rounded-lg text-lg transition-all ${
+                        icon === em ? 'bg-[rgba(24,230,190,0.18)] border border-[#18E6BE] scale-110' : 'hover:bg-[#102638]'
                       }`}
                     >
                       {em}
@@ -248,13 +252,13 @@ export const CategoriesView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-bold rounded-2xl text-xs"
+                  className="flex-1 py-2.5 bg-[#102638] text-[#A9BDCC] hover:text-[#F4F8FB] font-bold rounded-xl text-xs transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl text-xs shadow-md"
+                  className="flex-1 py-2.5 bg-[#18E6BE] hover:bg-[#23F2CB] text-[#06131F] font-bold rounded-xl text-xs shadow-[0_0_15px_rgba(24,230,190,0.25)] transition-all"
                 >
                   Save Category
                 </button>

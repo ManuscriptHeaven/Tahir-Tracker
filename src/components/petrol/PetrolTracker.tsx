@@ -17,7 +17,6 @@ import {
 } from '../../utils/petrolCalculations';
 import { 
   Fuel, 
-  Plus, 
   FileText, 
   Gauge, 
   TrendingUp, 
@@ -29,6 +28,9 @@ import {
   AlertCircle,
   CheckCircle2
 } from 'lucide-react';
+import { PageHeader } from '../ui/PageHeader';
+import { MetricCard } from '../ui/MetricCard';
+import { EmptyState } from '../ui/EmptyState';
 
 interface PetrolTrackerProps {
   selectedMonth: string; // YYYY-MM
@@ -67,16 +69,16 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
   const latestRefill = allRefills.length > 0 ? allRefills[allRefills.length - 1] : null;
   const previousOdoSuggestion = latestRefill ? latestRefill.odometerReading : 0;
 
-  // Helper to re-calculate distance & mileage for all refills sequentially using full-tank rules
+  // Helper to re-calculate distance & mileage for all refills sequentially using hybrid rules
   const recalculateAllRefills = async () => {
     const records = await db.petrol_refills.toArray();
     const processed = calculatePetrolIntervals(records);
     for (const p of processed) {
       await db.petrol_refills.update(p.id, {
         isFullTank: p.isFullTank ?? false,
-        distanceTravelled: p.calculationType === 'completed' ? p.intervalDistance : p.stepDistance,
+        distanceTravelled: p.distanceUntilNextRefill ?? (p.calculationType === 'completed' ? p.intervalDistance : p.stepDistance),
         mileageKmpl: p.mileageKmpl || 0,
-        costPerKm: p.costPerKm || 0,
+        costPerKm: p.refillCostPerKm ?? p.costPerKm ?? 0,
         updatedAt: new Date().toISOString()
       });
     }
@@ -96,7 +98,6 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
       .filter(r => !editingRefill || r.id !== editingRefill.id)
       .sort((a, b) => a.odometerReading - b.odometerReading);
 
-    // If editing or inserting, find the record immediately before this odometer reading
     let precedingOdo = 0;
     for (let i = sortedOtherRefills.length - 1; i >= 0; i--) {
       if (sortedOtherRefills[i].date <= date || sortedOtherRefills[i].odometerReading <= currentOdo) {
@@ -112,7 +113,6 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
       return;
     }
 
-    // Additional check: If there are records after this one, ensure odometer is <= the next record
     const succeedingRecord = sortedOtherRefills.find(r => r.date > date && r.odometerReading < currentOdo);
     if (succeedingRecord) {
       setFormError(
@@ -154,7 +154,6 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
       await db.petrol_refills.add(newRefill);
     }
 
-    // Refresh chained calculations deterministically across all intervals
     await recalculateAllRefills();
 
     resetForm();
@@ -190,245 +189,296 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <Fuel className="w-6 h-6 text-emerald-600" />
-            Bike Petrol & Mileage Tracker
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500">
-            Log fuel refills, track odometer distance, fuel economy (KM/L), and travel costs
-          </p>
-        </div>
+      {/* 1. PAGE HEADER */}
+      <PageHeader
+        icon={Fuel}
+        title="Petrol & Mileage Tracking"
+        subtitle="Monitor fuel consumption, vehicle odometer distance, and travel economy."
+        primaryAction={{
+          label: "+ Add Refill",
+          onClick: () => {
+            resetForm();
+            setIsAddModalOpen(true);
+          }
+        }}
+        secondaryAction={onOpenReport ? {
+          label: "Petrol Reports",
+          icon: FileText,
+          onClick: onOpenReport
+        } : undefined}
+      />
 
-        <div className="flex items-center gap-2">
-          {onOpenReport && (
-            <button
-              onClick={onOpenReport}
-              className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-sm"
-            >
-              <FileText className="w-4 h-4 text-slate-600" />
-              Petrol Report
-            </button>
+      {/* 2. ACTIVE TRACKING STATUS BANNER */}
+      {monthlyStats.latestRefill && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          {/* Latest Refill Card */}
+          <div className="bg-[#0B1D2C] border border-amber-500/30 rounded-2xl p-4 flex flex-col justify-between shadow-sm relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                Latest Refill (Active)
+              </span>
+              <span className="text-xs font-semibold text-amber-200">
+                {formatDate(monthlyStats.latestRefill.date, 'short')}
+              </span>
+            </div>
+            <div className="mt-2.5 flex items-baseline justify-between">
+              <div>
+                <span className="text-xl sm:text-2xl font-bold text-slate-100">
+                  {formatCurrency(monthlyStats.latestRefill.totalCost)}
+                </span>
+                <span className="text-xs font-medium text-slate-400 ml-1.5">
+                  ({monthlyStats.latestRefill.litres} L)
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-950/60 text-amber-300 border border-amber-500/30 font-bold text-xs">
+                  Distance: In Progress
+                </span>
+              </div>
+            </div>
+            <div className="mt-2 pt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+              <span>Odometer: <strong className="font-mono text-slate-200">{formatNumber(monthlyStats.latestRefill.odometerReading, 0)} km</strong></span>
+              <span className="text-[11px] text-slate-500">Completes when next refill is added</span>
+            </div>
+          </div>
+
+          {/* Last Completed Refill Leg */}
+          {monthlyStats.previousCompletedRefill ? (
+            <div className="bg-[#0B1D2C] border border-teal-500/30 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-teal-300 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#18E6BE]" />
+                  Previous Completed Refill
+                </span>
+                <span className="text-xs font-semibold text-teal-200">
+                  {formatDate(monthlyStats.previousCompletedRefill.date, 'short')}
+                </span>
+              </div>
+              <div className="mt-2.5 flex items-baseline justify-between">
+                <div>
+                  <span className="text-xl sm:text-2xl font-bold text-slate-100">
+                    {monthlyStats.previousCompletedRefill.displayDistanceUntilNext}
+                  </span>
+                  <span className="text-xs font-medium text-slate-400 ml-1.5">
+                    travelled before next refill
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-base sm:text-lg font-bold text-teal-300 bg-teal-950/60 border border-teal-500/30 px-2.5 py-0.5 rounded-xl">
+                    {monthlyStats.previousCompletedRefill.displayRefillCostPerKm}
+                  </span>
+                </div>
+              </div>
+              <div className="mt-2 pt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                <span>Refill: <strong className="text-slate-200">{formatCurrency(monthlyStats.previousCompletedRefill.totalCost)}</strong> ({monthlyStats.previousCompletedRefill.litres} L)</span>
+                <span>Odometer: <strong className="font-mono text-slate-200">{formatNumber(monthlyStats.previousCompletedRefill.odometerReading, 0)} km</strong></span>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-[#0B1D2C] border border-slate-700/50 rounded-2xl p-4 flex flex-col justify-center items-center text-center shadow-sm">
+              <Fuel className="w-6 h-6 text-slate-500 mb-1" />
+              <span className="text-xs font-semibold text-slate-300">No completed refill leg yet</span>
+              <span className="text-[11px] text-slate-500">Enter a second refill to calculate completed distance and cost/KM</span>
+            </div>
           )}
-          <button
-            onClick={() => {
-              resetForm();
-              setIsAddModalOpen(true);
-            }}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-md shadow-emerald-600/20"
-          >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            Add Refill
-          </button>
         </div>
-      </div>
+      )}
 
-      {/* Monthly Statistics Banner Cards */}
+      {/* 3. MONTHLY STATISTICS BANNER CARDS (MATCHING PANEL 6) */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
-        <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-4 text-white shadow-md col-span-2 sm:col-span-1">
-          <div className="flex items-center justify-between opacity-90 text-[10px] font-bold uppercase tracking-wider">
-            <span>Avg Mileage</span>
-            <TrendingUp className="w-4 h-4" />
-          </div>
-          <div className="text-2xl sm:text-3xl font-extrabold mt-1">
-            {monthlyStats.avgMileage > 0 ? (
-              formatNumber(monthlyStats.avgMileage, 2)
-            ) : (
-              <span className="text-emerald-200 text-xl font-bold">—</span>
-            )}
-          </div>
-          <div className="text-[11px] text-emerald-100 mt-1 font-semibold">
-            {monthlyStats.completedIntervalsCount > 0 ? (
-              `${monthlyStats.completedIntervalsCount} Completed ${monthlyStats.completedIntervalsCount === 1 ? 'Interval' : 'Intervals'}`
-            ) : (
-              'No full-tank interval completed'
-            )}
-          </div>
-        </div>
+        {/* 1. Total Fuel Spend */}
+        <MetricCard
+          title="Total Fuel Spend"
+          value={formatCurrency(monthlyStats.monthlyCost)}
+          subtitle="Monthly Fuel Inflow"
+          icon={DollarSign}
+          variant="danger"
+        />
 
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-            <span>Logged Travel</span>
-            <Navigation className="w-4 h-4 text-slate-400" />
-          </div>
-          <div className="text-xl sm:text-2xl font-extrabold text-slate-800 mt-1">
-            {formatNumber(monthlyStats.loggedTravelKm, 0)} <span className="text-xs font-semibold text-slate-500">KM</span>
-          </div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            {monthlyRefills.length} Fill-up {monthlyRefills.length === 1 ? 'record' : 'records'}
-          </div>
-        </div>
+        {/* 2. Petrol Purchased */}
+        <MetricCard
+          title="Fuel Purchased"
+          value={`${formatNumber(monthlyStats.monthlyLitres, 1)} L`}
+          subtitle="Total Litres Bought"
+          icon={Fuel}
+          variant="default"
+        />
 
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-            <span>Petrol Purchased</span>
-            <Fuel className="w-4 h-4 text-slate-400" />
-          </div>
-          <div className="text-xl sm:text-2xl font-extrabold text-slate-800 mt-1">
-            {formatNumber(monthlyStats.monthlyLitres, 1)} <span className="text-xs font-semibold text-slate-500">L</span>
-          </div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            Total Litres Bought
-          </div>
-        </div>
+        {/* 3. Logged Distance */}
+        <MetricCard
+          title="Distance Logged"
+          value={`${formatNumber(monthlyStats.loggedTravelKm, 0)} KM`}
+          subtitle={`${monthlyRefills.length} Fill-up ${monthlyRefills.length === 1 ? 'record' : 'records'}`}
+          icon={Navigation}
+          variant="info"
+        />
 
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-            <span>Total Cost</span>
-            <DollarSign className="w-4 h-4 text-emerald-600" />
-          </div>
-          <div className="text-xl sm:text-2xl font-extrabold text-slate-800 mt-1">
-            {formatCurrency(monthlyStats.monthlyCost)}
-          </div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            Monthly Fuel Spending
-          </div>
-        </div>
+        {/* 4. Average Refill Cost/KM */}
+        <MetricCard
+          title="Avg Refill Rate"
+          value={monthlyStats.avgRefillCostPerKm > 0 ? `${formatNumber(monthlyStats.avgRefillCostPerKm, 2)} PKR` : '—'}
+          subtitle={monthlyStats.completedRefillsCount > 0 ? `${monthlyStats.completedRefillsCount} completed legs` : 'Leg in progress'}
+          icon={Gauge}
+          variant="default"
+        />
 
-        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-            <span>Cost per KM</span>
-            <Gauge className="w-4 h-4 text-slate-400" />
-          </div>
-          <div className="text-xl sm:text-2xl font-extrabold text-slate-800 mt-1">
-            {monthlyStats.costPerKm > 0 ? (
-              `${formatNumber(monthlyStats.costPerKm, 2)}`
-            ) : (
-              '—'
-            )} <span className="text-xs font-semibold text-slate-500">PKR</span>
-          </div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            {monthlyStats.totalIntervalDistance > 0 ? 'Full-tank intervals' : 'Logged travel rate'}
-          </div>
+        {/* 5. Verified Mileage */}
+        <div className="col-span-2 sm:col-span-1">
+          <MetricCard
+            title="Verified Mileage"
+            value={monthlyStats.avgMileage > 0 ? `${formatNumber(monthlyStats.avgMileage, 2)} KM/L` : '—'}
+            subtitle={monthlyStats.completedIntervalsCount > 0 ? `${monthlyStats.completedIntervalsCount} Full-Tank Intervals` : 'Full-Tank Pending'}
+            icon={TrendingUp}
+            variant="accent"
+          />
         </div>
       </div>
 
-      {/* Refills Table / Timeline */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="font-bold text-slate-800 text-sm sm:text-base">
-            Refill Log & Mileage Records — {getMonthYearFormatted(selectedMonth)}
-          </h3>
-          <span className="text-xs font-semibold text-slate-500">
+      {/* 4. REFILLS TABLE / TIMELINE */}
+      <div className="bg-[#0B1D2C] rounded-2xl border border-slate-700/50 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+          <div>
+            <h3 className="font-bold text-slate-100 text-sm sm:text-base">
+              Refill Log & Mileage Records — {getMonthYearFormatted(selectedMonth)}
+            </h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Refill-to-Refill daily tracking paired with Full-Tank verified fuel economy
+            </p>
+          </div>
+          <span className="text-xs font-medium text-slate-400">
             {monthlyRefills.length} Records
           </span>
         </div>
 
         {monthlyRefills.length === 0 ? (
-          <div className="text-center py-12 p-6">
-            <Fuel className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <h4 className="font-bold text-slate-700 text-base">No refill records for {getMonthYearFormatted(selectedMonth)}</h4>
-            <p className="text-xs text-slate-500 mt-1">
-              Tap "Add Refill" above to log your odometer meter reading and fuel purchase.
-            </p>
-          </div>
+          <EmptyState
+            icon={Fuel}
+            title="No Refill Records Found"
+            description={`No petrol refills have been logged yet for ${getMonthYearFormatted(selectedMonth)}.`}
+            action={{
+              label: "+ Log First Refill",
+              onClick: () => {
+                resetForm();
+                setIsAddModalOpen(true);
+              }
+            }}
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs sm:text-sm">
               <thead>
-                <tr className="bg-slate-50 text-slate-600 border-b border-slate-200 text-[11px] sm:text-xs uppercase font-bold tracking-wider">
+                <tr className="bg-[#102638] text-slate-400 border-b border-slate-700/60 text-[11px] sm:text-xs uppercase font-semibold tracking-wider">
                   <th className="py-3 px-3 sm:px-4">Date</th>
-                  <th className="py-3 px-3 sm:px-4">Meter (KM)</th>
+                  <th className="py-3 px-3 sm:px-4">Odometer</th>
                   <th className="py-3 px-3 sm:px-4">Fuel (L)</th>
                   <th className="py-3 px-3 sm:px-4">Rate (PKR)</th>
                   <th className="py-3 px-3 sm:px-4">Total Cost</th>
                   <th className="py-3 px-3 sm:px-4">Type</th>
-                  <th className="py-3 px-3 sm:px-4">Distance</th>
-                  <th className="py-3 px-3 sm:px-4">Mileage</th>
-                  <th className="py-3 px-3 sm:px-4">Cost/KM</th>
+                  <th className="py-3 px-3 sm:px-4 bg-[#0a1e2d]">Distance After Refill</th>
+                  <th className="py-3 px-3 sm:px-4 bg-[#0a1e2d]">Refill Cost/KM</th>
+                  <th className="py-3 px-3 sm:px-4 bg-[#072422]">Verified Mileage</th>
                   <th className="py-3 px-3 sm:px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
+              <tbody className="divide-y divide-slate-800 font-medium text-slate-200">
                 {monthlyRefills.map((refill) => (
-                  <tr key={refill.id} className="hover:bg-slate-50/80 transition-colors">
+                  <tr key={refill.id} className="hover:bg-[#102638]/50 transition-colors">
                     <td className="py-3 px-3 sm:px-4 whitespace-nowrap">
-                      <div className="font-bold text-slate-900">{formatDate(refill.date, 'short')}</div>
+                      <div className="font-bold text-slate-100">{formatDate(refill.date, 'short')}</div>
                       {refill.notes && (
                         <div className="text-[11px] text-slate-400 font-normal">{refill.notes}</div>
                       )}
                     </td>
-                    <td className="py-3 px-3 sm:px-4 font-mono font-bold text-slate-900">
+                    <td className="py-3 px-3 sm:px-4 font-mono font-bold text-slate-100">
                       {formatNumber(refill.odometerReading, 0)} km
                     </td>
-                    <td className="py-3 px-3 sm:px-4">
+                    <td className="py-3 px-3 sm:px-4 text-slate-200">
                       {refill.litres} L
                     </td>
-                    <td className="py-3 px-3 sm:px-4 text-slate-600">
+                    <td className="py-3 px-3 sm:px-4 text-slate-400">
                       {refill.pricePerLitre}
                     </td>
-                    <td className="py-3 px-3 sm:px-4 font-bold text-slate-900">
+                    <td className="py-3 px-3 sm:px-4 font-bold text-slate-100">
                       {formatCurrency(refill.totalCost)}
                     </td>
                     <td className="py-3 px-3 sm:px-4 whitespace-nowrap">
                       {refill.calculationType === 'completed' ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px]">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Full Tank
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/40 font-bold text-[11px]">
+                          <CheckCircle2 className="w-3 h-3 text-[#18E6BE]" /> Full Tank
                         </span>
                       ) : refill.calculationType === 'baseline' ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 font-bold text-[11px]">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold text-[11px]">
                           Baseline Full
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold text-[11px]">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-[#102638] text-slate-300 border border-slate-700 font-medium text-[11px]">
                           Partial Refill
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-3 sm:px-4 whitespace-nowrap">
-                      {refill.calculationType === 'completed' ? (
+                    {/* DAILY TRACKING: Distance After Refill */}
+                    <td className="py-3 px-3 sm:px-4 whitespace-nowrap bg-[#071724]/40">
+                      {refill.isRefillSegmentComplete ? (
                         <div>
-                          <span className="font-bold text-slate-900">+{refill.intervalDistance} km</span>
-                          <span className="block text-[10px] text-slate-400 font-normal">full interval</span>
+                          <span className="font-bold text-slate-100">{refill.displayDistanceUntilNext}</span>
+                          <span className="block text-[10px] text-slate-500 font-normal">until next refill</span>
                         </div>
-                      ) : refill.calculationType === 'baseline' ? (
-                        <span className="text-slate-400 text-xs">Baseline (0 km)</span>
                       ) : (
                         <div>
-                          <span className="font-medium text-slate-700">{refill.stepDistance > 0 ? `+${refill.stepDistance} km` : '—'}</span>
-                          <span className="block text-[10px] text-slate-400 font-normal">since prev refill</span>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-amber-950/60 text-amber-300 border border-amber-500/30">
+                            In Progress
+                          </span>
+                          <span className="block text-[10px] text-amber-400/80 font-normal">awaiting next refill</span>
                         </div>
                       )}
                     </td>
-                    <td className="py-3 px-3 sm:px-4 whitespace-nowrap">
+                    {/* DAILY TRACKING: Refill Cost/KM */}
+                    <td className="py-3 px-3 sm:px-4 whitespace-nowrap bg-[#071724]/40">
+                      {refill.refillCostPerKm !== null ? (
+                        <div>
+                          <span className="font-bold text-slate-100">{formatNumber(refill.refillCostPerKm, 2)} PKR</span>
+                          <span className="block text-[10px] text-slate-500 font-normal">refill cost/km</span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-500 text-xs font-medium">—</span>
+                      )}
+                    </td>
+                    {/* ACCURATE FUEL ECONOMY: Verified Mileage */}
+                    <td className="py-3 px-3 sm:px-4 whitespace-nowrap bg-[#071d2b]/30">
                       {refill.calculationType === 'completed' ? (
                         <div>
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold text-xs">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-teal-500/20 text-teal-300 border border-teal-500/40 font-bold text-xs">
                             {formatNumber(refill.mileageKmpl, 2)} km/L
                           </span>
-                          <span className="block text-[10px] text-emerald-700 font-medium">{refill.intervalFuel} L used</span>
+                          <span className="block text-[10px] text-teal-400 font-medium">
+                            {refill.intervalDistance} km / {refill.intervalFuel} L
+                          </span>
                         </div>
                       ) : refill.calculationType === 'baseline' ? (
                         <div>
-                          <span className="text-slate-400 text-xs font-semibold">—</span>
-                          <span className="block text-[10px] text-sky-700 font-medium">Baseline (ready for next)</span>
+                          <span className="text-slate-500 text-xs font-medium">—</span>
+                          <span className="block text-[10px] text-cyan-400 font-medium">Baseline (first full tank)</span>
                         </div>
                       ) : (
                         <div>
-                          <span className="text-slate-400 text-xs font-semibold">—</span>
-                          <span className="block text-[10px] text-slate-400 font-normal">At next full tank</span>
+                          <span className="text-slate-500 text-xs font-medium">—</span>
+                          <span className="block text-[10px] text-slate-500 font-normal">At next full tank</span>
                         </div>
                       )}
-                    </td>
-                    <td className="py-3 px-3 sm:px-4 text-slate-600 whitespace-nowrap">
-                      {refill.calculationType === 'completed' && refill.costPerKm > 0
-                        ? `${formatNumber(refill.costPerKm, 2)} PKR`
-                        : '—'}
                     </td>
                     <td className="py-3 px-3 sm:px-4 text-right whitespace-nowrap">
                       <div className="inline-flex items-center gap-1">
                         <button
                           onClick={() => handleOpenEdit(refill)}
-                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-[#102638] rounded-lg transition-colors"
                           title="Edit Refill"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleDeleteRefill(refill.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
                           title="Delete Refill"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -443,18 +493,18 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
         )}
       </div>
 
-      {/* MODAL: ADD / EDIT REFILL */}
+      {/* 5. MODAL: ADD / EDIT REFILL */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
-                <Fuel className="w-5 h-5 text-emerald-600" />
-                {editingRefill ? 'Edit Refill Entry' : 'Log New Fuel Refill'}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+          <div className="bg-[#0B1D2C] rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-cyan-500/30 animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h3 className="font-bold text-slate-100 text-lg flex items-center gap-2">
+                <Fuel className="w-5 h-5 text-[#18E6BE]" />
+                <span>{editingRefill ? 'Edit Refill Entry' : 'Log New Fuel Refill'}</span>
               </h3>
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100"
+                className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-[#102638]"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -463,15 +513,15 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
             <form onSubmit={handleSaveRefill} className="space-y-4 mt-4">
               {/* Validation Error Banner */}
               {formError && (
-                <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-rose-700 text-xs flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+                <div className="p-3 bg-rose-950/40 border border-rose-500/40 rounded-xl text-rose-300 text-xs flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
                   <div className="flex-1 font-semibold">{formError}</div>
                 </div>
               )}
 
               {/* Date */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-medium text-slate-300 mb-1">
                   Refill Date *
                 </label>
                 <input
@@ -479,24 +529,24 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
                   required
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-xs font-medium text-slate-200 focus:outline-none focus:border-cyan-400"
                 />
               </div>
 
               {/* Meter Reading */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-slate-700">
+                  <label className="block text-xs font-medium text-slate-300">
                     Odometer Meter Reading (KM) *
                   </label>
                   {previousOdoSuggestion > 0 && !editingRefill && (
-                    <span className="text-[11px] text-emerald-600 font-semibold">
+                    <span className="text-[11px] text-cyan-400 font-semibold">
                       Previous: {previousOdoSuggestion} km
                     </span>
                   )}
                 </div>
                 <div className="relative">
-                  <Gauge className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Gauge className="w-4 h-4 text-cyan-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="number"
                     step="any"
@@ -507,7 +557,7 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
                       setOdometerReading(e.target.value);
                       if (formError) setFormError(null);
                     }}
-                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base font-bold text-slate-900 font-mono focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                    className="w-full pl-9 pr-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-base font-bold text-slate-100 font-mono placeholder-slate-600 focus:outline-none focus:border-cyan-400"
                   />
                 </div>
               </div>
@@ -515,7 +565,7 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
               {/* Petrol Litres & Price Per Litre */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-medium text-slate-300 mb-1">
                     Petrol Quantity (Litres) *
                   </label>
                   <input
@@ -529,12 +579,12 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
                       setLitres(e.target.value);
                       if (formError) setFormError(null);
                     }}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                    className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-sm font-bold text-slate-100 placeholder-slate-600 focus:outline-none focus:border-cyan-400"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-medium text-slate-300 mb-1">
                     Price / Litre (PKR) *
                   </label>
                   <input
@@ -548,34 +598,34 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
                       setPricePerLitre(e.target.value);
                       if (formError) setFormError(null);
                     }}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                    className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-sm font-bold text-slate-100 placeholder-slate-600 focus:outline-none focus:border-cyan-400"
                   />
                 </div>
               </div>
 
               {/* Full Tank Toggle */}
-              <div className="p-3 bg-emerald-50/70 rounded-2xl border border-emerald-200/80">
+              <div className="p-3 bg-[#102638] rounded-xl border border-cyan-500/30">
                 <label className="flex items-start gap-3 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={isFullTank}
                     onChange={(e) => setIsFullTank(e.target.checked)}
-                    className="mt-1 w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                    className="mt-1 w-4 h-4 text-cyan-500 rounded border-slate-700 focus:ring-cyan-400 cursor-pointer"
                   />
                   <div className="flex-1">
-                    <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
                       Full Tank
                       {isFullTank ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-600 text-white font-bold">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#18E6BE] text-slate-950 font-bold">
                           Full Tank Checkpoint
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-200 text-slate-700 font-semibold">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#071724] text-slate-400 font-semibold border border-slate-700">
                           Partial Refill
                         </span>
                       )}
                     </span>
-                    <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                    <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
                       Enable when the tank is filled completely. Accurate mileage is calculated between full-tank refills.
                     </p>
                   </div>
@@ -583,12 +633,12 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
               </div>
 
               {/* Total Cost Preview */}
-              <div className="bg-emerald-50/80 p-3 rounded-2xl border border-emerald-100 flex items-center justify-between">
+              <div className="bg-[#071724] p-3 rounded-xl border border-slate-800 flex items-center justify-between">
                 <div>
-                  <div className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">
+                  <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                     Calculated Total Cost
                   </div>
-                  <div className="text-xs text-emerald-600">
+                  <div className="text-xs text-slate-500">
                     {parseFloat(litres) > 0 && parseFloat(pricePerLitre) > 0 ? (
                       `${litres} L × ${pricePerLitre} PKR`
                     ) : (
@@ -596,7 +646,7 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
                     )}
                   </div>
                 </div>
-                <div className="text-lg font-extrabold text-emerald-800">
+                <div className="text-lg font-bold text-[#18E6BE]">
                   {parseFloat(litres) > 0 && parseFloat(pricePerLitre) > 0
                     ? formatCurrency(parseFloat(litres) * parseFloat(pricePerLitre))
                     : '0 PKR'}
@@ -605,7 +655,7 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
 
               {/* Notes */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-medium text-slate-300 mb-1">
                   Notes (Optional)
                 </label>
                 <input
@@ -613,22 +663,22 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
                   placeholder="e.g. Shell Petrol Pump, Highway trip"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  className="w-full px-3 py-2 bg-[#071724] border border-slate-700 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-400"
                 />
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-[#102638] border border-slate-700 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20"
+                  className="px-5 py-2 rounded-xl bg-[#18E6BE] hover:bg-[#23F2CB] text-slate-950 font-bold text-xs sm:text-sm shadow-md shadow-[#18E6BE]/20 transition-all"
                 >
                   {editingRefill ? 'Save Changes' : 'Confirm Refill'}
                 </button>

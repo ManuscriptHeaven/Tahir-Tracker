@@ -79,7 +79,7 @@ export const RecurringView: React.FC = () => {
           title: title.trim(),
           transactionType,
           amount: numAmount,
-          categoryId,
+          categoryId: categoryId || undefined,
           accountId,
           frequency,
           startDate,
@@ -93,7 +93,7 @@ export const RecurringView: React.FC = () => {
           title: title.trim(),
           transactionType,
           amount: numAmount,
-          categoryId,
+          categoryId: categoryId || undefined,
           accountId,
           frequency,
           startDate,
@@ -124,7 +124,6 @@ export const RecurringView: React.FC = () => {
     const account = accounts.find(a => a.id === rule.accountId);
 
     try {
-      // 1. Insert transaction
       const newTx = {
         id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         transactionType: rule.transactionType,
@@ -143,7 +142,6 @@ export const RecurringView: React.FC = () => {
       };
       await db.finance_transactions.add(newTx);
 
-      // 2. Advance next run date
       const newNextRun = computeNextRunDate(rule.nextRunDate, rule.frequency);
       await db.finance_recurring_transactions.update(rule.id, {
         nextRunDate: newNextRun,
@@ -158,9 +156,9 @@ export const RecurringView: React.FC = () => {
     <div className="space-y-6">
       {/* 1. DUE NOTIFICATIONS BANNER */}
       {dueTransactions.length > 0 && (
-        <div className="bg-amber-500/10 border-2 border-amber-500/30 rounded-3xl p-5 space-y-3">
-          <div className="flex items-center gap-2 text-amber-900 font-black text-sm">
-            <Clock className="w-5 h-5 text-amber-600" />
+        <div className="bg-[rgba(247,183,51,0.1)] border border-[rgba(247,183,51,0.28)] rounded-2xl p-5 space-y-3">
+          <div className="flex items-center gap-2 text-[#F7B733] font-bold text-sm">
+            <Clock className="w-5 h-5 text-[#F7B733]" />
             <span>{dueTransactions.length} Recurring Transaction{dueTransactions.length > 1 ? 's' : ''} Due for Recording</span>
           </div>
 
@@ -168,20 +166,20 @@ export const RecurringView: React.FC = () => {
             {dueTransactions.map(rule => (
               <div
                 key={rule.id}
-                className="bg-white p-3.5 rounded-2xl border border-amber-200 shadow-xs flex items-center justify-between gap-3"
+                className="bg-[#0B1D2C] p-3.5 rounded-xl border border-[rgba(70,150,180,0.18)] flex items-center justify-between gap-3"
               >
                 <div>
-                  <div className="font-bold text-slate-900 text-xs sm:text-sm">
+                  <div className="font-bold text-[#F4F8FB] text-xs sm:text-sm">
                     {rule.title}
                   </div>
-                  <div className="text-[11px] text-slate-500">
-                    Due: <strong className="text-amber-700">{rule.nextRunDate}</strong> • {formatCurrency(rule.amount)}
+                  <div className="text-[11px] text-[#6F899B]">
+                    Due: <strong className="text-[#F7B733]">{rule.nextRunDate}</strong> • {formatCurrency(rule.amount)}
                   </div>
                 </div>
 
                 <button
                   onClick={() => handleExecuteDue(rule)}
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1 shrink-0"
+                  className="px-3 py-1.5 bg-[#18E6BE] hover:bg-[#23F2CB] active:scale-95 text-[#06131F] font-bold text-xs rounded-lg shadow-sm flex items-center gap-1 shrink-0"
                 >
                   <Check className="w-3.5 h-3.5 stroke-[3]" />
                   <span>Record Now</span>
@@ -193,21 +191,21 @@ export const RecurringView: React.FC = () => {
       )}
 
       {/* 2. RECURRING RULES HEADER */}
-      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-sm flex items-center justify-between">
+      <div className="bg-[#0B1D2C] rounded-2xl p-4 sm:p-5 border border-[rgba(70,150,180,0.18)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex items-center justify-between">
         <div>
-          <h3 className="font-black text-slate-900 text-base">
+          <h3 className="font-bold text-base text-[#F4F8FB]">
             Recurring Bills & Subscriptions
           </h3>
-          <p className="text-xs text-slate-500">
-            Automate monthly rent, salary, utilities, gym, and subscriptions
+          <p className="text-xs text-[#6F899B] mt-0.5">
+            Automate monthly rent, salary, utilities, and subscriptions
           </p>
         </div>
 
         <button
           onClick={handleOpenAdd}
-          className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-2xl flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
+          className="px-4 py-2 bg-[#18E6BE] hover:bg-[#23F2CB] text-[#06131F] font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-[0_0_15px_rgba(24,230,190,0.25)] active:scale-95 transition-all"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 stroke-[3]" />
           <span>+ Add Recurring</span>
         </button>
       </div>
@@ -216,27 +214,28 @@ export const RecurringView: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {recurringRules.map(rule => {
           const category = categories.find(c => c.id === rule.categoryId);
-          const account = accounts.find(a => a.id === rule.accountId);
           const isIncome = rule.transactionType === 'income';
 
           return (
             <div
               key={rule.id}
-              className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm hover:border-emerald-500/50 transition-all flex flex-col justify-between space-y-4 group"
+              className="bg-[#0B1D2C] rounded-2xl p-5 border border-[rgba(70,150,180,0.18)] hover:border-[rgba(55,210,190,0.35)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] transition-all flex flex-col justify-between space-y-4 group"
             >
               <div>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl shadow-inner ${
-                      isIncome ? 'bg-teal-50 text-teal-700' : 'bg-rose-50 text-rose-700'
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg border ${
+                      isIncome 
+                        ? 'bg-[rgba(20,230,170,0.12)] text-[#14E6AA] border-[rgba(20,230,170,0.25)]' 
+                        : 'bg-[rgba(255,98,123,0.12)] text-[#FF627B] border-[rgba(255,98,123,0.25)]'
                     }`}>
                       {category?.icon || (isIncome ? '💵' : '📅')}
                     </div>
                     <div>
-                      <h4 className="font-black text-slate-900 text-sm sm:text-base group-hover:text-emerald-700 transition-colors">
+                      <h4 className="font-bold text-[#F4F8FB] text-sm sm:text-base group-hover:text-[#18E6BE] transition-colors">
                         {rule.title}
                       </h4>
-                      <span className="text-[10px] font-bold text-slate-400 capitalize">
+                      <span className="text-[10px] font-bold text-[#6F899B] capitalize">
                         {rule.frequency} • {rule.transactionType}
                       </span>
                     </div>
@@ -245,13 +244,13 @@ export const RecurringView: React.FC = () => {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleOpenEdit(rule)}
-                      className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                      className="p-1.5 rounded-lg text-[#6F899B] hover:text-[#F4F8FB] hover:bg-[#102638]"
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDeleteRule(rule.id)}
-                      className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                      className="p-1.5 rounded-lg text-[#6F899B] hover:text-[#FF627B] hover:bg-[rgba(255,98,123,0.1)]"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -259,26 +258,23 @@ export const RecurringView: React.FC = () => {
                 </div>
 
                 <div className="mt-4">
-                  <div className={`text-2xl font-black ${isIncome ? 'text-teal-700' : 'text-slate-900'}`}>
+                  <span className="text-[10px] font-bold text-[#6F899B] uppercase tracking-wider">Amount</span>
+                  <div className={`text-2xl font-extrabold mt-0.5 tabular-nums ${isIncome ? 'text-[#14E6AA]' : 'text-[#FF627B]'}`}>
                     {isIncome ? '+' : '-'}{formatCurrency(rule.amount)}
                   </div>
-                  <div className="flex items-center gap-3 text-[11px] text-slate-500 mt-1.5">
-                    <span>Account: <strong className="text-slate-800">{account?.name || 'Cash'}</strong></span>
-                    <span>Category: <strong className="text-slate-800">{category?.name || 'General'}</strong></span>
+                  <div className="text-[11px] text-[#6F899B] mt-1">
+                    Next run: <strong className="text-[#F4F8FB]">{rule.nextRunDate}</strong>
                   </div>
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                <span className="text-slate-500">
-                  Next Due: <strong className="text-slate-800">{rule.nextRunDate}</strong>
-                </span>
-
+              <div className="pt-3 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between text-xs">
+                <span className="text-[#6F899B] capitalize">{rule.frequency}</span>
                 <button
                   onClick={() => handleExecuteDue(rule)}
-                  className="text-emerald-700 font-bold hover:underline"
+                  className="text-[#18E6BE] font-bold hover:underline"
                 >
-                  Record Now →
+                  Record now →
                 </button>
               </div>
             </div>
@@ -286,19 +282,19 @@ export const RecurringView: React.FC = () => {
         })}
       </div>
 
-      {/* 4. ADD / EDIT RECURRING MODAL */}
+      {/* 4. MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
           <div className="fixed inset-0" onClick={() => setIsModalOpen(false)} />
 
-          <div className="relative z-10 w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-200 p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-black text-slate-900">
-                {ruleToEdit ? 'Edit Recurring Rule' : 'Add Recurring Transaction'}
+          <div className="relative z-10 w-full max-w-md bg-[#071724] rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden border border-[rgba(70,150,180,0.2)] p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[rgba(70,150,180,0.14)] pb-3">
+              <h3 className="text-base font-bold text-[#F4F8FB]">
+                {ruleToEdit ? 'Edit Recurring Rule' : 'New Recurring Transaction'}
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1 rounded-xl text-slate-400 hover:bg-slate-100"
+                className="p-1 rounded-lg text-[#6F899B] hover:text-[#F4F8FB] hover:bg-[#0B1D2C]"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -306,24 +302,24 @@ export const RecurringView: React.FC = () => {
 
             <form onSubmit={handleSaveRule} className="space-y-3.5">
               <div>
-                <label className="text-xs font-bold text-slate-600">Title *</label>
+                <label className="text-xs font-bold text-[#A9BDCC]">Title *</label>
                 <input
                   type="text"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. House Rent, StormFiber Internet, Netflix..."
-                  className="w-full mt-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  placeholder="e.g. Netflix, Rent Payment, Office Internet"
+                  className="w-full mt-1 px-3.5 py-2.5 bg-[#091A28] border border-[rgba(70,150,180,0.2)] rounded-xl text-xs sm:text-sm font-bold text-[#F4F8FB] placeholder-[#6F899B] focus:outline-none focus:border-[#18E6BE]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-xs font-bold text-slate-600">Type</label>
+                  <label className="text-xs font-bold text-[#A9BDCC]">Type</label>
                   <select
                     value={transactionType}
                     onChange={(e) => setTransactionType(e.target.value as any)}
-                    className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold"
+                    className="w-full mt-1 px-3 py-2 bg-[#091A28] border border-[rgba(70,150,180,0.2)] rounded-xl text-xs font-bold text-[#F4F8FB]"
                   >
                     <option value="expense">Expense</option>
                     <option value="income">Income</option>
@@ -331,39 +327,39 @@ export const RecurringView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-600">Amount (PKR) *</label>
+                  <label className="text-xs font-bold text-[#A9BDCC]">Amount (PKR) *</label>
                   <input
                     type="number"
                     required
                     step="any"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    placeholder="e.g. 15000"
-                    className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold"
+                    placeholder="e.g. 5000"
+                    className="w-full mt-1 px-3 py-2 bg-[#091A28] border border-[rgba(70,150,180,0.2)] rounded-xl text-xs font-bold text-[#F4F8FB]"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-xs font-bold text-slate-600">Category</label>
+                  <label className="text-xs font-bold text-[#A9BDCC]">Category</label>
                   <select
                     value={categoryId}
                     onChange={(e) => setCategoryId(e.target.value)}
-                    className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold"
+                    className="w-full mt-1 px-3 py-2 bg-[#091A28] border border-[rgba(70,150,180,0.2)] rounded-xl text-xs font-bold text-[#F4F8FB]"
                   >
-                    {categories.filter(c => c.type === transactionType).map(c => (
+                    {categories.map(c => (
                       <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-600">Account</label>
+                  <label className="text-xs font-bold text-[#A9BDCC]">Account</label>
                   <select
                     value={accountId}
                     onChange={(e) => setAccountId(e.target.value)}
-                    className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold"
+                    className="w-full mt-1 px-3 py-2 bg-[#091A28] border border-[rgba(70,150,180,0.2)] rounded-xl text-xs font-bold text-[#F4F8FB]"
                   >
                     {accounts.map(a => (
                       <option key={a.id} value={a.id}>{a.icon || '💳'} {a.name}</option>
@@ -374,11 +370,11 @@ export const RecurringView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-xs font-bold text-slate-600">Frequency</label>
+                  <label className="text-xs font-bold text-[#A9BDCC]">Frequency</label>
                   <select
                     value={frequency}
                     onChange={(e) => setFrequency(e.target.value as any)}
-                    className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold"
+                    className="w-full mt-1 px-3 py-2 bg-[#091A28] border border-[rgba(70,150,180,0.2)] rounded-xl text-xs font-bold text-[#F4F8FB]"
                   >
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
@@ -388,13 +384,12 @@ export const RecurringView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-600">Next Due Date</label>
+                  <label className="text-xs font-bold text-[#A9BDCC]">Next Due Date</label>
                   <input
                     type="date"
-                    required
                     value={nextRunDate}
                     onChange={(e) => setNextRunDate(e.target.value)}
-                    className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold"
+                    className="w-full mt-1 px-3 py-2 bg-[#091A28] border border-[rgba(70,150,180,0.2)] rounded-xl text-xs text-[#F4F8FB]"
                   />
                 </div>
               </div>
@@ -403,15 +398,15 @@ export const RecurringView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-bold rounded-2xl text-xs"
+                  className="flex-1 py-2.5 bg-[#102638] text-[#A9BDCC] hover:text-[#F4F8FB] font-bold rounded-xl text-xs transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl text-xs shadow-md"
+                  className="flex-1 py-2.5 bg-[#18E6BE] hover:bg-[#23F2CB] text-[#06131F] font-bold rounded-xl text-xs shadow-[0_0_15px_rgba(24,230,190,0.25)] transition-all"
                 >
-                  Save Recurring Rule
+                  Save Recurring
                 </button>
               </div>
             </form>

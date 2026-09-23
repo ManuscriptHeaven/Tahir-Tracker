@@ -91,16 +91,16 @@ export const AppContent: React.FC = () => {
 
   if (!isDbReady) {
     return (
-      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#071724] text-[#F4F8FB] flex items-center justify-center p-4">
         <div className="text-center space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white font-black text-2xl flex items-center justify-center mx-auto animate-bounce shadow-lg shadow-emerald-500/30">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#059669] to-[#18E6BE] text-[#06131F] font-black text-2xl flex items-center justify-center mx-auto shadow-[0_0_25px_rgba(24,230,190,0.35)] animate-pulse">
             {isRentMode ? '🏠' : 'TT'}
           </div>
-          <h2 className="font-bold text-lg text-slate-100">
-            {isRentMode ? 'Rent Tracking' : 'Personal Finance & Household Tracker'}
+          <h2 className="font-extrabold text-lg text-[#F4F8FB]">
+            {isRentMode ? 'Rent Tracking' : 'Tahir Tracker'}
           </h2>
-          <p className="text-xs text-slate-400">
-            {isRentMode ? 'Loading rental portions & cloud sync...' : 'Loading offline local database & cloud sync...'}
+          <p className="text-xs text-[#6F899B]">
+            {isRentMode ? 'Loading rental portions & cloud sync...' : 'Loading offline database & cloud sync...'}
           </p>
         </div>
       </div>
@@ -108,7 +108,7 @@ export const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col antialiased">
+    <div className="min-h-screen bg-[#071724] text-[#F4F8FB] flex flex-col antialiased selection:bg-[#18E6BE] selection:text-[#06131F]">
       {/* Top App Bar with Cloud Sync & PWA Install */}
       <Navbar
         activeTab={activeTab}
@@ -122,7 +122,7 @@ export const AppContent: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-24">
+      <main className="flex-1 max-w-[1680px] w-full mx-auto px-3 sm:px-6 lg:px-8 pt-5 pb-24">
         {/* Sub Navigation Switcher only for Full Household Tracker */}
         {!isRentMode && (
           <TrackerSubNav
