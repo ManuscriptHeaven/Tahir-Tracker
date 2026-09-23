@@ -7,6 +7,7 @@
 
 import { db } from '../db/db';
 import { SyncQueueItem } from '../types';
+import { getRetryDelayMs, isRetryTimestampReady } from './syncPolicy';
 
 /**
  * Enqueue a mutation (upsert or delete)
@@ -63,15 +64,8 @@ export async function dequeueSyncOperation(id: string): Promise<void> {
 /**
  * Increment retry count on failure
  */
-export function getRetryDelayMs(retryCount: number): number {
-  const schedule = [5_000, 15_000, 60_000, 5 * 60_000, 30 * 60_000, 60 * 60_000];
-  return schedule[Math.min(Math.max(retryCount - 1, 0), schedule.length - 1)];
-}
-
 export function isQueueItemReady(item: SyncQueueItem, nowMs = Date.now()): boolean {
-  if (!item.nextRetryAt) return true;
-  const next = Date.parse(item.nextRetryAt);
-  return Number.isNaN(next) || next <= nowMs;
+  return isRetryTimestampReady(item.nextRetryAt, nowMs);
 }
 
 export async function incrementRetryCount(id: string, errorMessage?: string): Promise<void> {
