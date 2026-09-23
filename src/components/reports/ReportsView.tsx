@@ -12,6 +12,7 @@ import {
 import { exportElementAsJpg } from '../../utils/exportImage';
 import { addMoney, subtractMoney, multiplyMoney } from '../../utils/money';
 import { calculateChronologicalRentArrears } from '../../utils/rentCalculations';
+import { filterPortionsByProperty, getRentPropertyName, resolvePortionPropertyId } from '../../utils/rentProperties';
 import { calculatePetrolIntervals, calculateMonthlyPetrolStats } from '../../utils/petrolCalculations';
 import { 
   Printer, 
@@ -39,6 +40,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   initialCategory = 'milk'
 }) => {
   const [activeCategory, setActiveCategory] = useState<ReportCategory>(initialCategory);
+  const [rentPropertyFilter, setRentPropertyFilter] = useState<string>('all');
   const [isExporting, setIsExporting] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
 
@@ -53,8 +55,13 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   const petrolRefills = useLiveQuery(
     () => db.petrol_refills.orderBy('odometerReading').toArray()
   ) || [];
+  const rentProperties = useLiveQuery(() => db.rent_properties.toArray()) || [];
+  const activeRentProperties = rentProperties.filter(p => p.status === 'active');
   const rentPortions = useLiveQuery(() => db.rent_portions.filter(p => p.active).toArray()) || [];
   const rentRecords = useLiveQuery(() => db.rent_records.toArray()) || [];
+  const rentPortionsForReport = activeCategory === 'rent'
+    ? filterPortionsByProperty(rentPortions, activeRentProperties, rentPropertyFilter)
+    : rentPortions;
   const utilityPersons = useLiveQuery(() => db.utility_persons.toArray()) || [];
   const utilityBills = useLiveQuery(() => db.utility_bills.toArray()) || [];
   const utilityPayments = useLiveQuery(() => db.utility_payments.toArray()) || [];
@@ -139,13 +146,15 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 
   // 4. RENT CALCULATIONS WITH PREVIOUS ARREARS
   const rentRecordMap = new Map<string, typeof rentRecords[0]>();
-  rentRecords.forEach(r => rentRecordMap.set(r.portionId, r));
+  rentRecords
+    .filter(r => r.monthYear === selectedMonth)
+    .forEach(r => rentRecordMap.set(r.portionId, r));
 
   let totalRentCurrentExpected = 0;
   let totalRentArrears = 0;
   let totalRentCollected = 0;
 
-  const rentPortionList = rentPortions.map(portion => {
+  const rentPortionList = rentPortionsForReport.map(portion => {
     const rec = rentRecordMap.get(portion.id);
     const expected = rec ? rec.expectedAmount : portion.expectedRent;
     const arrears = rec?.arrearsAmount !== undefined 
@@ -275,6 +284,34 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
             );
           })}
         </div>
+
+        {activeCategory === 'rent' && (
+          <div className="flex items-center gap-2 overflow-x-auto bg-white p-2 rounded-2xl border border-slate-200 shadow-sm">
+            <span className="px-2 text-[10px] font-black uppercase tracking-wider text-slate-400 shrink-0">House</span>
+            <button
+              onClick={() => setRentPropertyFilter('all')}
+              className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold ${
+                rentPropertyFilter === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700'
+              }`}
+            >
+              All Houses
+            </button>
+            {activeRentProperties.map(property => (
+              <button
+                key={property.id}
+                onClick={() => setRentPropertyFilter(property.id)}
+                className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 ${
+                  rentPropertyFilter === property.id
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-emerald-50 text-emerald-800'
+                }`}
+              >
+                <Home className="w-3.5 h-3.5" />
+                {property.name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* A4 REPORT PREVIEW CARD (Mobile responsive preview + crisp print/JPG capture) */}
@@ -300,7 +337,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               {activeCategory === 'master' && 'HOUSEHOLD MASTER STATEMENT'}
             </h1>
             <div className="text-xs font-extrabold text-emerald-600">
-              {activeCategory === 'utility' ? 'Comprehensive All-Months Statement' : formattedMonthName}
+              {activeCategory === 'utility'
+                ? 'Comprehensive All-Months Statement'
+                : activeCategory === 'rent' && rentPropertyFilter !== 'all'
+                ? `${getRentPropertyName(rentPropertyFilter, activeRentProperties)} • ${formattedMonthName}`
+                : formattedMonthName}
             </div>
           </div>
 
@@ -684,7 +725,12 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                   <tbody className="divide-y divide-slate-200">
                     {rentPortionList.map(({ portion, expected, arrears, totalDue, paid, balance, status }) => (
                       <tr key={portion.id}>
-                        <td className="py-1 px-2 font-bold text-slate-900 truncate">{portion.portionName}</td>
+                        <td className="py-1 px-2 text-slate-900 truncate">
+                          <div className="font-bold">{portion.portionName}</div>
+                          <div className="text-[8.5px] text-slate-400 font-semibold">
+                            {getRentPropertyName(resolvePortionPropertyId(portion, activeRentProperties), activeRentProperties)}
+                          </div>
+                        </td>
                         <td className="py-1 px-2 text-slate-700 truncate">{portion.tenantName}</td>
                         <td className="py-1 px-2 text-right truncate">{formatCurrency(expected)}</td>
                         <td className="py-1 px-2 text-right font-bold text-rose-700 truncate">{formatCurrency(arrears)}</td>
