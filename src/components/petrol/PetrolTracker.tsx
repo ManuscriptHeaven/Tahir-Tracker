@@ -198,7 +198,7 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
             Bike Petrol & Mileage Tracker
           </h2>
           <p className="text-xs sm:text-sm text-slate-500">
-            Log fuel refills, track odometer distance, fuel economy (KM/L), and travel costs
+            Track every refill: fuel cost → KM until next refill → PKR/KM, plus verified full-tank KM/L
           </p>
         </div>
 
@@ -229,7 +229,7 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
         <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-4 text-white shadow-md col-span-2 sm:col-span-1">
           <div className="flex items-center justify-between opacity-90 text-[10px] font-bold uppercase tracking-wider">
-            <span>Avg Mileage</span>
+            <span>Verified Mileage</span>
             <TrendingUp className="w-4 h-4" />
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold mt-1">
@@ -289,18 +289,20 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
 
         <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-            <span>Cost per KM</span>
+            <span>Avg Refill Cost/KM</span>
             <Gauge className="w-4 h-4 text-slate-400" />
           </div>
           <div className="text-xl sm:text-2xl font-extrabold text-slate-800 mt-1">
-            {monthlyStats.costPerKm > 0 ? (
-              `${formatNumber(monthlyStats.costPerKm, 2)}`
+            {monthlyStats.avgRefillCostPerKm > 0 ? (
+              `${formatNumber(monthlyStats.avgRefillCostPerKm, 2)}`
             ) : (
               '—'
             )} <span className="text-xs font-semibold text-slate-500">PKR</span>
           </div>
           <div className="text-[11px] text-slate-500 mt-1">
-            {monthlyStats.totalIntervalDistance > 0 ? 'Full-tank intervals' : 'Logged travel rate'}
+            {monthlyStats.completedRefillCyclesCount > 0
+              ? `${monthlyStats.completedRefillCyclesCount} completed refill ${monthlyStats.completedRefillCyclesCount === 1 ? 'cycle' : 'cycles'}`
+              : 'Needs next refill checkpoint'}
           </div>
         </div>
       </div>
@@ -335,9 +337,9 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
                   <th className="py-3 px-3 sm:px-4">Rate (PKR)</th>
                   <th className="py-3 px-3 sm:px-4">Total Cost</th>
                   <th className="py-3 px-3 sm:px-4">Type</th>
-                  <th className="py-3 px-3 sm:px-4">Distance</th>
-                  <th className="py-3 px-3 sm:px-4">Mileage</th>
-                  <th className="py-3 px-3 sm:px-4">Cost/KM</th>
+                  <th className="py-3 px-3 sm:px-4">KM Until Next</th>
+                  <th className="py-3 px-3 sm:px-4">Verified Mileage</th>
+                  <th className="py-3 px-3 sm:px-4">Refill Cost/KM</th>
                   <th className="py-3 px-3 sm:px-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -378,17 +380,15 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
                       )}
                     </td>
                     <td className="py-3 px-3 sm:px-4 whitespace-nowrap">
-                      {refill.calculationType === 'completed' ? (
+                      {refill.refillCycleStatus === 'completed' ? (
                         <div>
-                          <span className="font-bold text-slate-900">+{refill.intervalDistance} km</span>
-                          <span className="block text-[10px] text-slate-400 font-normal">full interval</span>
+                          <span className="font-bold text-slate-900">+{formatNumber(refill.distanceUntilNextRefill, 0)} km</span>
+                          <span className="block text-[10px] text-slate-400 font-normal">after this refill</span>
                         </div>
-                      ) : refill.calculationType === 'baseline' ? (
-                        <span className="text-slate-400 text-xs">Baseline (0 km)</span>
                       ) : (
                         <div>
-                          <span className="font-medium text-slate-700">{refill.stepDistance > 0 ? `+${refill.stepDistance} km` : '—'}</span>
-                          <span className="block text-[10px] text-slate-400 font-normal">since prev refill</span>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[11px] font-bold">In Progress</span>
+                          <span className="block text-[10px] text-slate-400 font-normal mt-0.5">until next refill</span>
                         </div>
                       )}
                     </td>
@@ -413,9 +413,14 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
                       )}
                     </td>
                     <td className="py-3 px-3 sm:px-4 text-slate-600 whitespace-nowrap">
-                      {refill.calculationType === 'completed' && refill.costPerKm > 0
-                        ? `${formatNumber(refill.costPerKm, 2)} PKR`
-                        : '—'}
+                      {refill.refillCycleStatus === 'completed' && refill.refillCostPerKm > 0 ? (
+                        <div>
+                          <span className="font-bold text-slate-900">{formatNumber(refill.refillCostPerKm, 2)} PKR</span>
+                          <span className="block text-[10px] text-slate-400 font-normal">per km from this refill</span>
+                        </div>
+                      ) : (
+                        <span className="text-amber-700 text-[11px] font-semibold">In Progress</span>
+                      )}
                     </td>
                     <td className="py-3 px-3 sm:px-4 text-right whitespace-nowrap">
                       <div className="inline-flex items-center gap-1">
@@ -576,7 +581,7 @@ export const PetrolTracker: React.FC<PetrolTrackerProps> = ({
                       )}
                     </span>
                     <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
-                      Enable when the tank is filled completely. Accurate mileage is calculated between full-tank refills.
+                      Enable only when the tank is completely full. Verified KM/L uses full-tank checkpoints; refill cost/KM is tracked for every refill automatically.
                     </p>
                   </div>
                 </label>
