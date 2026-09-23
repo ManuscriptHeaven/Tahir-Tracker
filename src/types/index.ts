@@ -200,5 +200,7 @@ export interface AuthSessionState {
   loading: boolean;
   error: string | null;
   isAuthenticated: boolean;
+  isRecoveryMode?: boolean;
+  recoveryError?: string | null;
 }
 

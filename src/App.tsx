@@ -25,7 +25,7 @@ import { AIAssistantModal } from './components/ai/AIAssistantModal';
 import { AIFloatingButton } from './components/ai/AIFloatingButton';
 
 // Authentication
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginModal } from './components/auth/LoginModal';
 
 export const AppContent: React.FC = () => {
@@ -39,6 +39,15 @@ export const AppContent: React.FC = () => {
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<any>(null);
+
+  const { isRecoveryMode, recoveryError } = useAuth();
+
+  // Auto-open LoginModal when recovery mode or recovery error is detected from URL
+  useEffect(() => {
+    if (isRecoveryMode || recoveryError) {
+      setIsLoginModalOpen(true);
+    }
+  }, [isRecoveryMode, recoveryError]);
 
   useEffect(() => {
     let disposed = false;

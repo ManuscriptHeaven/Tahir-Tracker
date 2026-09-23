@@ -18,7 +18,8 @@ import {
   Download,
   Cloud,
   Shield,
-  RefreshCw
+  RefreshCw,
+  LogIn
 } from 'lucide-react';
 import { getMonthYearFormatted } from '../../utils/formatters';
 import { SyncStatus } from '../../services/syncService';
@@ -129,7 +130,10 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
         <div className="p-4 border-b border-[rgba(70,150,180,0.12)] bg-[#0B1D2C]/60">
           <div className="flex items-center justify-between">
             <button
-              onClick={onOpenLogin}
+              onClick={() => {
+                onClose();
+                onOpenLogin?.();
+              }}
               className="flex items-center gap-2.5 text-left hover:opacity-85 transition-opacity"
             >
               <div className="w-8 h-8 rounded-full bg-[#18E6BE] text-[#06131F] font-black flex items-center justify-center text-xs shadow-[0_0_10px_rgba(24,230,190,0.3)]">
@@ -158,6 +162,19 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
               <span>{syncStatus.state === 'synced' ? 'Synced' : 'Sync'}</span>
             </button>
           </div>
+
+          {!isAuthenticated && (
+            <button
+              onClick={() => {
+                onClose();
+                onOpenLogin?.();
+              }}
+              className="mt-2.5 w-full py-2 px-3 rounded-xl bg-gradient-to-r from-teal-500/20 to-emerald-500/20 hover:from-teal-500/30 hover:to-emerald-500/30 border border-teal-500/40 text-[#18E6BE] font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Sign In / Forgot Password</span>
+            </button>
+          )}
 
           {/* Month Selector in Drawer */}
           <div className="mt-3 flex items-center justify-between bg-[#071724] p-1.5 rounded-xl border border-[rgba(70,150,180,0.18)]">
