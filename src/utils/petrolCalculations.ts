@@ -1,9 +1,10 @@
 /**
  * Petrol & Fuel Mileage Calculation Engine for Tahir Tracker
  * 
- * Implements the Full-Tank-to-Full-Tank methodology for accurate fuel economy.
- * Partial refills are preserved for accounting and odometer history but do NOT
- * generate individual mileage calculations.
+ * Implements two complementary views:
+ * 1) Full-Tank-to-Full-Tank methodology for verified fuel economy (KM/L).
+ * 2) Refill-to-refill practical tracking for every refill: cost -> KM until next refill -> PKR/KM.
+ * Partial refills never pretend to be verified KM/L, but they remain useful for real-world cost tracking.
  */
 
 import type { PetrolRefill } from '../types/index.ts';
@@ -33,26 +34,36 @@ export function toCamelCase(obj: any): any {
 
 export type RefillCalculationType = 'baseline' | 'completed' | 'partial';
 
+export type RefillCycleStatus = 'completed' | 'in_progress';
+
 export interface ProcessedRefill extends PetrolRefill {
   calculationType: RefillCalculationType;
   stepDistance: number; // Distance from immediately previous refill
   intervalDistance: number; // Distance since previous full tank (completed only)
   intervalFuel: number; // Total litres consumed across interval (completed only)
   intervalCost: number; // Total PKR spent across interval (completed only)
-  displayMileage: string; // Formatted string for UI display
-  displayCostPerKm: string; // Formatted string for UI display
+  distanceUntilNextRefill: number; // Practical distance travelled after THIS refill until next refill
+  refillCostPerKm: number; // THIS refill cost / distance until next refill
+  refillCycleStatus: RefillCycleStatus;
+  displayMileage: string; // Formatted verified full-tank mileage for UI display
+  displayCostPerKm: string; // Formatted verified full-tank interval cost/km for UI display
 }
 
 export interface MonthlyPetrolStats {
   completedIntervalsCount: number;
-  avgMileage: number; // Weighted: total interval distance / total interval fuel
+  avgMileage: number; // Verified weighted full-tank mileage: total interval distance / total interval fuel
   totalIntervalDistance: number;
   totalIntervalFuel: number;
   totalIntervalCost: number;
+  verifiedCostPerKm: number; // Full-tank interval cost / full-tank interval distance
   monthlyLitres: number; // Total fuel litres purchased in this month
   monthlyCost: number; // Total PKR spent on fuel in this month
   loggedTravelKm: number; // Sum of step distances logged in this month
-  costPerKm: number; // Monthly interval cost / interval distance (or monthlyCost / loggedTravelKm)
+  completedRefillCyclesCount: number; // Refills in this month that have a following refill
+  refillCycleDistanceKm: number; // Distance driven after those refills until the next refill
+  refillCycleCost: number; // Cost of those starting refills
+  avgRefillCostPerKm: number; // Weighted refill cost / refill-cycle distance
+  costPerKm: number; // Backward-compatible alias of avgRefillCostPerKm
 }
 
 export interface RefillValidationResult {
@@ -159,6 +170,9 @@ export function calculatePetrolIntervals(refills: PetrolRefill[]): ProcessedRefi
         intervalDistance: 0,
         intervalFuel: 0,
         intervalCost: 0,
+        distanceUntilNextRefill: 0,
+        refillCostPerKm: 0,
+        refillCycleStatus: 'in_progress',
         distanceTravelled: stepDistance,
         mileageKmpl: 0,
         costPerKm: 0,
@@ -180,6 +194,9 @@ export function calculatePetrolIntervals(refills: PetrolRefill[]): ProcessedRefi
         intervalDistance: 0,
         intervalFuel: 0,
         intervalCost: 0,
+        distanceUntilNextRefill: 0,
+        refillCostPerKm: 0,
+        refillCycleStatus: 'in_progress',
         distanceTravelled: 0,
         mileageKmpl: 0,
         costPerKm: 0,
@@ -216,6 +233,9 @@ export function calculatePetrolIntervals(refills: PetrolRefill[]): ProcessedRefi
         intervalDistance,
         intervalFuel: parseFloat(intervalFuel.toFixed(2)),
         intervalCost,
+        distanceUntilNextRefill: 0,
+        refillCostPerKm: 0,
+        refillCycleStatus: 'in_progress',
         distanceTravelled: intervalDistance,
         mileageKmpl: mileage,
         costPerKm: costKm,
@@ -226,6 +246,29 @@ export function calculatePetrolIntervals(refills: PetrolRefill[]): ProcessedRefi
       // Update pointer to this full tank checkpoint
       lastFullTankIndex = i;
     }
+  }
+
+  // Practical refill-to-refill view:
+  // attribute the distance AFTER a refill to the refill that purchased the fuel.
+  // Example: Rs 500 at 10,000 km, next refill at 10,080 km => 80 km and Rs 6.25/km.
+  // This is intentionally separate from verified KM/L and works for full or partial refills.
+  for (let i = 0; i < result.length; i++) {
+    const current = result[i];
+    const next = i < result.length - 1 ? result[i + 1] : null;
+
+    if (!next) {
+      current.distanceUntilNextRefill = 0;
+      current.refillCostPerKm = 0;
+      current.refillCycleStatus = 'in_progress';
+      continue;
+    }
+
+    const distanceUntilNextRefill = Math.max(0, next.odometerReading - current.odometerReading);
+    current.distanceUntilNextRefill = distanceUntilNextRefill;
+    current.refillCostPerKm = distanceUntilNextRefill > 0
+      ? parseFloat(((current.totalCost || 0) / distanceUntilNextRefill).toFixed(2))
+      : 0;
+    current.refillCycleStatus = distanceUntilNextRefill > 0 ? 'completed' : 'in_progress';
   }
 
   return result;
@@ -275,10 +318,25 @@ export function calculateMonthlyPetrolStats(
   const monthlyCost = monthlyRefills.reduce((sum, r) => addMoney(sum, r.totalCost || 0), 0);
   const loggedTravelKm = monthlyRefills.reduce((sum, r) => sum + (r.stepDistance || 0), 0);
 
-  const costPerKm = totalIntervalDistance > 0
+  const verifiedCostPerKm = totalIntervalDistance > 0
     ? parseFloat((totalIntervalCost / totalIntervalDistance).toFixed(2))
-    : loggedTravelKm > 0
-    ? parseFloat((monthlyCost / loggedTravelKm).toFixed(2))
+    : 0;
+
+  // Practical refill-cycle metric is assigned to the month of the STARTING refill.
+  // Latest refill remains "in progress" until the next odometer checkpoint exists.
+  const completedRefillCyclesInMonth = monthlyRefills.filter(
+    r => r.refillCycleStatus === 'completed' && r.distanceUntilNextRefill > 0
+  );
+  const refillCycleDistanceKm = completedRefillCyclesInMonth.reduce(
+    (sum, r) => sum + r.distanceUntilNextRefill,
+    0
+  );
+  const refillCycleCost = completedRefillCyclesInMonth.reduce(
+    (sum, r) => addMoney(sum, r.totalCost || 0),
+    0
+  );
+  const avgRefillCostPerKm = refillCycleDistanceKm > 0
+    ? parseFloat((refillCycleCost / refillCycleDistanceKm).toFixed(2))
     : 0;
 
   return {
@@ -287,9 +345,14 @@ export function calculateMonthlyPetrolStats(
     totalIntervalDistance,
     totalIntervalFuel: parseFloat(totalIntervalFuel.toFixed(2)),
     totalIntervalCost,
+    verifiedCostPerKm,
     monthlyLitres: parseFloat(monthlyLitres.toFixed(2)),
     monthlyCost,
     loggedTravelKm,
-    costPerKm
+    completedRefillCyclesCount: completedRefillCyclesInMonth.length,
+    refillCycleDistanceKm,
+    refillCycleCost,
+    avgRefillCostPerKm,
+    costPerKm: avgRefillCostPerKm
   };
 }
