@@ -36,6 +36,8 @@ export const AddEditUtilityBillModal: React.FC<AddEditUtilityBillModalProps> = (
   const [notes, setNotes] = useState<string>('');
 
   useEffect(() => {
+    if (!isOpen) return;
+
     if (billToEdit) {
       setPersonId(billToEdit.personId);
       setMonth(billToEdit.month);
@@ -56,13 +58,21 @@ export const AddEditUtilityBillModal: React.FC<AddEditUtilityBillModalProps> = (
       setElectricity('');
       setGas('');
       setWater(1550);
+      setCustomWaterGasShare('');
+      setCustomTotalBill('');
       setNotes('');
       setAutoCalculate(true);
 
       const p = persons.find(per => per.id === (selectedPersonId || persons[0]?.id));
       setExpectedContribution(p ? p.monthlyExpectedContribution : 9500);
     }
-  }, [billToEdit, isOpen, selectedPersonId, persons]);
+
+    // IMPORTANT: This effect initializes a fresh editing session only.
+    // Do not depend on the live `persons` array here. Supabase/Dexie refreshes can
+    // replace that array while the user is typing, which previously reset Electricity,
+    // Gas and the rest of the draft back to their defaults.
+    // A modal reopen or switching to a different bill ID intentionally reinitializes it.
+  }, [isOpen, billToEdit?.id]);
 
   // When person changes, update default expected contribution if adding new
   const handlePersonChange = (newPersonId: string) => {
