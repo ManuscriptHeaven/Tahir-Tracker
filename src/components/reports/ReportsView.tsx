@@ -213,7 +213,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-16">
+    <div className="reports-print-root space-y-6 pb-16">
       {/* Top Toolbar (Hidden in Print) */}
       <div className="no-print space-y-4">
         <PageHeader
@@ -303,7 +303,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       <div 
         id="printable-report-card" 
         ref={reportRef}
-        className="bg-white rounded-3xl p-3.5 sm:p-6 border border-slate-200/90 shadow-2xl max-w-4xl mx-auto text-slate-900 font-sans print-page overflow-hidden"
+        className="report-document bg-white rounded-3xl p-3.5 sm:p-6 border border-slate-200/90 shadow-2xl max-w-5xl mx-auto text-slate-900 font-sans print-page overflow-x-auto sm:overflow-visible"
       >
         {/* Report Header */}
         <div className="flex flex-col sm:flex-row sm:items-start justify-between border-b-2 border-slate-900 pb-2.5 mb-2.5 gap-2">
