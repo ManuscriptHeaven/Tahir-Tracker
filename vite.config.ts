@@ -8,29 +8,35 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['logo.svg', 'pwa-192x192.svg', 'pwa-512x512.svg'],
+      includeAssets: ['tahir-logo.svg', 'tahir-icon-192.svg', 'tahir-icon-512.svg', 'tahir-icon-maskable.svg'],
       manifest: {
         name: 'Tahir Tracker - Personal Finance & Household',
         short_name: 'Tahir Tracker',
         description: 'Personal Finance & Household Tracker - Utility Bills, Loans, Milk, Petrol & Rent Management',
-        theme_color: '#059669',
-        background_color: '#f8fafc',
+        theme_color: '#071724',
+        background_color: '#071724',
         display: 'standalone',
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
         icons: [
           {
-            src: '/pwa-192x192.svg',
+            src: '/tahir-icon-192.svg',
             sizes: '192x192',
             type: 'image/svg+xml',
-            purpose: 'any maskable'
+            purpose: 'any'
           },
           {
-            src: '/pwa-512x512.svg',
+            src: '/tahir-icon-512.svg',
             sizes: '512x512',
             type: 'image/svg+xml',
-            purpose: 'any maskable'
+            purpose: 'any'
+          },
+          {
+            src: '/tahir-icon-maskable.svg',
+            sizes: '512x512',
+            type: 'image/svg+xml',
+            purpose: 'maskable'
           }
         ]
       },
