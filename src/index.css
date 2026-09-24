@@ -204,10 +204,9 @@
     max-width: 100% !important;
   }
 
-  .print-avoid-break,
-  .print-page > div > div {
-    page-break-inside: avoid;
-    break-inside: avoid;
+  .print-avoid-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   /* Tables with many rows are explicitly allowed to continue on the next page. */
