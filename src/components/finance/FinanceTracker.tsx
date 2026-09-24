@@ -75,6 +75,7 @@ export const FinanceTracker: React.FC<FinanceTrackerProps> = ({
   return (
     <div className="space-y-6">
       {/* 1. REUSABLE PAGE HEADER */}
+      <div className="no-print">
       <PageHeader
         title="Personal Finance"
         subtitle="Manage your money, build a better tomorrow"
@@ -92,9 +93,10 @@ export const FinanceTracker: React.FC<FinanceTrackerProps> = ({
           onClick: () => handleOpenAddModalWithType('expense')
         }}
       />
+      </div>
 
       {/* 2. SUB-NAVIGATION TABS */}
-      <nav aria-label="Finance sections" className="bg-[#0B1D2C] p-1.5 rounded-2xl border border-[rgba(70,150,180,0.18)] shadow-sm flex items-center gap-1 overflow-x-auto no-scrollbar">
+      <nav aria-label="Finance sections" className="no-print bg-[#0B1D2C] p-1.5 rounded-2xl border border-[rgba(70,150,180,0.18)] shadow-sm flex items-center gap-1 overflow-x-auto no-scrollbar">
         {subTabs.map(tab => {
           const Icon = tab.icon;
           const isActive = activeSubTab === tab.id;
