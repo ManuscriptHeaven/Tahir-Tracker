@@ -74,9 +74,9 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
   return (
     <div className="space-y-6 pb-8 animate-in fade-in duration-300">
       {/* 1. TOP OVERVIEW HERO METRICS (4 Cards) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Card 1: Selected Month Cash Flow */}
-        <div className="bg-[#0B1D2C] rounded-2xl p-5 border border-[rgba(70,150,180,0.18)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col justify-between relative overflow-hidden">
+        <div className="bg-[#0B1D2C] rounded-2xl p-3.5 sm:p-5 border border-[rgba(70,150,180,0.18)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col justify-between relative overflow-hidden">
           <div>
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wider text-[#6F899B]">
@@ -91,8 +91,8 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
               </div>
             </div>
 
-            <div className="mt-2.5">
-              <div className={`text-2xl sm:text-[28px] font-extrabold tracking-tight tabular-nums ${
+            <div className="mt-2 sm:mt-2.5">
+              <div className={`text-xl sm:text-2xl lg:text-[28px] font-extrabold tracking-tight tabular-nums ${
                 isNetPositive ? 'text-[#14E6AA]' : 'text-[#FF627B]'
               }`}>
                 {isNetPositive ? '+' : ''}{formatCurrency(summary.netSavings)}
@@ -108,7 +108,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between text-xs text-[#6F899B]">
+          <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between text-xs text-[#6F899B] flex-wrap gap-1">
             <span>Income: <strong className="text-[#14E6AA]">{formatCurrency(summary.monthlyIncome)}</strong></span>
             <span>Expenses: <strong className="text-[#FF627B]">{formatCurrency(summary.monthlyExpenses)}</strong></span>
           </div>
@@ -118,7 +118,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
         <button 
           type="button"
           onClick={() => onNavigateToSubTab('accounts')}
-          className="text-left bg-[#0B1D2C] rounded-2xl p-5 border border-[rgba(70,150,180,0.18)] hover:border-[rgba(55,210,190,0.35)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col justify-between cursor-pointer transition-all hover:-translate-y-0.5 group focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#18E6BE]"
+          className="text-left bg-[#0B1D2C] rounded-2xl p-3.5 sm:p-5 border border-[rgba(70,150,180,0.18)] hover:border-[rgba(55,210,190,0.35)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col justify-between cursor-pointer transition-all hover:-translate-y-0.5 group focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#18E6BE]"
         >
           <div>
             <div className="flex items-center justify-between">
@@ -129,8 +129,8 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
                 <Wallet className="w-4 h-4" />
               </div>
             </div>
-            <div className="mt-2.5">
-              <div className="text-2xl sm:text-[28px] font-extrabold text-[#F4F8FB] tracking-tight tabular-nums">
+            <div className="mt-2 sm:mt-2.5">
+              <div className="text-xl sm:text-2xl lg:text-[28px] font-extrabold text-[#F4F8FB] tracking-tight tabular-nums">
                 {formatCurrency(summary.totalLiquidBalance)}
               </div>
               <div className="text-xs text-[#6F899B] mt-1">
@@ -138,7 +138,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
               </div>
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between text-xs text-[#18E6BE] font-bold group-hover:underline">
+          <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between text-xs text-[#18E6BE] font-bold group-hover:underline">
             <span>View accounts</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
           </div>
@@ -148,7 +148,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
         <button 
           type="button"
           onClick={() => onOpenAddModal('income')}
-          className="text-left bg-[#0B1D2C] rounded-2xl p-5 border border-[rgba(70,150,180,0.18)] hover:border-[rgba(20,230,170,0.35)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col justify-between cursor-pointer transition-all hover:-translate-y-0.5 group focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#14E6AA]"
+          className="text-left bg-[#0B1D2C] rounded-2xl p-3.5 sm:p-5 border border-[rgba(70,150,180,0.18)] hover:border-[rgba(20,230,170,0.35)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col justify-between cursor-pointer transition-all hover:-translate-y-0.5 group focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#14E6AA]"
         >
           <div>
             <div className="flex items-center justify-between">
@@ -159,8 +159,8 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
                 <ArrowDownLeft className="w-4 h-4" />
               </div>
             </div>
-            <div className="mt-2.5">
-              <div className="text-2xl sm:text-[28px] font-extrabold text-[#14E6AA] tracking-tight tabular-nums">
+            <div className="mt-2 sm:mt-2.5">
+              <div className="text-xl sm:text-2xl lg:text-[28px] font-extrabold text-[#14E6AA] tracking-tight tabular-nums">
                 {formatCurrency(summary.monthlyIncome)}
               </div>
               <div className="text-xs text-[#6F899B] mt-1">
@@ -168,7 +168,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
               </div>
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between text-xs text-[#14E6AA] font-bold group-hover:underline">
+          <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between text-xs text-[#14E6AA] font-bold group-hover:underline">
             <span>Add income</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
           </div>
@@ -178,7 +178,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
         <button 
           type="button"
           onClick={() => onNavigateToSubTab('budgets')}
-          className="text-left bg-[#0B1D2C] rounded-2xl p-5 border border-[rgba(70,150,180,0.18)] hover:border-[rgba(255,98,123,0.35)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col justify-between cursor-pointer transition-all hover:-translate-y-0.5 group focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF627B]"
+          className="text-left bg-[#0B1D2C] rounded-2xl p-3.5 sm:p-5 border border-[rgba(70,150,180,0.18)] hover:border-[rgba(255,98,123,0.35)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col justify-between cursor-pointer transition-all hover:-translate-y-0.5 group focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF627B]"
         >
           <div>
             <div className="flex items-center justify-between">
@@ -189,8 +189,8 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
                 <ArrowUpRight className="w-4 h-4" />
               </div>
             </div>
-            <div className="mt-2.5">
-              <div className="text-2xl sm:text-[28px] font-extrabold text-[#FF627B] tracking-tight tabular-nums">
+            <div className="mt-2 sm:mt-2.5">
+              <div className="text-xl sm:text-2xl lg:text-[28px] font-extrabold text-[#FF627B] tracking-tight tabular-nums">
                 {formatCurrency(summary.monthlyExpenses)}
               </div>
               <div className="text-xs text-[#6F899B] mt-1">
@@ -198,7 +198,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
               </div>
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between text-xs text-[#FF627B] font-bold group-hover:underline">
+          <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between text-xs text-[#FF627B] font-bold group-hover:underline">
             <span>View budgets</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
           </div>
@@ -213,9 +213,9 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
       />
 
       {/* 3. FINANCIAL HEALTH, INSIGHTS & SAVINGS GOALS ROW (3 Columns) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
         {/* Column 1: Financial Health Score (4 cols) */}
-        <div className="lg:col-span-4 bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] p-5 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
+        <div className="lg:col-span-4 bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] p-3.5 sm:p-5 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
           <div className="flex items-center justify-between border-b border-[rgba(70,150,180,0.12)] pb-3 mb-3">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-[#18E6BE]" />
@@ -234,10 +234,10 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-5 my-2">
+          <div className="flex items-center gap-3 sm:gap-5 my-2">
             {/* Circular Gauge */}
             <div 
-              className="relative w-20 h-20 shrink-0 flex items-center justify-center"
+              className="relative w-16 h-16 sm:w-20 sm:h-20 shrink-0 flex items-center justify-center"
               role="progressbar" 
               aria-label="Financial health score" 
               aria-valuenow={healthScore.score} 
@@ -266,25 +266,25 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-black text-[#F4F8FB] tracking-tight">{healthScore.score}</span>
+                <span className="text-xl sm:text-2xl font-black text-[#F4F8FB] tracking-tight">{healthScore.score}</span>
               </div>
             </div>
 
             {/* Metrics List */}
-            <div className="flex-1 space-y-1.5 text-xs">
-              <div className="flex justify-between items-center text-[#A9BDCC]">
-                <span>Savings Rate:</span>
-                <strong className={`font-bold ${healthScore.savingsRate < 0 ? 'text-[#FF627B]' : 'text-[#14E6AA]'}`}>
+            <div className="flex-1 space-y-1.5 text-xs min-w-0">
+              <div className="flex justify-between items-center text-[#A9BDCC] gap-2">
+                <span className="truncate">Savings Rate:</span>
+                <strong className={`font-bold tabular-nums shrink-0 ${healthScore.savingsRate < 0 ? 'text-[#FF627B]' : 'text-[#14E6AA]'}`}>
                   {healthScore.savingsRate}%
                 </strong>
               </div>
-              <div className="flex justify-between items-center text-[#A9BDCC]">
-                <span>Budget Adherence:</span>
-                <strong className="text-[#F4F8FB] font-bold">{healthScore.budgetAdherenceRate}%</strong>
+              <div className="flex justify-between items-center text-[#A9BDCC] gap-2">
+                <span className="truncate">Budget Adherence:</span>
+                <strong className="text-[#F4F8FB] font-bold tabular-nums shrink-0">{healthScore.budgetAdherenceRate}%</strong>
               </div>
-              <div className="flex justify-between items-center text-[#A9BDCC]">
-                <span>Expense Ratio:</span>
-                <strong className={healthScore.expenseToIncomeRatio > 100 ? 'text-[#FF627B]' : 'text-[#F4F8FB]'}>
+              <div className="flex justify-between items-center text-[#A9BDCC] gap-2">
+                <span className="truncate">Expense Ratio:</span>
+                <strong className={`font-bold tabular-nums shrink-0 ${healthScore.expenseToIncomeRatio > 100 ? 'text-[#FF627B]' : 'text-[#F4F8FB]'}`}>
                   {healthScore.expenseToIncomeRatio}%
                 </strong>
               </div>
@@ -297,17 +297,17 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
         </div>
 
         {/* Column 2: Spending Insights (4 cols) */}
-        <div className="lg:col-span-4 bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] p-5 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
+        <div className="lg:col-span-4 bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] p-3.5 sm:p-5 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
           <div className="flex items-center justify-between border-b border-[rgba(70,150,180,0.12)] pb-3 mb-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-[#F7B733]" />
-              <h3 className="font-bold text-sm sm:text-base text-[#F4F8FB]">
+            <div className="flex items-center gap-2 min-w-0">
+              <Sparkles className="w-5 h-5 text-[#F7B733] shrink-0" />
+              <h3 className="font-bold text-sm sm:text-base text-[#F4F8FB] truncate">
                 Spending Insights
               </h3>
             </div>
             <button
               onClick={() => onNavigateToSubTab('reports')}
-              className="text-xs font-semibold text-[#18E6BE] hover:underline"
+              className="text-xs font-semibold text-[#18E6BE] hover:underline shrink-0"
             >
               View All
             </button>
@@ -318,7 +318,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
               aiInsights.slice(0, 2).map((insight) => (
                 <div
                   key={insight.id}
-                  className={`p-3 rounded-xl border flex items-start gap-2.5 text-xs ${
+                  className={`p-2.5 sm:p-3 rounded-xl border flex items-start gap-2.5 text-xs ${
                     insight.type === 'increase' || insight.type === 'budget_warning'
                       ? 'bg-[rgba(255,98,123,0.08)] border-[rgba(255,98,123,0.25)] text-[#F4F8FB]'
                       : insight.type === 'achievement'
@@ -326,15 +326,15 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
                       : 'bg-[#102638] border-[rgba(70,150,180,0.2)] text-[#F4F8FB]'
                   }`}
                 >
-                  <span className="text-base shrink-0">{insight.icon || '💡'}</span>
-                  <div className="flex-1">
-                    <div className="font-bold">{insight.title}</div>
-                    <p className="text-[11px] text-[#A9BDCC] mt-0.5 leading-snug">{insight.message}</p>
+                  <span className="text-base shrink-0 mt-0.5">{insight.icon || '💡'}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-xs sm:text-sm text-[#F4F8FB] truncate">{insight.title}</div>
+                    <p className="text-[11px] text-[#A9BDCC] mt-0.5 leading-snug line-clamp-2 sm:line-clamp-3">{insight.message}</p>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="p-4 text-center text-xs text-[#6F899B] bg-[#091A28] rounded-xl border border-[rgba(70,150,180,0.14)]">
+              <div className="p-3 text-center text-xs text-[#6F899B] bg-[#091A28] rounded-xl border border-[rgba(70,150,180,0.14)]">
                 Spending habits are currently within standard targets.
               </div>
             )}
@@ -344,7 +344,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
             <span>Personalized from real data</span>
             <button
               onClick={() => onNavigateToSubTab('reports')}
-              className="text-[#18E6BE] font-bold hover:underline"
+              className="text-[#18E6BE] font-bold hover:underline shrink-0"
             >
               Reports →
             </button>
@@ -352,31 +352,31 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
         </div>
 
         {/* Column 3: Savings Goals (4 cols) */}
-        <div className="lg:col-span-4 bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] p-5 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
+        <div className="lg:col-span-4 bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] p-3.5 sm:p-5 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
           <div className="flex items-center justify-between border-b border-[rgba(70,150,180,0.12)] pb-3 mb-3">
-            <div className="flex items-center gap-2">
-              <Target className="w-5 h-5 text-[#18E6BE]" />
-              <h3 className="font-bold text-sm sm:text-base text-[#F4F8FB]">
+            <div className="flex items-center gap-2 min-w-0">
+              <Target className="w-5 h-5 text-[#18E6BE] shrink-0" />
+              <h3 className="font-bold text-sm sm:text-base text-[#F4F8FB] truncate">
                 Savings Goals
               </h3>
             </div>
             <button
               onClick={() => onNavigateToSubTab('goals')}
-              className="text-xs font-semibold text-[#18E6BE] hover:underline"
+              className="text-xs font-semibold text-[#18E6BE] hover:underline shrink-0"
             >
               See All →
             </button>
           </div>
 
-          <div className="space-y-3 my-auto py-1">
+          <div className="space-y-2.5 my-auto py-1">
             {goals.filter(g => g.status === 'in_progress').length > 0 ? (
               goals.filter(g => g.status === 'in_progress').slice(0, 2).map(goal => {
                 const percent = goal.targetAmount > 0 ? Math.round((goal.currentAmount / goal.targetAmount) * 100) : 0;
                 return (
-                  <div key={goal.id} className="p-3 bg-[#102638] rounded-xl border border-[rgba(70,150,180,0.18)] space-y-1.5">
+                  <div key={goal.id} className="p-2.5 sm:p-3 bg-[#102638] rounded-xl border border-[rgba(70,150,180,0.18)] space-y-1.5">
                     <div className="flex items-center justify-between text-xs font-bold text-[#F4F8FB]">
-                      <span>{goal.icon || '🎯'} {goal.name}</span>
-                      <span className="text-[#18E6BE]">{percent}%</span>
+                      <span className="truncate pr-2">{goal.icon || '🎯'} {goal.name}</span>
+                      <span className="text-[#18E6BE] shrink-0">{percent}%</span>
                     </div>
                     <div className="w-full bg-[#091A28] h-2 rounded-full overflow-hidden">
                       <div
@@ -392,7 +392,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
                 );
               })
             ) : (
-              <div className="p-4 text-center text-xs text-[#6F899B] bg-[#091A28] rounded-xl border border-[rgba(70,150,180,0.14)]">
+              <div className="py-3 px-3 text-center text-xs text-[#6F899B] bg-[#091A28] rounded-xl border border-[rgba(70,150,180,0.14)]">
                 No active savings goals yet.
               </div>
             )}
@@ -410,9 +410,9 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
       </div>
 
       {/* 4. LOWER ROW: SPENDING BY CATEGORY & RECENT TRANSACTIONS */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
         {/* Spending by Category (6 cols) */}
-        <div className="lg:col-span-6 bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] p-5 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
+        <div className="lg:col-span-6 bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] p-3.5 sm:p-5 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
           <div>
             <div className="flex items-center justify-between border-b border-[rgba(70,150,180,0.12)] pb-3 mb-4">
               <div className="flex items-center gap-2">
@@ -423,7 +423,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
               </div>
               <button
                 onClick={() => onNavigateToSubTab('categories')}
-                className="text-xs font-semibold text-[#18E6BE] hover:underline"
+                className="text-xs font-semibold text-[#18E6BE] hover:underline shrink-0"
               >
                 Categories →
               </button>
@@ -434,11 +434,11 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
                 categorySpending.slice(0, 5).map(cat => (
                   <div key={cat.categoryId} className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2 font-bold text-[#F4F8FB]">
+                      <div className="flex items-center gap-2 font-bold text-[#F4F8FB] truncate pr-2">
                         <span>{cat.icon}</span>
-                        <span>{cat.categoryName}</span>
+                        <span className="truncate">{cat.categoryName}</span>
                       </div>
-                      <div className="flex items-center gap-2 font-extrabold tabular-nums">
+                      <div className="flex items-center gap-2 font-extrabold tabular-nums shrink-0">
                         <span className="text-[#F4F8FB]">{formatCurrency(cat.totalAmount)}</span>
                         <span className="text-[10px] text-[#6F899B] font-normal">({cat.percentage}%)</span>
                       </div>
@@ -452,18 +452,18 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
                   </div>
                 ))
               ) : (
-                <div className="py-8 text-center text-xs text-[#6F899B]">
+                <div className="py-6 sm:py-8 text-center text-xs text-[#6F899B]">
                   No expenses recorded for this month yet.
                 </div>
               )}
             </div>
           </div>
 
-          <div className="pt-3 mt-4 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between text-xs text-[#6F899B]">
+          <div className="pt-3 mt-4 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between text-xs text-[#6F899B] flex-wrap gap-2">
             <span>Total Expense: <strong className="text-[#FF627B]">{formatCurrency(summary.monthlyExpenses)}</strong></span>
             <button
               onClick={() => onNavigateToSubTab('transactions')}
-              className="text-[#18E6BE] font-bold hover:underline"
+              className="text-[#18E6BE] font-bold hover:underline shrink-0"
             >
               View Transactions →
             </button>
@@ -471,7 +471,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
         </div>
 
         {/* Recent Transactions (6 cols) */}
-        <div className="lg:col-span-6 bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] p-5 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
+        <div className="lg:col-span-6 bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] p-3.5 sm:p-5 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
           <div>
             <div className="flex items-center justify-between border-b border-[rgba(70,150,180,0.12)] pb-3 mb-3">
               <h3 className="font-bold text-sm sm:text-base text-[#F4F8FB]">

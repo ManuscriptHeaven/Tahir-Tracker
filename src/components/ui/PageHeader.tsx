@@ -65,11 +65,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       </div>
 
       {/* Actions & Month Selector */}
-      <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap justify-between sm:justify-end">
+      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-start sm:justify-end w-full sm:w-auto">
         {children}
 
         {selectedMonth && onMonthChange && (
-          <div className="flex items-center gap-1 bg-[#0B1D2C] px-2 py-1.5 rounded-xl border border-[rgba(70,150,180,0.2)] text-xs text-[#A9BDCC]">
+          <div className="flex items-center gap-1 bg-[#0B1D2C] px-2 py-1.5 rounded-xl border border-[rgba(70,150,180,0.2)] text-xs text-[#A9BDCC] shrink-0">
             <button
               onClick={() => shiftMonth(-1)}
               aria-label="Previous Month"
@@ -101,7 +101,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         {secondaryAction && (
           <button
             onClick={secondaryAction.onClick}
-            className="px-3.5 py-2 rounded-xl bg-[#0B1D2C] hover:bg-[#102638] text-[#A9BDCC] hover:text-[#F4F8FB] border border-[rgba(70,150,180,0.22)] font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+            className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-[#0B1D2C] hover:bg-[#102638] text-[#A9BDCC] hover:text-[#F4F8FB] border border-[rgba(70,150,180,0.22)] font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-sm active:scale-95 shrink-0"
           >
             {secondaryAction.icon && <secondaryAction.icon className="w-4 h-4" />}
             <span>{secondaryAction.label}</span>
@@ -111,7 +111,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         {primaryAction && (
           <button
             onClick={primaryAction.onClick}
-            className="px-4 py-2 rounded-xl bg-[#18E6BE] hover:bg-[#23F2CB] text-[#06131F] font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-[0_0_20px_rgba(24,230,190,0.25)] hover:shadow-[0_0_25px_rgba(24,230,190,0.4)] transition-all active:scale-95 whitespace-nowrap"
+            className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-[#18E6BE] hover:bg-[#23F2CB] text-[#06131F] font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-[0_0_20px_rgba(24,230,190,0.25)] hover:shadow-[0_0_25px_rgba(24,230,190,0.4)] transition-all active:scale-95 whitespace-nowrap shrink-0"
           >
             {primaryAction.icon && <primaryAction.icon className="w-4 h-4 stroke-[2.5]" />}
             <span>{primaryAction.label}</span>

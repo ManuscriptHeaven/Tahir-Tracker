@@ -20,7 +20,8 @@ import {
   Zap,
   Menu,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  MoreVertical
 } from 'lucide-react';
 import { getMonthYearFormatted } from '../../utils/formatters';
 import { subscribeSyncStatus, syncWithSupabase, SyncStatus } from '../../services/syncService';
@@ -50,6 +51,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const { user, isAuthenticated } = useAuth();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({
     state: 'unconfigured',
     lastSyncedAt: null,
@@ -175,31 +177,31 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-[rgba(70,150,180,0.18)] bg-[#071724]/90 backdrop-blur-xl no-print">
-        <div className="max-w-[1680px] mx-auto px-3 sm:px-6">
-          <div className="h-[68px] flex items-center justify-between gap-2 sm:gap-4">
+        <div className="max-w-[1680px] mx-auto px-2.5 sm:px-6">
+          <div className="h-14 sm:h-[68px] flex items-center justify-between gap-1.5 sm:gap-4">
             {/* Left: Mobile Menu Trigger + Brand */}
-            <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 shrink">
               <button
                 type="button"
                 onClick={() => setIsDrawerOpen(true)}
-                className="xl:hidden p-2 rounded-xl bg-[#0B1D2C] hover:bg-[#102638] text-[#A9BDCC] hover:text-[#F4F8FB] border border-[rgba(70,150,180,0.2)] transition-colors"
+                className="xl:hidden w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#0B1D2C] hover:bg-[#102638] text-[#A9BDCC] hover:text-[#F4F8FB] border border-[rgba(70,150,180,0.2)] transition-colors flex items-center justify-center shrink-0"
                 aria-label="Open navigation menu"
               >
-                <Menu className="w-5 h-5" />
+                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab(isRentMode ? 'rent' : 'dashboard')}
-                className="flex items-center gap-2.5 sm:gap-3 rounded-2xl pr-1 text-left focus:outline-none"
+                className="flex items-center gap-2 sm:gap-3 rounded-2xl pr-1 text-left focus:outline-none min-w-0"
                 aria-label="Tahir Tracker home"
               >
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#059669] to-[#18E6BE] flex items-center justify-center text-[#06131F] font-black text-lg shadow-[0_0_15px_rgba(24,230,190,0.3)]">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-[#059669] to-[#18E6BE] flex items-center justify-center text-[#06131F] font-black text-sm sm:text-lg shadow-[0_0_15px_rgba(24,230,190,0.3)] shrink-0">
                   {isRentMode ? '🏠' : 'TT'}
                 </div>
-                <div>
-                  <h1 className="font-extrabold text-[#F4F8FB] text-base sm:text-[17px] leading-tight tracking-tight flex items-center gap-1.5">
-                    <span>{isRentMode ? 'Rent Tracking' : 'Tahir Tracker'}</span>
+                <div className="min-w-0">
+                  <h1 className="font-extrabold text-[#F4F8FB] text-xs sm:text-[17px] leading-tight tracking-tight flex items-center gap-1.5 truncate">
+                    <span className="truncate max-w-[85px] xs:max-w-[125px] sm:max-w-none">{isRentMode ? 'Rent Tracking' : 'Tahir Tracker'}</span>
                   </h1>
                   <p className="hidden md:block text-[10px] sm:text-[11px] font-medium text-[#6F899B] leading-none mt-0.5">
                     {isRentMode ? 'Property & Tenant Management' : 'Track Everything — Finance & Household'}
@@ -208,7 +210,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             </div>
 
-            {/* Desktop Navigation Links (Centered) */}
+            {/* Desktop Navigation Links (Centered on xl screens) */}
             <nav className="hidden xl:flex flex-1 items-center justify-center gap-1 min-w-0 px-2" aria-label="Main navigation">
               {desktopTabs.map((tab) => {
                 const Icon = tab.icon;
@@ -235,10 +237,42 @@ export const Navbar: React.FC<NavbarProps> = ({
               })}
             </nav>
 
+            {/* Center Month Selector on Mobile / Tablet (< xl) */}
+            <div className="flex xl:hidden items-center justify-center bg-[#0B1D2C] p-0.5 rounded-xl border border-[rgba(70,150,180,0.2)] text-xs shrink-0">
+              <button
+                type="button"
+                onClick={() => shiftMonth(-1)}
+                className="p-1 sm:p-1.5 rounded-lg text-[#A9BDCC] hover:text-[#18E6BE] hover:bg-[#102638] transition-colors"
+                aria-label="Previous month"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <label className="relative flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.5 sm:py-1 cursor-pointer font-bold text-[#F4F8FB] text-xs">
+                <Calendar className="w-3.5 h-3.5 text-[#18E6BE] shrink-0" />
+                <span className="hidden sm:inline">{formattedMonth}</span>
+                <span className="sm:hidden font-mono text-[11px] font-bold">{selectedMonth.slice(5, 7)}/{selectedMonth.slice(2, 4)}</span>
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(e) => e.target.value && setSelectedMonth(e.target.value)}
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  title="Choose month"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => shiftMonth(1)}
+                className="p-1 sm:p-1.5 rounded-lg text-[#A9BDCC] hover:text-[#18E6BE] hover:bg-[#102638] transition-colors"
+                aria-label="Next month"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
             {/* Right-side Controls */}
             <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-              {/* Synchronized Month Selector */}
-              <div className="flex items-center bg-[#0B1D2C] p-0.5 rounded-xl border border-[rgba(70,150,180,0.2)] text-xs">
+              {/* Synchronized Month Selector (Shown on xl screens in right control group) */}
+              <div className="hidden xl:flex items-center bg-[#0B1D2C] p-0.5 rounded-xl border border-[rgba(70,150,180,0.2)] text-xs">
                 <button
                   type="button"
                   onClick={() => shiftMonth(-1)}
@@ -249,8 +283,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
                 <label className="relative flex items-center gap-1.5 px-2 py-1 cursor-pointer font-bold text-[#F4F8FB] text-xs">
                   <Calendar className="w-3.5 h-3.5 text-[#18E6BE]" />
-                  <span className="hidden sm:inline">{formattedMonth}</span>
-                  <span className="sm:hidden">{selectedMonth.slice(5, 7)}/{selectedMonth.slice(2, 4)}</span>
+                  <span>{formattedMonth}</span>
                   <input
                     type="month"
                     value={selectedMonth}
@@ -269,18 +302,30 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               </div>
 
-              {/* Supabase Live Sync Status Pill */}
+              {/* Supabase Live Sync Status: Mobile compact icon (< sm) vs Desktop/Tablet Pill (>= sm) */}
+              {/* 1. Mobile Primary Action: Single compact sync button (< sm) */}
               <button
                 type="button"
                 onClick={handleManualSync}
-                className={`h-9 flex items-center gap-1.5 px-2.5 rounded-xl border transition-all hover:brightness-110 ${sync.classes}`}
+                className={`sm:hidden w-8 h-8 rounded-xl border flex items-center justify-center transition-all hover:brightness-110 shrink-0 ${sync.classes}`}
+                title={syncStatus.message || 'Supabase sync status'}
+                aria-label={`Sync status: ${sync.title}`}
+              >
+                <span>{sync.icon}</span>
+              </button>
+
+              {/* 2. Desktop/Tablet Sync Status Pill (>= sm) */}
+              <button
+                type="button"
+                onClick={handleManualSync}
+                className={`hidden sm:flex h-9 items-center gap-1.5 px-2.5 rounded-xl border transition-all hover:brightness-110 ${sync.classes}`}
                 title={syncStatus.message || 'Supabase sync status'}
               >
                 <span>{sync.icon}</span>
                 <span className="hidden lg:inline text-xs font-bold whitespace-nowrap">{sync.title}</span>
               </button>
 
-              {/* PWA Install Button */}
+              {/* Desktop/Tablet Only: PWA Install Button */}
               {installPrompt && onInstallPWA && (
                 <button
                   type="button"
@@ -292,12 +337,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               )}
 
-              {/* AI Voice Assistant trigger */}
+              {/* Desktop/Tablet Only: AI Voice Assistant trigger */}
               {onOpenAI && !isRentMode && (
                 <button
                   type="button"
                   onClick={onOpenAI}
-                  className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#059669] to-[#18E6BE] text-[#06131F] flex items-center justify-center shadow-[0_0_15px_rgba(24,230,190,0.3)] hover:brightness-110 active:scale-95 transition-all"
+                  className="hidden sm:flex w-9 h-9 rounded-xl bg-gradient-to-tr from-[#059669] to-[#18E6BE] text-[#06131F] items-center justify-center shadow-[0_0_15px_rgba(24,230,190,0.3)] hover:brightness-110 active:scale-95 transition-all"
                   title="Open AI Voice Assistant"
                   aria-label="Open AI Voice Assistant"
                 >
@@ -305,17 +350,148 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               )}
 
-              {/* User Avatar */}
+              {/* Desktop/Tablet Only: User Avatar */}
               <button
                 type="button"
                 onClick={() => setActiveTab('settings')}
-                className="flex items-center gap-2 pl-1 group relative"
+                className="hidden sm:flex items-center gap-2 pl-1 group relative"
                 title={isAuthenticated ? `Cloud Sync: ${user?.email}` : 'Local Device Profile'}
               >
                 <div className={`w-8 h-8 rounded-full bg-[#18E6BE] text-[#06131F] font-black text-xs flex items-center justify-center shadow-[0_0_10px_rgba(24,230,190,0.3)] group-hover:scale-105 transition-transform ${isAuthenticated ? 'ring-2 ring-cyan-400' : ''}`}>
                   {user?.email ? user.email.charAt(0).toUpperCase() : 'T'}
                 </div>
               </button>
+
+              {/* Mobile "More" Menu Button (< sm): Collapses secondary actions into popover */}
+              <div className="relative sm:hidden">
+                <button
+                  type="button"
+                  onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
+                  aria-label="More options"
+                  className={`w-8 h-8 rounded-xl bg-[#0B1D2C] hover:bg-[#102638] text-[#A9BDCC] hover:text-[#F4F8FB] border border-[rgba(70,150,180,0.2)] flex items-center justify-center transition-colors shrink-0 ${isMoreMenuOpen ? 'border-[#18E6BE] text-[#18E6BE]' : ''}`}
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+
+                {/* More Menu Dropdown Popover */}
+                {isMoreMenuOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsMoreMenuOpen(false)}
+                      aria-hidden="true"
+                    />
+                    <div className="absolute right-0 top-full mt-2 w-64 bg-[#071724] border border-[rgba(70,150,180,0.25)] rounded-2xl shadow-[0_12px_36px_rgba(0,0,0,0.65)] p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                      {/* User Profile Card */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMoreMenuOpen(false);
+                          setActiveTab('settings');
+                        }}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-[#0B1D2C] transition-colors text-left group"
+                      >
+                        <div className={`w-8 h-8 rounded-full bg-[#18E6BE] text-[#06131F] font-black text-xs flex items-center justify-center shadow-[0_0_10px_rgba(24,230,190,0.3)] shrink-0 ${isAuthenticated ? 'ring-2 ring-cyan-400' : ''}`}>
+                          {user?.email ? user.email.charAt(0).toUpperCase() : 'T'}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-bold text-[#F4F8FB] truncate">
+                            {user?.email ? user.email.split('@')[0] : 'Tahir Household'}
+                          </div>
+                          <div className="text-[10px] text-[#6F899B] truncate">
+                            {isAuthenticated ? 'Cloud Authenticated' : 'Local Device Profile'}
+                          </div>
+                        </div>
+                      </button>
+
+                      <div className="my-1.5 border-t border-[rgba(70,150,180,0.12)]" />
+
+                      {/* AI Voice Assistant Option */}
+                      {onOpenAI && !isRentMode && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsMoreMenuOpen(false);
+                            onOpenAI();
+                          }}
+                          className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-[#0B1D2C] text-xs font-semibold text-[#F4F8FB] transition-colors"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#059669] to-[#18E6BE] text-[#06131F] flex items-center justify-center shrink-0 shadow-[0_0_8px_rgba(24,230,190,0.3)]">
+                            <Mic className="w-3.5 h-3.5 stroke-[2.5]" />
+                          </div>
+                          <div className="flex-1 text-left">
+                            <div className="font-bold">AI Voice Assistant</div>
+                            <div className="text-[10px] text-[#6F899B]">Speak commands or analyze finances</div>
+                          </div>
+                        </button>
+                      )}
+
+                      {/* PWA Install Option */}
+                      {installPrompt && onInstallPWA && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsMoreMenuOpen(false);
+                            onInstallPWA();
+                          }}
+                          className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-[#0B1D2C] text-xs font-semibold text-[#F4F8FB] transition-colors"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-[#0B1D2C] border border-[rgba(70,150,180,0.2)] text-[#18E6BE] flex items-center justify-center shrink-0">
+                            <Download className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="flex-1 text-left">
+                            <div className="font-bold">Install Tahir Tracker</div>
+                            <div className="text-[10px] text-[#6F899B]">Add to home screen as native app</div>
+                          </div>
+                        </button>
+                      )}
+
+                      {/* Manual Cloud Sync Option */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMoreMenuOpen(false);
+                          handleManualSync();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-[#0B1D2C] text-xs font-semibold text-[#F4F8FB] transition-colors"
+                      >
+                        <div className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 ${sync.classes}`}>
+                          {syncStatus.state === 'syncing' ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Cloud className="w-3.5 h-3.5" />
+                          )}
+                        </div>
+                        <div className="flex-1 text-left">
+                          <div className="font-bold flex items-center gap-1.5">
+                            <span>Cloud Sync</span>
+                            <span className="text-[10px] text-[#18E6BE] font-normal">({sync.title})</span>
+                          </div>
+                          <div className="text-[10px] text-[#6F899B]">Tap to sync database now</div>
+                        </div>
+                      </button>
+
+                      {/* Settings & Backups Link */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMoreMenuOpen(false);
+                          setActiveTab('settings');
+                        }}
+                        className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-[#0B1D2C] text-xs font-semibold text-[#F4F8FB] transition-colors"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-[#0B1D2C] border border-[rgba(70,150,180,0.2)] text-[#A9BDCC] flex items-center justify-center shrink-0">
+                          <Settings className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <div className="font-bold">Settings & Backups</div>
+                          <div className="text-[10px] text-[#6F899B]">Preferences, profile & export</div>
+                        </div>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>

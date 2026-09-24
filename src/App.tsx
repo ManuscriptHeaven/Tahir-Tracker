@@ -123,7 +123,7 @@ export const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#071724] text-[#F4F8FB] flex flex-col antialiased selection:bg-[#18E6BE] selection:text-[#06131F]">
+    <div className="min-h-screen bg-[#071724] text-[#F4F8FB] flex flex-col antialiased selection:bg-[#18E6BE] selection:text-[#06131F] w-full max-w-full overflow-x-clip">
       {/* Top App Bar with Cloud Sync & PWA Install */}
       <Navbar
         activeTab={activeTab}
@@ -137,7 +137,10 @@ export const AppContent: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-[1680px] w-full mx-auto px-3 sm:px-6 lg:px-8 pt-5 pb-24">
+      <main 
+        className="flex-1 max-w-[1680px] w-full mx-auto px-3 sm:px-6 lg:px-8 pt-3 sm:pt-5 pb-28"
+        style={{ paddingBottom: 'max(calc(env(safe-area-inset-bottom, 0px) + 6.5rem), 7rem)' }}
+      >
         {/* Sub Navigation Switcher only for Full Household Tracker */}
         {!isRentMode && (
           <TrackerSubNav

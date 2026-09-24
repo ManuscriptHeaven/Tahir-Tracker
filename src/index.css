@@ -27,9 +27,19 @@
     background-attachment: fixed;
     color: #F4F8FB;
     min-height: 100vh;
+    max-width: 100%;
+    overflow-x: clip;
     font-family: Inter, system-ui, -apple-system, sans-serif;
     touch-action: manipulation;
   }
+}
+
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 6px);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 /* Custom scrollbars for dark premium appearance */
