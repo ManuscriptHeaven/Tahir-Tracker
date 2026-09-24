@@ -2,7 +2,8 @@ import React, { useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
 import { 
-  Download, 
+  Download,
+  Printer,
   PieChart, 
   TrendingUp, 
   Sparkles 
@@ -74,8 +75,12 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({
     await exportElementAsPng(reportRef.current, `Finance_Report_${selectedMonth}`);
   };
 
+  const handlePrintReport = () => {
+    window.print();
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="finance-reports-root space-y-6">
       {/* 1. REPORT CONTROLS HEADER */}
       <div className="bg-[#0B1D2C] rounded-2xl p-4 sm:p-5 border border-slate-700/50 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 no-print">
         <div className="flex items-center gap-3">
@@ -92,17 +97,27 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({
           </div>
         </div>
 
-        <button
-          onClick={handleExportReport}
-          className="w-full sm:w-auto px-4 py-2.5 bg-[#18E6BE] hover:bg-[#23F2CB] active:scale-95 text-slate-950 font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-md shadow-[#18E6BE]/20 transition-all"
-        >
-          <Download className="w-4 h-4 stroke-[2.5]" />
-          <span>Export Image Statement</span>
-        </button>
+        <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-2">
+          <button
+            onClick={handlePrintReport}
+            className="w-full sm:w-auto px-4 py-2.5 bg-[#102638] hover:bg-[#16344d] text-slate-100 border border-cyan-500/20 font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all"
+          >
+            <Printer className="w-4 h-4" />
+            <span>Print Report</span>
+          </button>
+
+          <button
+            onClick={handleExportReport}
+            className="w-full sm:w-auto px-4 py-2.5 bg-[#18E6BE] hover:bg-[#23F2CB] active:scale-95 text-slate-950 font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-md shadow-[#18E6BE]/20 transition-all"
+          >
+            <Download className="w-4 h-4 stroke-[2.5]" />
+            <span>Export Image Statement</span>
+          </button>
+        </div>
       </div>
 
       {/* 2. PRINTABLE REPORT CONTAINER */}
-      <div ref={reportRef} className="space-y-6 bg-[#071724] p-3 sm:p-4 rounded-2xl border border-slate-800">
+      <div ref={reportRef} className="finance-print-page report-document print-page space-y-6 bg-[#071724] p-3 sm:p-4 rounded-2xl border border-slate-800">
         {/* Monthly Summary Cards Banner */}
         <div className="bg-[#0B1D2C] rounded-2xl p-5 sm:p-6 border border-slate-700/50 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
