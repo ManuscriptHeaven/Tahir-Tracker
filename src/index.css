@@ -52,73 +52,194 @@
   background: #18E6BE;
 }
 
-/* A4 Print & PDF Stylesheet */
+/* Stable cross-device Print & PDF Stylesheet */
 @media print {
   @page {
-    size: A4 portrait;
-    margin: 8mm 8mm;
+    size: A4 landscape;
+    margin: 8mm;
   }
 
-  html, body {
-    background: #ffffff !important;
-    color: #000000 !important;
-    padding: 0 !important;
-    margin: 0 !important;
+  html,
+  body,
+  #root {
     width: 100% !important;
-    font-size: 11px !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    overflow: visible !important;
+    font-size: 10pt !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
-  .no-print, nav, footer {
+  /* Remove the application chrome and, critically, all screen-only fixed layers. */
+  .no-print,
+  header.no-print,
+  nav.no-print,
+  footer,
+  .fixed:not(.print-allow-fixed) {
     display: none !important;
+  }
+
+  /* The app shell must not keep its desktop max-width/padding during print. */
+  main {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .reports-print-root,
+  .finance-reports-root {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   .print-only {
     display: block !important;
   }
 
-  .print-page {
+  .print-page,
+  .report-document {
+    display: block !important;
+    box-sizing: border-box !important;
     width: 100% !important;
-    max-width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
     box-shadow: none !important;
-    border: none !important;
     background: #ffffff !important;
-    page-break-after: avoid;
-    break-after: avoid;
+    color: #111827 !important;
+    overflow: visible !important;
   }
 
-  .print-avoid-break {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
+  /* Screen utility classes such as truncate/overflow-hidden must never crop print data. */
+  .print-page .truncate,
+  .print-page [class*="truncate"] {
+    max-width: none !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
   }
 
-  table {
+  .print-page .overflow-hidden,
+  .print-page [class*="overflow-hidden"] {
+    overflow: visible !important;
+  }
+
+  .print-page .whitespace-nowrap,
+  .print-page [class*="whitespace-nowrap"] {
+    white-space: normal !important;
+  }
+
+  .print-page table {
     width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
     table-layout: fixed !important;
-    page-break-inside: auto;
+    border-collapse: collapse !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
   }
 
-  tr {
+  .print-page thead {
+    display: table-header-group !important;
+  }
+
+  .print-page tfoot {
+    display: table-footer-group !important;
+  }
+
+  .print-page tr {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
 
-  thead {
-    display: table-header-group;
+  .print-page th,
+  .print-page td {
+    box-sizing: border-box !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    padding: 3px 4px !important;
+    font-size: 8.4pt !important;
+    line-height: 1.18 !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+    vertical-align: middle !important;
   }
 
-  tfoot {
-    display: table-footer-group;
+  .print-page h1 {
+    font-size: 16pt !important;
+    line-height: 1.08 !important;
   }
 
-  th, td {
-    padding-top: 3px !important;
-    padding-bottom: 3px !important;
-    padding-left: 4px !important;
-    padding-right: 4px !important;
-    font-size: 10.5px !important;
+  .print-page h2 {
+    font-size: 13pt !important;
+  }
+
+  .print-page h3 {
+    font-size: 9pt !important;
+  }
+
+  .print-page svg,
+  .print-page img {
+    max-width: 100% !important;
+  }
+
+  .print-avoid-break,
+  .print-page > div > div {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Tables with many rows are explicitly allowed to continue on the next page. */
+  .print-page table,
+  .print-page tbody {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  /* Finance report gets a clean paper surface instead of the app background. */
+  .finance-print-page {
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  .finance-print-page > div {
+    background: #ffffff !important;
+    border-color: #d9e2ea !important;
+    box-shadow: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
+
+/* Mobile report preview: never silently crop a wide table. */
+@media screen and (max-width: 767px) {
+  .report-document {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .report-document table {
+    min-width: 720px;
   }
 }
