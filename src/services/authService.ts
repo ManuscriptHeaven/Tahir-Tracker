@@ -56,10 +56,18 @@ export async function initAuth(): Promise<void> {
   if (authInitialized) return;
   authInitialized = true;
 
-  // Inspect URL hash / search for password recovery or expired link error
+  // Inspect URL hash / search for OAuth errors, password recovery, or expired link error
   if (typeof window !== 'undefined') {
     const hash = window.location.hash || '';
     const search = window.location.search || '';
+
+    // Check for OAuth / Auth errors in hash or search params
+    const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
+    const searchParams = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+    const oauthError = hashParams.get('error_description') || 
+                       searchParams.get('error_description') || 
+                       hashParams.get('error') || 
+                       searchParams.get('error');
 
     if (
       hash.includes('error_code=otp_expired') || 
@@ -68,6 +76,9 @@ export async function initAuth(): Promise<void> {
     ) {
       recoveryError = 'Your reset link has expired. Request a new one.';
       authError = recoveryError;
+      window.history.replaceState(null, '', window.location.pathname);
+    } else if (oauthError) {
+      authError = formatAuthError(decodeURIComponent(oauthError.replace(/\+/g, ' ')));
       window.history.replaceState(null, '', window.location.pathname);
     } else if (hash.includes('type=recovery')) {
       isRecoveryMode = true;
@@ -121,7 +132,7 @@ export async function initAuth(): Promise<void> {
         }
       } else if (event === 'SIGNED_IN') {
         authError = null;
-        if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
+        if (typeof window !== 'undefined' && (window.location.hash.includes('access_token') || window.location.search.includes('code='))) {
           window.history.replaceState(null, '', window.location.pathname);
         }
       } else if (event === 'SIGNED_OUT') {
@@ -218,6 +229,53 @@ export function subscribeAuth(listener: AuthListener): () => void {
   return () => {
     authListeners.delete(listener);
   };
+}
+
+/**
+ * Sign in using Google OAuth with Supabase Auth
+ */
+export async function signInWithGoogle(): Promise<{ success: boolean; error?: string }> {
+  const client = getSupabaseClient();
+  if (!client) {
+    return { success: false, error: 'Supabase client is not configured' };
+  }
+
+  try {
+    isLoading = true;
+    authError = null;
+    notifyListeners();
+
+    const redirectUrl = getAuthRedirectUrl();
+    const { data, error } = await client.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectUrl,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'select_account'
+        }
+      }
+    });
+
+    if (error) {
+      const friendly = formatAuthError(error);
+      authError = friendly;
+      return { success: false, error: friendly };
+    }
+
+    if (data?.url && typeof window !== 'undefined') {
+      window.location.assign(data.url);
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    const friendly = formatAuthError(err);
+    authError = friendly;
+    return { success: false, error: friendly };
+  } finally {
+    isLoading = false;
+    notifyListeners();
+  }
 }
 
 /**

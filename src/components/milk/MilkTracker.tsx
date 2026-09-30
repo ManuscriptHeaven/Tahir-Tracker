@@ -394,7 +394,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
       : 'unpaid';
 
     const recordToSave: MilkMonthlyRecord = {
-      id: selectedMonth,
+      id: currentMonthRecord?.id || `mmr_${selectedMonth}_${Date.now()}`,
       monthYear: selectedMonth,
       totalKg: totalSuppliedKg,
       ratePerKg,
@@ -416,7 +416,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
 
   const handleMarkAsFullyPaid = async () => {
     const recordToSave: MilkMonthlyRecord = {
-      id: selectedMonth,
+      id: currentMonthRecord?.id || `mmr_${selectedMonth}_${Date.now()}`,
       monthYear: selectedMonth,
       totalKg: totalSuppliedKg,
       ratePerKg,

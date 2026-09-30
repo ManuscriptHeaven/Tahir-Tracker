@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { NavTab } from './types';
-import { initializeDefaultData } from './db/db';
-import { initSyncService } from './services/syncService';
+import { 
+  initializeDefaultData,
+  switchUserDb,
+  checkUserOnboardingStatus,
+  checkLegacyDataExists
+} from './db/db';
+import { initSyncService, stopAllSyncActivity } from './services/syncService';
 
 // Layout
 import { Navbar } from './components/layout/Navbar';
@@ -24,9 +29,12 @@ import { SettingsView } from './components/settings/SettingsView';
 import { AIAssistantModal } from './components/ai/AIAssistantModal';
 import { AIFloatingButton } from './components/ai/AIFloatingButton';
 
-// Authentication
+// Authentication & Multi-Tenant Onboarding
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginModal } from './components/auth/LoginModal';
+import { AuthWelcomeScreen } from './components/auth/AuthWelcomeScreen';
+import { OnboardingWizard } from './components/auth/OnboardingWizard';
+import { LegacyDataMigrationModal } from './components/auth/LegacyDataMigrationModal';
 
 export const AppContent: React.FC = () => {
   const isRentMode = (import.meta as any).env?.VITE_APP_MODE === 'rent';
@@ -53,12 +61,10 @@ export const AppContent: React.FC = () => {
     let disposed = false;
     let cleanupSync = () => {};
 
-    // 1. Initialize local Dexie database
+    // 1. Initialize local Dexie database if not already ready
     initializeDefaultData().then(() => {
       if (disposed) return;
       setIsDbReady(true);
-      // 2. Initialize Supabase cloud synchronization
-      cleanupSync = initSyncService();
     });
 
     // 3. PWA install prompt handler
@@ -275,10 +281,122 @@ export const AppContent: React.FC = () => {
   );
 };
 
+export const AuthenticatedWorkspace: React.FC<{ user: any }> = ({ user }) => {
+  const [isDbReady, setIsDbReady] = useState(false);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [legacyDataInfo, setLegacyDataInfo] = useState<{ hasLegacy: boolean; recordCount: number } | null>(null);
+
+  useEffect(() => {
+    let disposed = false;
+    let cleanupSync = () => {};
+
+    const setupUserWorkspace = async () => {
+      try {
+        // 1. Switch Dexie instance to user's private database
+        switchUserDb(user.id);
+
+        // 2. Check if user needs first-time onboarding
+        const onboarded = await checkUserOnboardingStatus(user.id);
+        if (!onboarded && !disposed) {
+          setNeedsOnboarding(true);
+        }
+
+        // 3. Check if unmigrated legacy single-user data exists on device
+        const legacy = await checkLegacyDataExists();
+        if (legacy.hasLegacy && !disposed) {
+          setLegacyDataInfo(legacy);
+        }
+
+        // 4. Ensure baseline starter records exist for this user
+        await initializeDefaultData(user.id);
+
+        if (!disposed) {
+          setIsDbReady(true);
+          // 5. Initialize Supabase cloud synchronization for this user
+          cleanupSync = initSyncService();
+        }
+      } catch (err) {
+        console.error('Failed to setup user workspace:', err);
+        if (!disposed) setIsDbReady(true);
+      }
+    };
+
+    setupUserWorkspace();
+
+    return () => {
+      disposed = true;
+      cleanupSync();
+      stopAllSyncActivity();
+    };
+  }, [user.id]);
+
+  if (!isDbReady) {
+    return (
+      <div className="min-h-screen bg-[#071724] text-[#F4F8FB] flex items-center justify-center p-4">
+        <div className="text-center space-y-3">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#059669] to-[#18E6BE] text-[#06131F] font-black text-2xl flex items-center justify-center mx-auto shadow-[0_0_25px_rgba(24,230,190,0.35)] animate-pulse">
+            TT
+          </div>
+          <h2 className="font-extrabold text-lg text-[#F4F8FB]">Tahir Tracker</h2>
+          <p className="text-xs text-[#6F899B]">Initializing your private workspace...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {needsOnboarding && (
+        <OnboardingWizard
+          userId={user.id}
+          userEmail={user.email}
+          onComplete={() => setNeedsOnboarding(false)}
+        />
+      )}
+
+      {legacyDataInfo && legacyDataInfo.hasLegacy && !needsOnboarding && (
+        <LegacyDataMigrationModal
+          userId={user.id}
+          recordCount={legacyDataInfo.recordCount}
+          isOpen={true}
+          onClose={() => setLegacyDataInfo(null)}
+          onMigrated={() => setLegacyDataInfo(null)}
+        />
+      )}
+
+      <AppContent key={user.id} />
+    </>
+  );
+};
+
+export const MainAppRouter: React.FC = () => {
+  const { isAuthenticated, user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#071724] text-[#F4F8FB] flex items-center justify-center p-4">
+        <div className="text-center space-y-3">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#059669] to-[#18E6BE] text-[#06131F] font-black text-2xl flex items-center justify-center mx-auto shadow-[0_0_25px_rgba(24,230,190,0.35)] animate-pulse">
+            TT
+          </div>
+          <h2 className="font-extrabold text-lg text-[#F4F8FB]">Tahir Tracker</h2>
+          <p className="text-xs text-[#6F899B]">Checking session security...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || !user) {
+    return <AuthWelcomeScreen />;
+  }
+
+  return <AuthenticatedWorkspace key={user.id} user={user} />;
+};
+
 export const App: React.FC = () => {
   return (
     <AuthProvider>
-      <AppContent />
+      <MainAppRouter />
     </AuthProvider>
   );
 };

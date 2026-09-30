@@ -47,8 +47,8 @@ export class TahirTrackerDB extends Dexie {
   // Offline Sync Queue Table (Version 5)
   sync_queue!: Table<any, string>;
 
-  constructor() {
-    super('TahirTrackerDB');
+  constructor(dbName: string = 'TahirTrackerDB') {
+    super(dbName);
     this.version(1).stores({
       loans: 'id, personName, type, date, dueDate, status, createdAt',
       milk_consumers: 'id, name, active, createdAt',
@@ -91,7 +91,63 @@ export class TahirTrackerDB extends Dexie {
   }
 }
 
-export const db = new TahirTrackerDB();
+// Multi-tenant database instance management
+const userDbInstances = new Map<string, TahirTrackerDB>();
+let currentActiveUserId: string | null = null;
+let defaultFallbackDb: TahirTrackerDB | null = null;
+
+export function getActiveDb(): TahirTrackerDB {
+  if (currentActiveUserId) {
+    let instance = userDbInstances.get(currentActiveUserId);
+    if (!instance) {
+      instance = new TahirTrackerDB(`TahirTrackerDB_${currentActiveUserId}`);
+      userDbInstances.set(currentActiveUserId, instance);
+    }
+    return instance;
+  }
+  if (!defaultFallbackDb) {
+    defaultFallbackDb = new TahirTrackerDB('TahirTrackerDB');
+  }
+  return defaultFallbackDb;
+}
+
+export function switchUserDb(userId: string | null): TahirTrackerDB {
+  currentActiveUserId = userId;
+  return getActiveDb();
+}
+
+export function closeUserDb(userId: string): void {
+  const instance = userDbInstances.get(userId);
+  if (instance) {
+    try {
+      instance.close();
+    } catch (_) {}
+    userDbInstances.delete(userId);
+  }
+  if (currentActiveUserId === userId) {
+    currentActiveUserId = null;
+  }
+}
+
+export function getCurrentDbUserId(): string | null {
+  return currentActiveUserId;
+}
+
+/**
+ * Transparent proxy for active database:
+ * Ensures all direct imports `import { db } from './db'` dynamically route
+ * to the currently authenticated user's isolated IndexedDB instance.
+ */
+export const db = new Proxy({} as TahirTrackerDB, {
+  get(_target, prop) {
+    const active = getActiveDb();
+    const val = (active as any)[prop];
+    if (typeof val === 'function') {
+      return val.bind(active);
+    }
+    return val;
+  }
+});
 
 // Known legacy dummy/sample IDs to remove across all modules
 export const LEGACY_DUMMY_IDS = {
@@ -157,168 +213,226 @@ export async function cleanupLegacyDummyData(): Promise<void> {
   }
 }
 
-// Default seed data initialization (No dummy transactions/logs)
-export async function initializeDefaultData() {
+// Checks whether a user has already completed onboarding for their workspace
+export async function checkUserOnboardingStatus(userId: string): Promise<boolean> {
+  try {
+    const userDb = switchUserDb(userId);
+    const settings = await userDb.settings.toCollection().first();
+    if (settings?.onboardingCompleted) return true;
+    // If settings already exist and have categories, mark as completed
+    const catCount = await userDb.finance_categories.count();
+    if (catCount > 0) return true;
+    return false;
+  } catch (_) {
+    return false;
+  }
+}
+
+// Multi-User SaaS Clean Workspace Initialization
+// Creates a clean private workspace with safe generic defaults and unique UUIDs.
+// Tahir's private records (Saleem, Tayyab, Chand, utility records, etc.) are strictly EXCLUDED.
+export async function initializeUserWorkspace(
+  userId: string,
+  options?: {
+    currency?: string;
+    enabledModules?: string[];
+  }
+): Promise<void> {
+  const userDb = switchUserDb(userId);
   const now = new Date().toISOString();
+  const currency = options?.currency || 'PKR';
 
   try {
-    // 1. Settings (Default config)
-    const settingsCount = await db.settings.count();
+    // 1. User Settings
+    const settingsCount = await userDb.settings.count();
     if (settingsCount === 0) {
-      await db.settings.add({
-        currency: 'PKR',
+      await userDb.settings.add({
+        currency,
         milkDefaultRate: 260,
         rentDueDayDefault: 10,
-        theme: 'light'
+        theme: 'light',
+        onboardingCompleted: true,
+        enabledModules: options?.enabledModules || ['finance', 'rent', 'utility', 'milk', 'petrol', 'loans']
       });
     }
 
-    // 2. Milk Consumers (Configured household members)
-    const consumersCount = await db.milk_consumers.count();
-    if (consumersCount === 0) {
-      const defaultConsumers: MilkConsumer[] = [
-        { id: 'c1', name: 'Saleem', defaultDailyKg: 1, active: true, createdAt: now },
-        { id: 'c2', name: 'Tayyab', defaultDailyKg: 3, active: true, createdAt: now },
-        { id: 'c3', name: 'Chand', defaultDailyKg: 3, active: true, createdAt: now },
-      ];
-      await db.milk_consumers.bulkAdd(defaultConsumers);
-    }
-    // (NO DUMMY MILK LOGS SEEDED)
-
-    // 3. Utility Persons (Configured household contributor)
-    const utilityPersonsCount = await db.utility_persons.count();
-    if (utilityPersonsCount === 0) {
-      const saleemPerson: UtilityPerson = {
-        id: 'p_saleem',
-        name: 'Saleem',
-        monthlyExpectedContribution: 9500,
-        currency: 'PKR',
+    // 2. Generic Starter Cash Account with Unique UUID
+    const accountsCount = await userDb.finance_accounts.count();
+    if (accountsCount === 0) {
+      const defaultAccount: FinanceAccount = {
+        id: `acc_${crypto.randomUUID()}`,
+        name: 'Cash Wallet',
+        accountType: 'cash',
+        openingBalance: 0,
+        currency,
+        isActive: true,
+        institution: 'Cash In Hand',
+        icon: '💵',
+        color: 'emerald',
+        notes: 'Primary cash wallet',
         createdAt: now,
         updatedAt: now
       };
-      await db.utility_persons.add(saleemPerson);
-    }
-    // (NO DUMMY UTILITY BILLS OR PAYMENTS SEEDED)
-
-    // 4. Finance Accounts (Standard accounts with 0 initial opening balance)
-    const accountsCount = await db.finance_accounts.count();
-    if (accountsCount === 0) {
-      const defaultAccounts: FinanceAccount[] = [
-        {
-          id: 'acc_cash',
-          name: 'Cash Wallet',
-          accountType: 'cash',
-          openingBalance: 0,
-          currency: 'PKR',
-          isActive: true,
-          institution: 'Cash In Hand',
-          icon: '💵',
-          color: 'emerald',
-          notes: 'Daily pocket and physical cash',
-          createdAt: now,
-          updatedAt: now
-        },
-        {
-          id: 'acc_hbl',
-          name: 'HBL Account',
-          accountType: 'bank',
-          openingBalance: 0,
-          currency: 'PKR',
-          isActive: true,
-          institution: 'Habib Bank Limited',
-          accountNumber: '',
-          icon: '🏦',
-          color: 'blue',
-          notes: 'Primary bank account',
-          createdAt: now,
-          updatedAt: now
-        },
-        {
-          id: 'acc_easypaisa',
-          name: 'Easypaisa',
-          accountType: 'digital_wallet',
-          openingBalance: 0,
-          currency: 'PKR',
-          isActive: true,
-          institution: 'Telenor Bank',
-          icon: '📱',
-          color: 'teal',
-          notes: 'Digital mobile wallet',
-          createdAt: now,
-          updatedAt: now
-        },
-        {
-          id: 'acc_credit_card',
-          name: 'Credit Card',
-          accountType: 'credit_card',
-          openingBalance: 0,
-          currency: 'PKR',
-          isActive: true,
-          institution: 'Credit Card',
-          accountNumber: '',
-          icon: '💳',
-          color: 'indigo',
-          notes: 'Monthly billing cycle',
-          createdAt: now,
-          updatedAt: now
-        },
-        {
-          id: 'acc_savings',
-          name: 'Savings Account',
-          accountType: 'savings',
-          openingBalance: 0,
-          currency: 'PKR',
-          isActive: true,
-          institution: 'Savings Account',
-          accountNumber: '',
-          icon: '🐷',
-          color: 'purple',
-          notes: 'Savings reserve fund',
-          createdAt: now,
-          updatedAt: now
-        }
-      ];
-      await db.finance_accounts.bulkAdd(defaultAccounts);
+      await userDb.finance_accounts.add(defaultAccount);
     }
 
-    // 5. Finance Categories (Standard master categories)
-    const categoriesCount = await db.finance_categories.count();
+    // 3. Standard Categories with Globally Unique UUIDs
+    const categoriesCount = await userDb.finance_categories.count();
     if (categoriesCount === 0) {
       const defaultCategories: FinanceCategory[] = [
-        // Expense Categories
-        { id: 'cat_food', name: 'Food & Dining', type: 'expense', icon: '🍔', isDefault: true, isActive: true, color: '#f97316', createdAt: now, updatedAt: now },
-        { id: 'cat_groceries', name: 'Groceries', type: 'expense', icon: '🛒', isDefault: true, isActive: true, color: '#10b981', createdAt: now, updatedAt: now },
-        { id: 'cat_transport', name: 'Transportation', type: 'expense', icon: '🚗', isDefault: true, isActive: true, color: '#3b82f6', createdAt: now, updatedAt: now },
-        { id: 'cat_home', name: 'Home & Housing', type: 'expense', icon: '🏠', isDefault: true, isActive: true, color: '#8b5cf6', createdAt: now, updatedAt: now },
-        { id: 'cat_utilities', name: 'Bills & Utilities', type: 'expense', icon: '💡', isDefault: true, isActive: true, color: '#eab308', createdAt: now, updatedAt: now },
-        { id: 'cat_shopping', name: 'Shopping', type: 'expense', icon: '🛍️', isDefault: true, isActive: true, color: '#ec4899', createdAt: now, updatedAt: now },
-        { id: 'cat_entertainment', name: 'Entertainment', type: 'expense', icon: '🎬', isDefault: true, isActive: true, color: '#6366f1', createdAt: now, updatedAt: now },
-        { id: 'cat_health', name: 'Health & Fitness', type: 'expense', icon: '🏥', isDefault: true, isActive: true, color: '#ef4444', createdAt: now, updatedAt: now },
-        { id: 'cat_family', name: 'Family & Gifts', type: 'expense', icon: '🎁', isDefault: true, isActive: true, color: '#f43f5e', createdAt: now, updatedAt: now },
-        { id: 'cat_travel', name: 'Travel', type: 'expense', icon: '✈️', isDefault: true, isActive: true, color: '#06b6d4', createdAt: now, updatedAt: now },
-        { id: 'cat_business_exp', name: 'Business Expense', type: 'expense', icon: '💼', isDefault: true, isActive: true, color: '#64748b', createdAt: now, updatedAt: now },
-        { id: 'cat_education', name: 'Education', type: 'expense', icon: '📚', isDefault: true, isActive: true, color: '#14b8a6', createdAt: now, updatedAt: now },
-        { id: 'cat_other_exp', name: 'Other Expense', type: 'expense', icon: '📦', isDefault: true, isActive: true, color: '#94a3b8', createdAt: now, updatedAt: now },
+        // Expenses
+        { id: `cat_${crypto.randomUUID()}`, name: 'Food & Dining', type: 'expense', icon: '🍔', isDefault: true, isActive: true, color: '#f97316', createdAt: now, updatedAt: now },
+        { id: `cat_${crypto.randomUUID()}`, name: 'Groceries', type: 'expense', icon: '🛒', isDefault: true, isActive: true, color: '#10b981', createdAt: now, updatedAt: now },
+        { id: `cat_${crypto.randomUUID()}`, name: 'Transportation', type: 'expense', icon: '🚗', isDefault: true, isActive: true, color: '#3b82f6', createdAt: now, updatedAt: now },
+        { id: `cat_${crypto.randomUUID()}`, name: 'Home & Housing', type: 'expense', icon: '🏠', isDefault: true, isActive: true, color: '#8b5cf6', createdAt: now, updatedAt: now },
+        { id: `cat_${crypto.randomUUID()}`, name: 'Bills & Utilities', type: 'expense', icon: '💡', isDefault: true, isActive: true, color: '#eab308', createdAt: now, updatedAt: now },
+        { id: `cat_${crypto.randomUUID()}`, name: 'Shopping', type: 'expense', icon: '🛍️', isDefault: true, isActive: true, color: '#ec4899', createdAt: now, updatedAt: now },
+        { id: `cat_${crypto.randomUUID()}`, name: 'Entertainment', type: 'expense', icon: '🎬', isDefault: true, isActive: true, color: '#6366f1', createdAt: now, updatedAt: now },
+        { id: `cat_${crypto.randomUUID()}`, name: 'Health & Fitness', type: 'expense', icon: '🏥', isDefault: true, isActive: true, color: '#ef4444', createdAt: now, updatedAt: now },
+        { id: `cat_${crypto.randomUUID()}`, name: 'Family & Gifts', type: 'expense', icon: '🎁', isDefault: true, isActive: true, color: '#f43f5e', createdAt: now, updatedAt: now },
+        { id: `cat_${crypto.randomUUID()}`, name: 'Travel', type: 'expense', icon: '✈️', isDefault: true, isActive: true, color: '#06b6d4', createdAt: now, updatedAt: now },
+        { id: `cat_${crypto.randomUUID()}`, name: 'Business Expense', type: 'expense', icon: '💼', isDefault: true, isActive: true, color: '#64748b', createdAt: now, updatedAt: now },
+        { id: `cat_${crypto.randomUUID()}`, name: 'Education', type: 'expense', icon: '📚', isDefault: true, isActive: true, color: '#14b8a6', createdAt: now, updatedAt: now },
+        { id: `cat_${crypto.randomUUID()}`, name: 'Other Expense', type: 'expense', icon: '📦', isDefault: true, isActive: true, color: '#94a3b8', createdAt: now, updatedAt: now },
 
-        // Income Categories
-        { id: 'cat_salary', name: 'Salary', type: 'income', icon: '💵', isDefault: true, isActive: true, color: '#10b981', createdAt: now, updatedAt: now },
-        { id: 'cat_business_inc', name: 'Business Income', type: 'income', icon: '💼', isDefault: true, isActive: true, color: '#059669', createdAt: now, updatedAt: now },
-        { id: 'cat_client_pay', name: 'Client Payment', type: 'income', icon: '💳', isDefault: true, isActive: true, color: '#0284c7', createdAt: now, updatedAt: now },
-        { id: 'cat_freelance', name: 'Freelancing', type: 'income', icon: '💻', isDefault: true, isActive: true, color: '#7c3aed', createdAt: now, updatedAt: now },
-        { id: 'cat_investment', name: 'Investment Return', type: 'income', icon: '📈', isDefault: true, isActive: true, color: '#16a34a', createdAt: now, updatedAt: now },
-        { id: 'cat_rental_inc', name: 'Rental Income', type: 'income', icon: '🏠', isDefault: true, isActive: true, color: '#d97706', createdAt: now, updatedAt: now },
-        { id: 'cat_gift_inc', name: 'Gift Received', type: 'income', icon: '🎁', isDefault: true, isActive: true, color: '#db2777', createdAt: now, updatedAt: now },
-        { id: 'cat_other_inc', name: 'Other Income', type: 'income', icon: '🪙', isDefault: true, isActive: true, color: '#475569', createdAt: now, updatedAt: now },
+        // Incomes
+        { id: `cat_${crypto.randomUUID()}`, name: 'Salary', type: 'income', icon: '💵', isDefault: true, isActive: true, color: '#10b981', createdAt: now, updatedAt: now },
+        { id: `cat_${crypto.randomUUID()}`, name: 'Business Income', type: 'income', icon: '💼', isDefault: true, isActive: true, color: '#059669', createdAt: now, updatedAt: now },
+        { id: `cat_${crypto.randomUUID()}`, name: 'Freelancing', type: 'income', icon: '💻', isDefault: true, isActive: true, color: '#7c3aed', createdAt: now, updatedAt: now },
+        { id: `cat_${crypto.randomUUID()}`, name: 'Investment Return', type: 'income', icon: '📈', isDefault: true, isActive: true, color: '#16a34a', createdAt: now, updatedAt: now },
+        { id: `cat_${crypto.randomUUID()}`, name: 'Rental Income', type: 'income', icon: '🏠', isDefault: true, isActive: true, color: '#d97706', createdAt: now, updatedAt: now },
+        { id: `cat_${crypto.randomUUID()}`, name: 'Other Income', type: 'income', icon: '🪙', isDefault: true, isActive: true, color: '#475569', createdAt: now, updatedAt: now }
       ];
-      await db.finance_categories.bulkAdd(defaultCategories);
+      await userDb.finance_categories.bulkAdd(defaultCategories);
+    }
+  } catch (err) {
+    console.error('Failed to initialize user workspace:', err);
+  }
+}
+
+// Checks if legacy unmigrated data exists in 'TahirTrackerDB'
+export async function checkLegacyDataExists(): Promise<{ hasLegacy: boolean; recordCount: number }> {
+  if (typeof window === 'undefined') return { hasLegacy: false, recordCount: 0 };
+  try {
+    const exists = await Dexie.exists('TahirTrackerDB');
+    if (!exists) return { hasLegacy: false, recordCount: 0 };
+    
+    // Check if already migrated
+    const migratedTo = localStorage.getItem('tahir_tracker_legacy_migrated');
+    if (migratedTo) return { hasLegacy: false, recordCount: 0 };
+
+    const legacyDb = new TahirTrackerDB('TahirTrackerDB');
+    let total = 0;
+    total += await legacyDb.finance_transactions.count();
+    total += await legacyDb.milk_logs.count();
+    total += await legacyDb.petrol_refills.count();
+    total += await legacyDb.rent_records.count();
+    total += await legacyDb.utility_bills.count();
+    total += await legacyDb.loans.count();
+    total += await legacyDb.rent_portions.count();
+    legacyDb.close();
+
+    return { hasLegacy: total > 0, recordCount: total };
+  } catch (_) {
+    return { hasLegacy: false, recordCount: 0 };
+  }
+}
+
+// Exports a safety backup JSON of legacy 'TahirTrackerDB' before migration
+export async function exportLegacyDatabaseBackupJson(): Promise<string | null> {
+  try {
+    const legacyDb = new TahirTrackerDB('TahirTrackerDB');
+    const data = {
+      appName: 'Tahir Tracker (Pre-Migration Safety Backup)',
+      version: 6,
+      exportedAt: new Date().toISOString(),
+      loans: await legacyDb.loans.toArray(),
+      milk_consumers: await legacyDb.milk_consumers.toArray(),
+      milk_logs: await legacyDb.milk_logs.toArray(),
+      milk_monthly_records: await legacyDb.milk_monthly_records.toArray(),
+      petrol_refills: await legacyDb.petrol_refills.toArray(),
+      rent_properties: await legacyDb.rent_properties.toArray(),
+      rent_portions: await legacyDb.rent_portions.toArray(),
+      rent_records: await legacyDb.rent_records.toArray(),
+      settings: await legacyDb.settings.toArray(),
+      utility_persons: await legacyDb.utility_persons.toArray(),
+      utility_bills: await legacyDb.utility_bills.toArray(),
+      utility_payments: await legacyDb.utility_payments.toArray(),
+      finance_accounts: await legacyDb.finance_accounts.toArray(),
+      finance_categories: await legacyDb.finance_categories.toArray(),
+      finance_transactions: await legacyDb.finance_transactions.toArray(),
+      finance_budgets: await legacyDb.finance_budgets.toArray(),
+      finance_recurring_transactions: await legacyDb.finance_recurring_transactions.toArray(),
+      finance_goals: await legacyDb.finance_goals.toArray(),
+      finance_voice_entries: await legacyDb.finance_voice_entries.toArray()
+    };
+    legacyDb.close();
+    return JSON.stringify(data, null, 2);
+  } catch (err) {
+    console.error('Failed to export legacy backup:', err);
+    return null;
+  }
+}
+
+// Migrates Tahir's legacy local records strictly to verified owner account with pre-backup
+export async function migrateLegacyDataToUser(targetUserId: string): Promise<{ success: boolean; migratedCount: number; error?: string }> {
+  try {
+    const backupJson = await exportLegacyDatabaseBackupJson();
+    if (!backupJson) {
+      return { success: false, migratedCount: 0, error: 'Could not export legacy safety backup' };
     }
 
-    // 6. Purge any legacy dummy records from existing IndexedDB storage
-    await cleanupLegacyDummyData();
+    try {
+      localStorage.setItem(`tahir_tracker_legacy_backup_snapshot_${targetUserId}`, backupJson);
+    } catch (_) {}
 
-  } catch (err) {
-    console.error('Failed to initialize default data:', err);
+    const legacyDb = new TahirTrackerDB('TahirTrackerDB');
+    const userDb = switchUserDb(targetUserId);
+
+    let count = 0;
+    await userDb.transaction('rw', [
+      userDb.loans, userDb.milk_consumers, userDb.milk_logs, userDb.milk_monthly_records,
+      userDb.petrol_refills, userDb.rent_properties, userDb.rent_portions, userDb.rent_records,
+      userDb.settings, userDb.utility_persons, userDb.utility_bills, userDb.utility_payments,
+      userDb.finance_accounts, userDb.finance_categories, userDb.finance_transactions,
+      userDb.finance_budgets, userDb.finance_recurring_transactions, userDb.finance_goals,
+      userDb.finance_voice_entries
+    ], async () => {
+      const tables: Array<keyof TahirTrackerDB> = [
+        'loans', 'milk_consumers', 'milk_logs', 'milk_monthly_records',
+        'petrol_refills', 'rent_properties', 'rent_portions', 'rent_records',
+        'settings', 'utility_persons', 'utility_bills', 'utility_payments',
+        'finance_accounts', 'finance_categories', 'finance_transactions',
+        'finance_budgets', 'finance_recurring_transactions', 'finance_goals',
+        'finance_voice_entries'
+      ];
+
+      for (const tbl of tables) {
+        const recs = await (legacyDb as any)[tbl].toArray();
+        if (recs && recs.length > 0) {
+          await (userDb as any)[tbl].bulkPut(recs);
+          count += recs.length;
+        }
+      }
+    });
+
+    legacyDb.close();
+    localStorage.setItem('tahir_tracker_legacy_migrated', targetUserId);
+    return { success: true, migratedCount: count };
+  } catch (err: any) {
+    console.error('Migration failed:', err);
+    return { success: false, migratedCount: 0, error: err?.message || 'Migration error' };
   }
+}
+
+// Backward-compatible initialization for test suites and existing callers
+export async function initializeDefaultData(userId?: string) {
+  if (userId || currentActiveUserId) {
+    await initializeUserWorkspace(userId || currentActiveUserId!);
+    return;
+  }
+  // Fallback for standalone/offline tests
+  await initializeUserWorkspace('default_workspace');
 }
 
 // Validates structure and integrity of backup JSON before import

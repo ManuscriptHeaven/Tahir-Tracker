@@ -33,7 +33,7 @@ interface UtilityTrackerProps {
 type DateFilterOption = 'all' | 'current_year' | 'previous_year' | 'custom';
 
 export const UtilityTracker: React.FC<UtilityTrackerProps> = ({ onOpenReport }) => {
-  const [selectedPersonId, setSelectedPersonId] = useState<string>('p_saleem');
+  const [selectedPersonId, setSelectedPersonId] = useState<string>('');
   const [dateFilter, setDateFilter] = useState<DateFilterOption>('all');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
 
@@ -52,17 +52,10 @@ export const UtilityTracker: React.FC<UtilityTrackerProps> = ({ onOpenReport }) 
   const allPayments = useLiveQuery(() => db.utility_payments.toArray()) || [];
 
   // Active Person
-  const currentPerson = persons.find(p => p.id === selectedPersonId) || persons[0] || {
-    id: 'p_saleem',
-    name: 'Saleem',
-    monthlyExpectedContribution: 9500,
-    currency: 'PKR',
-    createdAt: '',
-    updatedAt: ''
-  };
+  const currentPerson = persons.find(p => p.id === selectedPersonId) || persons[0] || null;
 
   // Filter bills by person
-  const personBills = allBills.filter(b => b.personId === currentPerson.id);
+  const personBills = currentPerson ? allBills.filter(b => b.personId === currentPerson.id) : [];
 
   // Available years for dropdown
   const availableYears = Array.from(new Set(personBills.map(b => b.year))).sort((a, b) => b - a);
@@ -94,7 +87,7 @@ export const UtilityTracker: React.FC<UtilityTrackerProps> = ({ onOpenReport }) 
   });
 
   // Financial Summary Cards calculation
-  const personPayments = allPayments.filter(p => p.personId === currentPerson.id);
+  const personPayments = currentPerson ? allPayments.filter(p => p.personId === currentPerson.id) : [];
   const summary = calculateUtilityNetBalance(filteredBills, personPayments);
 
   // Actions
@@ -126,6 +119,50 @@ export const UtilityTracker: React.FC<UtilityTrackerProps> = ({ onOpenReport }) 
       alert('Failed to delete utility bill record');
     }
   };
+
+  if (!currentPerson) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          icon={Zap}
+          title="Utility Tracking"
+          subtitle="Monitor, divide, and settle shared household and office utility expenses."
+          primaryAction={{
+            label: "+ Add Contributor",
+            onClick: () => setIsPersonModalOpen(true)
+          }}
+        />
+
+        <div className="bg-[#0B1D2C] border border-cyan-500/20 rounded-3xl p-8 text-center space-y-4 max-w-xl mx-auto my-8">
+          <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 text-[#18E6BE] flex items-center justify-center mx-auto">
+            <Zap className="w-7 h-7" />
+          </div>
+          <h3 className="text-base font-bold text-white">No Household Contributors Yet</h3>
+          <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+            Add a household member or contributor to begin tracking shared utility bills (Electricity, Gas, Water) and splitting payments automatically.
+          </p>
+          <button
+            type="button"
+            onClick={() => setIsPersonModalOpen(true)}
+            className="px-5 py-2.5 bg-gradient-to-r from-teal-500 to-[#18E6BE] text-[#06131F] font-bold text-xs rounded-xl inline-flex items-center gap-2 cursor-pointer shadow-lg shadow-teal-500/20"
+          >
+            <span>+ Add Contributor</span>
+          </button>
+        </div>
+
+        <PersonManagementModal
+          isOpen={isPersonModalOpen}
+          onClose={() => setIsPersonModalOpen(false)}
+          persons={persons}
+          selectedPersonId={selectedPersonId}
+          onSelectPerson={(id: string) => {
+            setSelectedPersonId(id);
+            setIsPersonModalOpen(false);
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

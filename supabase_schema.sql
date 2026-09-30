@@ -389,17 +389,18 @@ END $$;
 
 -- ==============================================================================
 -- 19. PRODUCTION AUTHENTICATED RLS MIGRATION (MULTI-TENANT / STRICT ACCESS)
--- Refer to docs/AUTH_RLS_MIGRATION.md for the complete zero-data-loss procedure.
+-- Enforces row-level isolation so users can only ever access their own records.
+-- All 19 private tables are protected by auth.uid() = user_id.
 -- ==============================================================================
-/*
--- STEP 1: Add user_id column and foreign key to all tables
+
+-- STEP 1: Add user_id column and foreign key to all 19 tables
 DO $$
 DECLARE
     tbl text;
     tbl_list text[] := ARRAY[
         'utility_persons', 'utility_bills', 'utility_payments',
         'milk_consumers', 'milk_logs', 'milk_monthly_records', 'petrol_refills',
-        'rent_portions', 'rent_records', 'loans', 'settings',
+        'rent_properties', 'rent_portions', 'rent_records', 'loans', 'settings',
         'finance_accounts', 'finance_categories', 'finance_transactions',
         'finance_budgets', 'finance_recurring_transactions',
         'finance_goals', 'finance_voice_entries'
@@ -411,25 +412,8 @@ BEGIN
     END LOOP;
 END $$;
 
--- STEP 2: Assign existing unowned records to Tahir's authenticated UUID
--- Replace '<TAHIR_USER_UUID>' with your actual user UUID from auth.users
-DO $$
-DECLARE
-    target_uuid UUID := '<TAHIR_USER_UUID>'::uuid;
-    tbl text;
-    tbl_list text[] := ARRAY[
-        'utility_persons', 'utility_bills', 'utility_payments',
-        'milk_consumers', 'milk_logs', 'milk_monthly_records', 'petrol_refills',
-        'rent_portions', 'rent_records', 'loans', 'settings',
-        'finance_accounts', 'finance_categories', 'finance_transactions',
-        'finance_budgets', 'finance_recurring_transactions',
-        'finance_goals', 'finance_voice_entries'
-    ];
-BEGIN
-    FOREACH tbl IN ARRAY tbl_list LOOP
-        EXECUTE format('UPDATE %I SET user_id = %L WHERE user_id IS NULL', tbl, target_uuid);
-    END LOOP;
-END $$;
+-- STEP 2: Enforce Unique Settings Row per Tenant Workspace
+CREATE UNIQUE INDEX IF NOT EXISTS idx_settings_user_id ON settings(user_id);
 
 -- STEP 3: Replace permissive policies with strict auth.uid() = user_id policies
 DO $$
@@ -438,25 +422,32 @@ DECLARE
     tbl_list text[] := ARRAY[
         'utility_persons', 'utility_bills', 'utility_payments',
         'milk_consumers', 'milk_logs', 'milk_monthly_records', 'petrol_refills',
-        'rent_portions', 'rent_records', 'loans', 'settings',
+        'rent_properties', 'rent_portions', 'rent_records', 'loans', 'settings',
         'finance_accounts', 'finance_categories', 'finance_transactions',
         'finance_budgets', 'finance_recurring_transactions',
         'finance_goals', 'finance_voice_entries'
     ];
 BEGIN
     FOREACH tbl IN ARRAY tbl_list LOOP
-        -- Drop legacy permissive policies
+        -- Enable Row Level Security
+        EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', tbl);
+
+        -- Drop legacy permissive or anon policies
         EXECUTE format('DROP POLICY IF EXISTS "Allow all access to %s" ON %I', tbl, tbl);
         EXECUTE format('DROP POLICY IF EXISTS "Allow all for anon" ON %I', tbl, tbl);
+        EXECUTE format('DROP POLICY IF EXISTS "Users can select own %s" ON %I', tbl, tbl);
+        EXECUTE format('DROP POLICY IF EXISTS "Users can insert own %s" ON %I', tbl, tbl);
+        EXECUTE format('DROP POLICY IF EXISTS "Users can update own %s" ON %I', tbl, tbl);
+        EXECUTE format('DROP POLICY IF EXISTS "Users can delete own %s" ON %I', tbl, tbl);
         
-        -- Create secure tenant-isolated policies
+        -- Create strict authenticated policies
         EXECUTE format('CREATE POLICY "Users can select own %s" ON %I FOR SELECT TO authenticated USING (auth.uid() = user_id)', tbl, tbl);
         EXECUTE format('CREATE POLICY "Users can insert own %s" ON %I FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id)', tbl, tbl);
         EXECUTE format('CREATE POLICY "Users can update own %s" ON %I FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)', tbl, tbl);
         EXECUTE format('CREATE POLICY "Users can delete own %s" ON %I FOR DELETE TO authenticated USING (auth.uid() = user_id)', tbl, tbl);
     END LOOP;
 END $$;
-*/
+
 
 -- ==============================================================================
 -- 20. IDEMPOTENT MIGRATION: FULL-TANK FUEL MILEAGE (is_full_tank)

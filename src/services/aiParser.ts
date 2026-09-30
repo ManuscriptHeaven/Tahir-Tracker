@@ -339,17 +339,17 @@ export async function parseNaturalLanguageInput(rawInput: string): Promise<AIPro
       actionType: 'add_milk_log',
       category: 'milk',
       title: 'Update Daily Milk Delivery',
-      urduSummary: `${matchedConsumer?.name || 'Consumer'} ka ${dateStr} ka doodh ${isMissed ? 'Missed (0 KG)' : `${kgAmount} KG`} update karne ki confirmation chahta hon.`,
+      urduSummary: `${matchedConsumer?.name || milkConsumers[0]?.name || 'Consumer'} ka ${dateStr} ka doodh ${isMissed ? 'Missed (0 KG)' : `${kgAmount} KG`} update karne ki confirmation chahta hon.`,
       requiresApproval: true,
       fields: [
-        { label: 'Consumer', value: matchedConsumer?.name || 'Saleem', key: 'consumerName' },
+        { label: 'Consumer', value: matchedConsumer?.name || milkConsumers[0]?.name || 'Consumer', key: 'consumerName' },
         { label: 'Date', value: dateStr, key: 'date' },
         { label: 'Quantity (KG)', value: `${kgAmount} KG`, key: 'actualKg' },
         { label: 'Status', value: status.toUpperCase(), key: 'status' }
       ],
       payload: {
-        consumerId: matchedConsumer?.id || 'c1',
-        consumerName: matchedConsumer?.name || 'Saleem',
+        consumerId: matchedConsumer?.id || milkConsumers[0]?.id || '',
+        consumerName: matchedConsumer?.name || milkConsumers[0]?.name || 'Consumer',
         date: dateStr,
         actualKg: kgAmount,
         status,
@@ -592,9 +592,12 @@ export async function parseNaturalLanguageInput(rawInput: string): Promise<AIPro
   // "Saleem ka payment 2000 add karo"
   // -------------------------------------------------------------
   const matchedPerson = findMatchingPerson(text, utilityPersons) || utilityPersons[0] || {
-    id: 'p_saleem',
-    name: 'Saleem',
-    monthlyExpectedContribution: 9500
+    id: 'default_person',
+    name: 'Household Contributor',
+    monthlyExpectedContribution: 9500,
+    isActive: true,
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString()
   };
 
   const amount = amounts[0] || 2000;

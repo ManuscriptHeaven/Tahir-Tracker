@@ -173,6 +173,8 @@ export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
   lastBackupDate?: string;
   legacyCleanupDone?: boolean;
+  onboardingCompleted?: boolean;
+  enabledModules?: string[];
 }
 
 export interface SyncQueueItem {

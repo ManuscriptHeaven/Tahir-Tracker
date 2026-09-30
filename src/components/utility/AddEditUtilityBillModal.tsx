@@ -20,7 +20,7 @@ export const AddEditUtilityBillModal: React.FC<AddEditUtilityBillModalProps> = (
   persons,
   selectedPersonId
 }) => {
-  const [personId, setPersonId] = useState<string>(selectedPersonId || 'p_saleem');
+  const [personId, setPersonId] = useState<string>(selectedPersonId || persons[0]?.id || '');
   const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
   const [year, setYear] = useState<number>(new Date().getFullYear());
   
@@ -32,7 +32,7 @@ export const AddEditUtilityBillModal: React.FC<AddEditUtilityBillModalProps> = (
   const [customWaterGasShare, setCustomWaterGasShare] = useState<number | ''>('');
   const [customTotalBill, setCustomTotalBill] = useState<number | ''>('');
   
-  const [expectedContribution, setExpectedContribution] = useState<number | ''>(9500);
+  const [expectedContribution, setExpectedContribution] = useState<number | ''>(persons[0]?.monthlyExpectedContribution || 0);
   const [notes, setNotes] = useState<string>('');
 
   useEffect(() => {
@@ -51,7 +51,7 @@ export const AddEditUtilityBillModal: React.FC<AddEditUtilityBillModalProps> = (
       setNotes(billToEdit.notes || '');
       setAutoCalculate(true);
     } else {
-      setPersonId(selectedPersonId || persons[0]?.id || 'p_saleem');
+      setPersonId(selectedPersonId || persons[0]?.id || '');
       const now = new Date();
       setMonth(now.getMonth() + 1);
       setYear(now.getFullYear());

@@ -14,6 +14,21 @@ export interface SyncStatus {
 
 const STORAGE_LAST_SYNCED = 'tahir_tracker_last_synced';
 
+export function getLastSyncedStorageKey(): string {
+  const uid = getCurrentUserId();
+  return uid ? `tahir_tracker_last_synced_${uid}` : STORAGE_LAST_SYNCED;
+}
+
+export function getLastSyncedTimestamp(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(getLastSyncedStorageKey());
+}
+
+export function setLastSyncedTimestamp(ts: string): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(getLastSyncedStorageKey(), ts);
+}
+
 function getInitialState(): SyncState {
   if (!isSupabaseConfigured()) return 'unconfigured';
   if (!isAuthenticated()) return 'auth_required';
@@ -28,7 +43,7 @@ function getInitialMessage(): string {
 
 let currentStatus: SyncStatus = {
   state: getInitialState(),
-  lastSyncedAt: localStorage.getItem(STORAGE_LAST_SYNCED),
+  lastSyncedAt: getLastSyncedTimestamp(),
   message: getInitialMessage()
 };
 
@@ -51,7 +66,7 @@ export function subscribeSyncStatus(fn: (status: SyncStatus) => void): () => voi
 function updateStatus(state: SyncState, message: string) {
   currentStatus = {
     state,
-    lastSyncedAt: localStorage.getItem(STORAGE_LAST_SYNCED),
+    lastSyncedAt: getLastSyncedTimestamp(),
     message
   };
   notifyListeners();
@@ -164,7 +179,7 @@ async function handleRealtimeChange(payload: any) {
       if (id) {
         await dexieTable.delete(id);
         const now = new Date().toISOString();
-        localStorage.setItem(STORAGE_LAST_SYNCED, now);
+        setLastSyncedTimestamp(now);
         updateStatus('realtime_active', `Live sync: removed from ${table}`);
       }
     } else if (eventType === 'INSERT' || eventType === 'UPDATE') {
@@ -187,7 +202,7 @@ async function handleRealtimeChange(payload: any) {
 
         await dexieTable.put(camelObj);
         const now = new Date().toISOString();
-        localStorage.setItem(STORAGE_LAST_SYNCED, now);
+        setLastSyncedTimestamp(now);
         updateStatus('realtime_active', `Live sync: updated ${table}`);
       }
     }
@@ -215,10 +230,10 @@ export function subscribeToRealtimeChanges(): () => void {
 
   try {
     realtimeChannel = client
-      .channel('public-db-realtime-all')
+      .channel(`user-sync-${currentUserId}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public' },
+        { event: '*', schema: 'public', filter: `user_id=eq.${currentUserId}` },
         (payload) => {
           handleRealtimeChange(payload);
         }
@@ -299,7 +314,7 @@ export async function pushRecordToSupabase(tableName: string, recordId: string):
     } else {
       await dequeueSyncOperation(`${tableName}_${recordId}`);
       const now = new Date().toISOString();
-      localStorage.setItem(STORAGE_LAST_SYNCED, now);
+      setLastSyncedTimestamp(now);
       updateStatus('realtime_active', `Live sync: updated ${tableName}`);
     }
   } catch (err) {
@@ -333,7 +348,7 @@ export async function pushTableToSupabase(tableName: string): Promise<void> {
         console.warn(`Supabase push error on ${tableName}:`, error.message);
       } else {
         const now = new Date().toISOString();
-        localStorage.setItem(STORAGE_LAST_SYNCED, now);
+        setLastSyncedTimestamp(now);
         updateStatus('realtime_active', `Synced ${cleanRecords.length} records in ${tableName}`);
       }
     }
@@ -364,7 +379,7 @@ export async function deleteRemoteRecord(tableName: string, id: any): Promise<vo
     } else {
       await dequeueSyncOperation(`${tableName}_${id}`);
       const now = new Date().toISOString();
-      localStorage.setItem(STORAGE_LAST_SYNCED, now);
+      setLastSyncedTimestamp(now);
       updateStatus('realtime_active', `Live sync: Deleted from ${tableName}`);
     }
   } catch (err) {
@@ -620,7 +635,7 @@ export async function syncWithSupabase(): Promise<{ success: boolean; message: s
 
     // Two-way sync across every cloud-backed table.
     // On first authenticated sync, pull cloud data before pushing local defaults.
-    const bootstrap = isBootstrapSync(localStorage.getItem(STORAGE_LAST_SYNCED));
+    const bootstrap = isBootstrapSync(getLastSyncedTimestamp());
 
     for (const tableName of SYNC_TABLE_KEYS) {
       const dexieTable = TABLE_MAP[tableName];
@@ -703,7 +718,7 @@ export async function syncWithSupabase(): Promise<{ success: boolean; message: s
     }
 
     const now = new Date().toISOString();
-    localStorage.setItem(STORAGE_LAST_SYNCED, now);
+    setLastSyncedTimestamp(now);
 
     updateStatus('synced', 'All records synced with Supabase successfully');
     return { success: true, message: 'Synchronization completed successfully!' };
@@ -713,6 +728,26 @@ export async function syncWithSupabase(): Promise<{ success: boolean; message: s
     updateStatus('error', `Sync failed: ${sanitizedMsg}`);
     return { success: false, message: err?.message || 'Sync failed' };
   }
+}
+
+/**
+ * Stops all ongoing background sync work, channels, and timers (used during sign-out / switch)
+ */
+export function stopAllSyncActivity(): void {
+  if (realtimeChannel) {
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        client.removeChannel(realtimeChannel);
+      } catch (_) {}
+    }
+    realtimeChannel = null;
+  }
+  for (const timeoutId of pendingPushTimeouts.values()) {
+    clearTimeout(timeoutId);
+  }
+  pendingPushTimeouts.clear();
+  updateStatus('auth_required', 'Sign in required for cloud synchronization');
 }
 
 /**
@@ -775,10 +810,8 @@ export function initSyncService(): () => void {
         updateStatus('offline', 'Device is offline');
       }
     } else if (!authState.isAuthenticated) {
+      stopAllSyncActivity();
       if (unsubscribeRealtime) unsubscribeRealtime();
-      if (isSupabaseConfigured()) {
-        updateStatus('auth_required', 'Sign in required for cloud synchronization');
-      }
     }
   });
 
@@ -807,6 +840,7 @@ export function initSyncService(): () => void {
     document.removeEventListener('visibilitychange', handleVisibilityChange);
     window.removeEventListener('focus', handleFocus);
     clearInterval(heartbeatTimer);
+    stopAllSyncActivity();
     if (unsubscribeRealtime) unsubscribeRealtime();
     unsubscribeAuth();
   };

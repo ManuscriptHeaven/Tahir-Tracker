@@ -31,15 +31,31 @@ export async function executeAIProposal(proposal: AIProposal): Promise<Execution
           };
         }
 
+        let resolvedCategoryId = categoryId;
+        let resolvedCategoryName = categoryName;
+        if (!resolvedCategoryId) {
+          const defaultCat = await db.finance_categories.where('type').equals(transactionType || 'expense').first();
+          resolvedCategoryId = defaultCat?.id || '';
+          resolvedCategoryName = defaultCat?.name || (transactionType === 'income' ? 'Income' : 'Expense');
+        }
+
+        let resolvedAccountId = accountId;
+        let resolvedAccountName = accountName;
+        if (!resolvedAccountId) {
+          const defaultAcc = await db.finance_accounts.filter(a => a.isActive).first();
+          resolvedAccountId = defaultAcc?.id || '';
+          resolvedAccountName = defaultAcc?.name || 'Cash Wallet';
+        }
+
         const newTx = {
           id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
           transactionType: transactionType || 'expense',
           amount: validAmount,
           currency: 'PKR',
-          categoryId: categoryId || 'cat_food',
-          categoryName: categoryName || 'Food & Dining',
-          accountId: accountId || 'acc_cash',
-          accountName: accountName || 'Cash Wallet',
+          categoryId: resolvedCategoryId,
+          categoryName: resolvedCategoryName,
+          accountId: resolvedAccountId,
+          accountName: resolvedAccountName,
           transactionDate: transactionDate || getTodayLocalDateStr(),
           description: description || 'Voice entry',
           source: source || 'voice',
@@ -54,7 +70,7 @@ export async function executeAIProposal(proposal: AIProposal): Promise<Execution
 
         return {
           success: true,
-          message: `✅ ${validAmount.toLocaleString()} PKR ka ${transactionType === 'income' ? 'Income' : 'Expense'} (${categoryName || 'General'}) kamyabi se save ho gaya hai!`
+          message: `✅ ${validAmount.toLocaleString()} PKR ka ${transactionType === 'income' ? 'Income' : 'Expense'} (${resolvedCategoryName || 'General'}) kamyabi se save ho gaya hai!`
         };
       }
 
@@ -72,17 +88,31 @@ export async function executeAIProposal(proposal: AIProposal): Promise<Execution
           };
         }
 
+        let resolvedFromAccId = accountId;
+        let resolvedFromAccName = accountName;
+        let resolvedToAccId = transferToAccountId;
+        let resolvedToAccName = transferToAccountName;
+        const allAccs = await db.finance_accounts.filter(a => a.isActive).toArray();
+        if (!resolvedFromAccId && allAccs.length > 0) {
+          resolvedFromAccId = allAccs[0].id;
+          resolvedFromAccName = allAccs[0].name;
+        }
+        if (!resolvedToAccId && allAccs.length > 1) {
+          resolvedToAccId = allAccs[1].id;
+          resolvedToAccName = allAccs[1].name;
+        }
+
         const newTransfer = {
           id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
           transactionType: 'transfer' as const,
           amount: validAmount,
           currency: 'PKR',
-          accountId: accountId || 'acc_cash',
-          accountName: accountName || 'Cash Wallet',
-          transferToAccountId: transferToAccountId || 'acc_hbl',
-          transferToAccountName: transferToAccountName || 'HBL Account',
+          accountId: resolvedFromAccId,
+          accountName: resolvedFromAccName || 'Account 1',
+          transferToAccountId: resolvedToAccId,
+          transferToAccountName: resolvedToAccName || 'Account 2',
           transactionDate: transactionDate || getTodayLocalDateStr(),
-          description: description || `Transfer to ${transferToAccountName || 'Bank'}`,
+          description: description || `Transfer to ${resolvedToAccName || 'Account'}`,
           source: 'voice' as const,
           status: 'completed' as const,
           createdAt: now,
@@ -93,7 +123,7 @@ export async function executeAIProposal(proposal: AIProposal): Promise<Execution
 
         return {
           success: true,
-          message: `✅ ${Number(amount).toLocaleString()} PKR ka transfer (${accountName || 'Cash'} → ${transferToAccountName || 'Bank'}) save ho gaya!`
+          message: `✅ ${Number(amount).toLocaleString()} PKR ka transfer (${resolvedFromAccName || 'Account 1'} → ${resolvedToAccName || 'Account 2'}) save ho gaya!`
         };
       }
 

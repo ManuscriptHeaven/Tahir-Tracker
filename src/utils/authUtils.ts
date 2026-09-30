@@ -38,6 +38,18 @@ export function formatAuthError(err: any): string {
   if (lower.includes('signup disabled') || lower.includes('signups not allowed')) {
     return 'Public registrations are disabled. Contact the administrator.';
   }
+  if (lower.includes('access_denied') || lower.includes('access denied')) {
+    return 'Google sign in was cancelled or access was denied. Please try again.';
+  }
+  if (lower.includes('unsupported_provider') || lower.includes('provider is not enabled') || lower.includes('provider disabled')) {
+    return 'Google sign in is not enabled in your Supabase project. Please configure Google OAuth in the Supabase Dashboard.';
+  }
+  if (lower.includes('redirect_uri_mismatch')) {
+    return 'Google OAuth redirect URI mismatch. Please verify your Google Cloud Console and Supabase dashboard settings.';
+  }
+  if (lower.includes('popup') && (lower.includes('closed') || lower.includes('blocked'))) {
+    return 'Sign-in popup was closed or blocked by browser. Please allow popups or retry.';
+  }
 
   return message.replace(/^AuthApiError:\s*/i, '').trim();
 }

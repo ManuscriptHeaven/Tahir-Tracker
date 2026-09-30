@@ -551,18 +551,24 @@ export function computeNextRunDate(currentDateStr: string, frequency: 'daily' | 
   return currentDateStr;
 }
 
+import { getCurrentUserId } from './authService';
+
 /**
- * User categorization learning mechanism stored in localStorage
+ * User categorization learning mechanism stored in localStorage (namespaced per authenticated user)
  */
-const STORAGE_CATEGORY_LEARNING = 'tahir_tracker_category_learning';
+function getCategoryLearningKey(): string {
+  const uid = getCurrentUserId();
+  return uid ? `tahir_tracker_category_learning_${uid}` : 'tahir_tracker_category_learning';
+}
 
 export function saveLearnedCategoryKeyword(keyword: string, categoryId: string) {
   try {
     const normalized = keyword.toLowerCase().trim();
     if (!normalized || normalized.length < 3) return;
-    const existing = JSON.parse(localStorage.getItem(STORAGE_CATEGORY_LEARNING) || '{}');
+    const storageKey = getCategoryLearningKey();
+    const existing = JSON.parse(localStorage.getItem(storageKey) || '{}');
     existing[normalized] = categoryId;
-    localStorage.setItem(STORAGE_CATEGORY_LEARNING, JSON.stringify(existing));
+    localStorage.setItem(storageKey, JSON.stringify(existing));
   } catch (e) {
     console.warn('Failed to save category learning:', e);
   }
@@ -570,7 +576,8 @@ export function saveLearnedCategoryKeyword(keyword: string, categoryId: string) 
 
 export function getLearnedCategoryKeyword(query: string): string | undefined {
   try {
-    const existing = JSON.parse(localStorage.getItem(STORAGE_CATEGORY_LEARNING) || '{}');
+    const storageKey = getCategoryLearningKey();
+    const existing = JSON.parse(localStorage.getItem(storageKey) || '{}');
     const lowerQuery = query.toLowerCase();
     for (const [kw, catId] of Object.entries(existing)) {
       if (lowerQuery.includes(kw)) {
