@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { 
   Lock, 
@@ -42,6 +42,10 @@ export const AuthWelcomeScreen: React.FC<AuthWelcomeScreenProps> = ({ isRentMode
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(authGlobalError || null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (authGlobalError) setErrorMessage(authGlobalError);
+  }, [authGlobalError]);
 
   const handleGoogleSignIn = async () => {
     setLoadingGoogle(true);
@@ -514,3 +518,4 @@ export const AuthWelcomeScreen: React.FC<AuthWelcomeScreenProps> = ({ isRentMode
     </div>
   );
 };
+

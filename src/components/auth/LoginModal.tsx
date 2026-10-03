@@ -306,7 +306,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         {/* Body */}
         <div className="p-4 sm:p-6">
           {/* Authenticated View */}
-          {isAuthenticated && user && mode !== 'set-new-password' ? (
+          {isAuthenticated && user && mode !== 'set-new-password' && !recoveryError ? (
             <div className="space-y-4">
               <div className="p-4 rounded-2xl bg-[#071724] border border-teal-500/30 text-slate-200">
                 <div className="flex items-center gap-2 font-bold text-sm text-[#18E6BE]">
@@ -811,3 +811,4 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     </div>
   );
 };
+

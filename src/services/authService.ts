@@ -78,7 +78,7 @@ export async function initAuth(): Promise<void> {
       authError = recoveryError;
       window.history.replaceState(null, '', window.location.pathname);
     } else if (oauthError) {
-      authError = formatAuthError(decodeURIComponent(oauthError.replace(/\+/g, ' ')));
+      authError = formatAuthError(oauthError);
       window.history.replaceState(null, '', window.location.pathname);
     } else if (hash.includes('type=recovery')) {
       isRecoveryMode = true;
@@ -92,32 +92,9 @@ export async function initAuth(): Promise<void> {
     return;
   }
 
-  try {
-    isLoading = true;
-    const { data, error } = await client.auth.getSession();
-    if (error) {
-      console.warn('[AuthService] Error getting initial session:', error.message);
-      authError = formatAuthError(error);
-      currentSession = null;
-      currentUser = null;
-    } else {
-      currentSession = data.session;
-      currentUser = mapSupabaseUser(data.session?.user);
-      authError = null;
-    }
-  } catch (err: any) {
-    console.error('[AuthService] Failed to restore auth session:', err);
-    authError = formatAuthError(err);
-    currentSession = null;
-    currentUser = null;
-  } finally {
-    isLoading = false;
-    notifyListeners();
-  }
-
   // Subscribe to auth state transitions (SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED, USER_UPDATED, PASSWORD_RECOVERY)
   try {
-    client.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
+    client.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
       console.log(`[AuthService] Auth event: ${event}`);
       currentSession = session;
       currentUser = mapSupabaseUser(session?.user);
@@ -149,6 +126,29 @@ export async function initAuth(): Promise<void> {
     });
   } catch (err) {
     console.error('[AuthService] Error setting up onAuthStateChange:', err);
+  }
+
+  try {
+    isLoading = true;
+    const { data, error } = await client.auth.getSession();
+    if (error) {
+      console.warn('[AuthService] Error getting initial session:', error.message);
+      authError = formatAuthError(error);
+      currentSession = null;
+      currentUser = null;
+    } else {
+      currentSession = data.session;
+      currentUser = mapSupabaseUser(data.session?.user);
+      // Keep callback errors visible even when session restoration succeeds.
+    }
+  } catch (err: any) {
+    console.error('[AuthService] Failed to restore auth session:', err);
+    authError = formatAuthError(err);
+    currentSession = null;
+    currentUser = null;
+  } finally {
+    isLoading = false;
+    notifyListeners();
   }
 }
 
@@ -565,3 +565,4 @@ export async function refreshSession(): Promise<Session | null> {
     return null;
   }
 }
+

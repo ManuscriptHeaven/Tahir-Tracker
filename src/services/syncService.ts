@@ -94,27 +94,28 @@ export function toCamelCase(obj: any): any {
   return result;
 }
 
-// Table instances mapping for automated reactive sync
+// Resolve tables when they are used, after the signed-in user's database is selected.
+// Capturing db.table at module load would bind sync to the fallback database.
 export const TABLE_MAP: Record<string, any> = {
-  utility_persons: db.utility_persons,
-  utility_bills: db.utility_bills,
-  utility_payments: db.utility_payments,
-  milk_consumers: db.milk_consumers,
-  milk_logs: db.milk_logs,
-  milk_monthly_records: db.milk_monthly_records,
-  petrol_refills: db.petrol_refills,
-  rent_properties: db.rent_properties,
-  rent_portions: db.rent_portions,
-  rent_records: db.rent_records,
-  loans: db.loans,
-  settings: db.settings,
-  finance_accounts: db.finance_accounts,
-  finance_categories: db.finance_categories,
-  finance_transactions: db.finance_transactions,
-  finance_budgets: db.finance_budgets,
-  finance_recurring_transactions: db.finance_recurring_transactions,
-  finance_goals: db.finance_goals,
-  finance_voice_entries: db.finance_voice_entries
+  get utility_persons() { return db.utility_persons; },
+  get utility_bills() { return db.utility_bills; },
+  get utility_payments() { return db.utility_payments; },
+  get milk_consumers() { return db.milk_consumers; },
+  get milk_logs() { return db.milk_logs; },
+  get milk_monthly_records() { return db.milk_monthly_records; },
+  get petrol_refills() { return db.petrol_refills; },
+  get rent_properties() { return db.rent_properties; },
+  get rent_portions() { return db.rent_portions; },
+  get rent_records() { return db.rent_records; },
+  get loans() { return db.loans; },
+  get settings() { return db.settings; },
+  get finance_accounts() { return db.finance_accounts; },
+  get finance_categories() { return db.finance_categories; },
+  get finance_transactions() { return db.finance_transactions; },
+  get finance_budgets() { return db.finance_budgets; },
+  get finance_recurring_transactions() { return db.finance_recurring_transactions; },
+  get finance_goals() { return db.finance_goals; },
+  get finance_voice_entries() { return db.finance_voice_entries; }
 };
 
 import { 
@@ -387,17 +388,15 @@ export async function deleteRemoteRecord(tableName: string, id: any): Promise<vo
   }
 }
 
-let hooksInitialized = false;
+const hookedTables = new WeakSet<object>();
 
 /**
  * Attach mutation hooks to all Dexie tables so local writes auto-push to Supabase
  */
 export function initDexieMutationHooks() {
-  if (hooksInitialized) return;
-  hooksInitialized = true;
-
   Object.entries(TABLE_MAP).forEach(([tableName, table]) => {
-    if (!table || typeof table.hook !== 'function') return;
+    if (!table || typeof table.hook !== 'function' || hookedTables.has(table)) return;
+    hookedTables.add(table);
 
     table.hook('creating', function (primKey: any, obj: any) {
       if (!isRemoteSyncing()) {
@@ -596,7 +595,22 @@ export function formatSyncErrorsSummary(errors: TableSyncError[]): string {
 /**
  * Execute a complete two-way synchronization between Dexie and Supabase
  */
-export async function syncWithSupabase(): Promise<{ success: boolean; message: string }> {
+let activeSync: Promise<{ success: boolean; message: string }> | null = null;
+
+// Focus, visibility, auth, and the heartbeat can all request a sync together.
+// Run one full pass at a time so reads and writes cannot race each other.
+export function syncWithSupabase(): Promise<{ success: boolean; message: string }> {
+  if (activeSync) return activeSync;
+  const sync = performSyncWithSupabase();
+  activeSync = sync;
+  void sync.then(
+    () => { if (activeSync === sync) activeSync = null; },
+    () => { if (activeSync === sync) activeSync = null; }
+  );
+  return sync;
+}
+
+async function performSyncWithSupabase(): Promise<{ success: boolean; message: string }> {
   if (!isSupabaseConfigured()) {
     updateStatus('unconfigured', 'Supabase credentials not configured');
     return { success: false, message: 'Supabase credentials not configured' };
@@ -845,3 +859,4 @@ export function initSyncService(): () => void {
     unsubscribeAuth();
   };
 }
+

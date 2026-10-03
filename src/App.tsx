@@ -370,7 +370,7 @@ export const AuthenticatedWorkspace: React.FC<{ user: any }> = ({ user }) => {
 };
 
 export const MainAppRouter: React.FC = () => {
-  const { isAuthenticated, user, loading } = useAuth();
+  const { isAuthenticated, user, loading, isRecoveryMode, recoveryError, setRecoveryMode, clearRecoveryError } = useAuth();
 
   if (loading) {
     return (
@@ -383,6 +383,19 @@ export const MainAppRouter: React.FC = () => {
           <p className="text-xs text-[#6F899B]">Checking session security...</p>
         </div>
       </div>
+    );
+  }
+
+  // Recovery must be reachable before onboarding and without an existing session.
+  if (isRecoveryMode || recoveryError) {
+    return (
+      <LoginModal
+        isOpen={true}
+        onClose={() => {
+          setRecoveryMode(false);
+          clearRecoveryError();
+        }}
+      />
     );
   }
 
@@ -402,3 +415,4 @@ export const App: React.FC = () => {
 };
 
 export default App;
+
