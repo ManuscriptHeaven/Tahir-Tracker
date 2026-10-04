@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { NavTab } from './types';
-import { 
-  initializeDefaultData,
+import {
+  getActiveDb,
   switchUserDb,
   checkUserOnboardingStatus,
   checkLegacyDataExists
 } from './db/db';
-import { initSyncService, stopAllSyncActivity } from './services/syncService';
+import { initSyncService, stopAllSyncActivity, syncWithSupabase } from './services/syncService';
 
 // Layout
 import { Navbar } from './components/layout/Navbar';
@@ -58,14 +58,8 @@ export const AppContent: React.FC = () => {
   }, [isRecoveryMode, recoveryError]);
 
   useEffect(() => {
-    let disposed = false;
-    let cleanupSync = () => {};
-
-    // 1. Initialize local Dexie database if not already ready
-    initializeDefaultData().then(() => {
-      if (disposed) return;
-      setIsDbReady(true);
-    });
+    // AuthenticatedWorkspace has already selected and synced this user's database.
+    setIsDbReady(true);
 
     // 3. PWA install prompt handler
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -76,8 +70,6 @@ export const AppContent: React.FC = () => {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
     return () => {
-      disposed = true;
-      cleanupSync();
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
@@ -285,6 +277,8 @@ export const AuthenticatedWorkspace: React.FC<{ user: any }> = ({ user }) => {
   const [isDbReady, setIsDbReady] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [legacyDataInfo, setLegacyDataInfo] = useState<{ hasLegacy: boolean; recordCount: number } | null>(null);
+  const [initialSyncError, setInitialSyncError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let disposed = false;
@@ -295,29 +289,41 @@ export const AuthenticatedWorkspace: React.FC<{ user: any }> = ({ user }) => {
         // 1. Switch Dexie instance to user's private database
         switchUserDb(user.id);
 
-        // 2. Check if user needs first-time onboarding
+        // 2. On a fresh device, restore cloud records before deciding whether
+        // this is a new account. Seeding defaults first duplicates cloud data.
+        const syncResult = await syncWithSupabase();
+        if (disposed) return;
+        if (!syncResult.success && navigator.onLine) {
+          const localDb = getActiveDb();
+          const localRecordCounts = await Promise.all([
+            localDb.finance_transactions.count(), localDb.utility_bills.count(),
+            localDb.rent_records.count(), localDb.loans.count(),
+            localDb.milk_logs.count(), localDb.petrol_refills.count()
+          ]);
+          if (localRecordCounts.every(count => count === 0)) {
+            setInitialSyncError(syncResult.message);
+            return;
+          }
+          // Keep established offline work usable when the cloud is temporarily down.
+        }
+        setInitialSyncError(null);
+
+        // 3. Check onboarding after the cloud has populated the private DB.
         const onboarded = await checkUserOnboardingStatus(user.id);
-        if (!onboarded && !disposed) {
-          setNeedsOnboarding(true);
-        }
-
-        // 3. Check if unmigrated legacy single-user data exists on device
         const legacy = await checkLegacyDataExists();
-        if (legacy.hasLegacy && !disposed) {
-          setLegacyDataInfo(legacy);
-        }
+        if (disposed) return;
+        setNeedsOnboarding(!onboarded && !legacy.hasLegacy);
+        // The old broken sync could populate the shared legacy DB on a phone.
+        // Once this account's cloud data is restored, that copy must not be
+        // offered for import again.
+        setLegacyDataInfo(!onboarded && legacy.hasLegacy ? legacy : null);
 
-        // 4. Ensure baseline starter records exist for this user
-        await initializeDefaultData(user.id);
-
-        if (!disposed) {
-          setIsDbReady(true);
-          // 5. Initialize Supabase cloud synchronization for this user
-          cleanupSync = initSyncService();
-        }
+        // 4. Attach mutation hooks and resume automatic synchronization.
+        cleanupSync = initSyncService();
+        setIsDbReady(true);
       } catch (err) {
         console.error('Failed to setup user workspace:', err);
-        if (!disposed) setIsDbReady(true);
+        if (!disposed) setInitialSyncError('Could not load your workspace. Please retry.');
       }
     };
 
@@ -328,7 +334,19 @@ export const AuthenticatedWorkspace: React.FC<{ user: any }> = ({ user }) => {
       cleanupSync();
       stopAllSyncActivity();
     };
-  }, [user.id]);
+  }, [user.id, retryCount]);
+
+  if (initialSyncError) {
+    return (
+      <div className="min-h-screen bg-[#071724] text-[#F4F8FB] flex flex-col items-center justify-center gap-4 p-6 text-center">
+        <h2 className="text-lg font-bold">Your data could not be loaded</h2>
+        <p className="max-w-md text-sm text-[#B4C8D3]">{initialSyncError}</p>
+        <button className="rounded-xl bg-[#18E6BE] px-5 py-3 font-semibold text-[#06131F]" onClick={() => { setInitialSyncError(null); setRetryCount(value => value + 1); }}>
+          Retry loading data
+        </button>
+      </div>
+    );
+  }
 
   if (!isDbReady) {
     return (
@@ -359,7 +377,7 @@ export const AuthenticatedWorkspace: React.FC<{ user: any }> = ({ user }) => {
           userId={user.id}
           recordCount={legacyDataInfo.recordCount}
           isOpen={true}
-          onClose={() => setLegacyDataInfo(null)}
+          onClose={() => { setLegacyDataInfo(null); setNeedsOnboarding(true); }}
           onMigrated={() => setLegacyDataInfo(null)}
         />
       )}

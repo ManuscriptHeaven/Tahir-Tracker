@@ -1,8 +1,9 @@
 import { RealtimeChannel } from '@supabase/supabase-js';
-import { db, LEGACY_DUMMY_IDS } from '../db/db';
+import { getActiveDb, getCurrentDbUserId, LEGACY_DUMMY_IDS, type TahirTrackerDB } from '../db/db';
 import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
 import { getCurrentUserId, isAuthenticated, subscribeAuth } from './authService';
 import { SYNC_TABLE_KEYS, isBootstrapSync } from './syncPolicy';
+import { findDuplicateStarterIds } from './syncReconcile';
 
 export type SyncState = 'idle' | 'syncing' | 'synced' | 'realtime_active' | 'error' | 'offline' | 'unconfigured' | 'auth_required';
 
@@ -94,28 +95,20 @@ export function toCamelCase(obj: any): any {
   return result;
 }
 
-// Table instances mapping for automated reactive sync
-export const TABLE_MAP: Record<string, any> = {
-  utility_persons: db.utility_persons,
-  utility_bills: db.utility_bills,
-  utility_payments: db.utility_payments,
-  milk_consumers: db.milk_consumers,
-  milk_logs: db.milk_logs,
-  milk_monthly_records: db.milk_monthly_records,
-  petrol_refills: db.petrol_refills,
-  rent_properties: db.rent_properties,
-  rent_portions: db.rent_portions,
-  rent_records: db.rent_records,
-  loans: db.loans,
-  settings: db.settings,
-  finance_accounts: db.finance_accounts,
-  finance_categories: db.finance_categories,
-  finance_transactions: db.finance_transactions,
-  finance_budgets: db.finance_budgets,
-  finance_recurring_transactions: db.finance_recurring_transactions,
-  finance_goals: db.finance_goals,
-  finance_voice_entries: db.finance_voice_entries
-};
+// Resolve tables only after authentication selects a private Dexie database.
+// Capturing `db.finance_transactions` here would bind every sync to the legacy
+// database because this module is evaluated before the user signs in.
+export const TABLE_MAP: Record<string, any> = {};
+for (const tableName of SYNC_TABLE_KEYS) {
+  Object.defineProperty(TABLE_MAP, tableName, {
+    enumerable: true,
+    get: () => {
+      const userId = getCurrentUserId();
+      if (!userId || !isAuthenticated() || getCurrentDbUserId() !== userId) return undefined;
+      return (getActiveDb() as any)[tableName];
+    }
+  });
+}
 
 import { 
   enqueueSyncOperation, 
@@ -158,11 +151,11 @@ const pendingPushTimeouts = new Map<string, any>();
  */
 async function handleRealtimeChange(payload: any) {
   const currentUserId = getCurrentUserId();
-  if (!currentUserId) return;
+  if (!currentUserId || getCurrentDbUserId() !== currentUserId) return;
 
   // Filter out events that do not belong to the authenticated user
   const eventUserId = payload.new?.user_id || payload.old?.user_id;
-  if (eventUserId && eventUserId !== currentUserId) {
+  if (eventUserId !== currentUserId) {
     return;
   }
 
@@ -177,6 +170,7 @@ async function handleRealtimeChange(payload: any) {
     if (eventType === 'DELETE') {
       const id = payload.old?.id;
       if (id) {
+        if (getCurrentUserId() !== currentUserId) return;
         await dexieTable.delete(id);
         const now = new Date().toISOString();
         setLastSyncedTimestamp(now);
@@ -200,6 +194,7 @@ async function handleRealtimeChange(payload: any) {
           }
         }
 
+        if (getCurrentUserId() !== currentUserId) return;
         await dexieTable.put(camelObj);
         const now = new Date().toISOString();
         setLastSyncedTimestamp(now);
@@ -267,7 +262,8 @@ export function subscribeToRealtimeChanges(): () => void {
 export function triggerDebouncedPush(tableName: string, recordId?: string) {
   if (isRemoteSyncing()) return;
   if (!isSupabaseConfigured() || !navigator.onLine) return;
-  if (!isAuthenticated() || !getCurrentUserId()) return;
+  const scheduledUserId = getCurrentUserId();
+  if (!isAuthenticated() || !scheduledUserId || getCurrentDbUserId() !== scheduledUserId) return;
 
   const key = recordId ? `${tableName}_${recordId}` : tableName;
   if (pendingPushTimeouts.has(key)) {
@@ -276,6 +272,7 @@ export function triggerDebouncedPush(tableName: string, recordId?: string) {
 
   const timeoutId = setTimeout(async () => {
     pendingPushTimeouts.delete(key);
+    if (getCurrentUserId() !== scheduledUserId || getCurrentDbUserId() !== scheduledUserId) return;
     if (recordId) {
       await pushRecordToSupabase(tableName, recordId);
     } else {
@@ -294,10 +291,11 @@ export async function pushRecordToSupabase(tableName: string, recordId: string):
   const client = getSupabaseClient();
   const dexieTable = TABLE_MAP[tableName];
   const currentUserId = getCurrentUserId();
-  if (!client || !dexieTable || !recordId || !currentUserId) return;
+  if (!client || !dexieTable || !recordId || !currentUserId || getCurrentDbUserId() !== currentUserId) return;
 
   try {
     const record = await dexieTable.get(recordId);
+    if (getCurrentUserId() !== currentUserId || getCurrentDbUserId() !== currentUserId) return;
     if (!record) return;
 
     const dummyIds = (LEGACY_DUMMY_IDS as any)[tableName] || [];
@@ -330,10 +328,11 @@ export async function pushTableToSupabase(tableName: string): Promise<void> {
   const client = getSupabaseClient();
   const dexieTable = TABLE_MAP[tableName];
   const currentUserId = getCurrentUserId();
-  if (!client || !dexieTable || !currentUserId) return;
+  if (!client || !dexieTable || !currentUserId || getCurrentDbUserId() !== currentUserId) return;
 
   try {
     const records = await dexieTable.toArray();
+    if (getCurrentUserId() !== currentUserId || getCurrentDbUserId() !== currentUserId) return;
     const dummyIds = (LEGACY_DUMMY_IDS as any)[tableName] || [];
     const cleanRecords = records.filter((r: any) => !dummyIds.includes(r.id));
 
@@ -387,45 +386,49 @@ export async function deleteRemoteRecord(tableName: string, id: any): Promise<vo
   }
 }
 
-let hooksInitialized = false;
+const hookedDatabases = new WeakSet<TahirTrackerDB>();
 
 /**
  * Attach mutation hooks to all Dexie tables so local writes auto-push to Supabase
  */
 export function initDexieMutationHooks() {
-  if (hooksInitialized) return;
-  hooksInitialized = true;
+  const userId = getCurrentUserId();
+  if (!userId || getCurrentDbUserId() !== userId) return;
+  const activeDb = getActiveDb();
+  if (hookedDatabases.has(activeDb)) return;
+  hookedDatabases.add(activeDb);
+  const stillCurrent = () => getCurrentUserId() === userId && getCurrentDbUserId() === userId;
 
   Object.entries(TABLE_MAP).forEach(([tableName, table]) => {
     if (!table || typeof table.hook !== 'function') return;
 
     table.hook('creating', function (primKey: any, obj: any) {
-      if (!isRemoteSyncing()) {
+      if (stillCurrent() && !isRemoteSyncing()) {
         const idStr = String(primKey || obj?.id || '');
         if (idStr) {
           enqueueSyncOperation(tableName, 'upsert', idStr, obj);
-          setTimeout(() => triggerDebouncedPush(tableName, idStr), 50);
+          setTimeout(() => { if (stillCurrent()) triggerDebouncedPush(tableName, idStr); }, 50);
         }
       }
     });
 
     table.hook('updating', function (modifications: any, primKey: any, obj: any) {
-      if (!isRemoteSyncing()) {
+      if (stillCurrent() && !isRemoteSyncing()) {
         const idStr = String(primKey || obj?.id || '');
         if (idStr) {
           const merged = { ...obj, ...modifications };
           enqueueSyncOperation(tableName, 'upsert', idStr, merged);
-          setTimeout(() => triggerDebouncedPush(tableName, idStr), 50);
+          setTimeout(() => { if (stillCurrent()) triggerDebouncedPush(tableName, idStr); }, 50);
         }
       }
     });
 
     table.hook('deleting', function (primKey: any) {
-      if (!isRemoteSyncing()) {
+      if (stillCurrent() && !isRemoteSyncing()) {
         const idStr = String(primKey || '');
         if (idStr) {
           enqueueSyncOperation(tableName, 'delete', idStr);
-          setTimeout(() => deleteRemoteRecord(tableName, primKey), 0);
+          setTimeout(() => { if (stillCurrent()) deleteRemoteRecord(tableName, primKey); }, 0);
         }
       }
     });
@@ -438,12 +441,13 @@ export function initDexieMutationHooks() {
 export async function processOfflineQueue(): Promise<void> {
   const client = getSupabaseClient();
   const currentUserId = getCurrentUserId();
-  if (!client || !navigator.onLine || !currentUserId) return;
+  if (!client || !navigator.onLine || !currentUserId || getCurrentDbUserId() !== currentUserId) return;
 
   const pending = await getPendingSyncOperations();
   if (pending.length === 0) return;
 
   for (const item of pending) {
+    if (getCurrentUserId() !== currentUserId || getCurrentDbUserId() !== currentUserId) return;
     try {
       if (!isQueueItemReady(item)) {
         continue;
@@ -469,6 +473,7 @@ export async function processOfflineQueue(): Promise<void> {
             payload = await dexieTable.get(item.recordId);
           }
         }
+        if (getCurrentUserId() !== currentUserId || getCurrentDbUserId() !== currentUserId) return;
         if (payload) {
           const snakePayload = toSnakeCase(payload);
           snakePayload.user_id = currentUserId;
@@ -497,9 +502,12 @@ async function mergeRemoteRecords(
   dexieTable: any,
   remoteRecords: any[],
   tableName: string,
-  preferRemote = false
+  preferRemote = false,
+  ownerId = getCurrentUserId()
 ) {
   if (!remoteRecords || remoteRecords.length === 0) return;
+  if (!ownerId || getCurrentUserId() !== ownerId || getCurrentDbUserId() !== ownerId) return;
+  const ownerDb = getActiveDb();
   const dummyIds = (LEGACY_DUMMY_IDS as any)[tableName] || [];
   const cleanRemotes = remoteRecords.filter(r => !dummyIds.includes(r.id));
   if (cleanRemotes.length === 0) return;
@@ -507,14 +515,17 @@ async function mergeRemoteRecords(
   enterRemoteSync();
   try {
     for (const r of cleanRemotes) {
+      if (getCurrentUserId() !== ownerId || getCurrentDbUserId() !== ownerId) return;
       const camel = toCamelCase(r);
       const existing = await dexieTable.get(camel.id);
+      if (getCurrentUserId() !== ownerId || getCurrentDbUserId() !== ownerId) return;
       if (existing) {
         // 1. If local record has a pending offline mutation waiting in sync_queue, NEVER let remote overwrite it!
-        const hasPendingLocalEdit = await db.sync_queue.get(`${tableName}_${camel.id}`);
+        const hasPendingLocalEdit = await ownerDb.sync_queue.get(`${tableName}_${camel.id}`);
         if (hasPendingLocalEdit) {
           continue;
         }
+        if (getCurrentUserId() !== ownerId || getCurrentDbUserId() !== ownerId) return;
 
         // On first authenticated sync, cloud is authoritative over seeded defaults.
         // Real offline edits are protected because they are processed through sync_queue first.
@@ -608,6 +619,13 @@ export async function syncWithSupabase(): Promise<{ success: boolean; message: s
     return { success: false, message: 'Authentication required for cloud sync' };
   }
 
+  if (getCurrentDbUserId() !== currentUserId) {
+    return { success: false, message: 'Your workspace is still opening. Please retry sync.' };
+  }
+  const userDb = getActiveDb();
+  const stillCurrent = () => getCurrentUserId() === currentUserId &&
+    getCurrentDbUserId() === currentUserId && getActiveDb() === userDb;
+
   if (!navigator.onLine) {
     updateStatus('offline', 'Device is offline');
     return { success: false, message: 'Device is offline' };
@@ -625,9 +643,11 @@ export async function syncWithSupabase(): Promise<{ success: boolean; message: s
   try {
     // 0. Process offline mutation queue first (deletes propagate and prevent resurrecting)
     await processOfflineQueue();
+    if (!stillCurrent()) return { success: false, message: 'Account changed during sync.' };
 
     // 0b. Purge any dummy data from Supabase cloud
     for (const [table, ids] of Object.entries(LEGACY_DUMMY_IDS)) {
+      if (!stillCurrent()) return { success: false, message: 'Account changed during sync.' };
       try {
         await client.from(table).delete().in('id', ids).eq('user_id', currentUserId);
       } catch (_) {}
@@ -638,7 +658,8 @@ export async function syncWithSupabase(): Promise<{ success: boolean; message: s
     const bootstrap = isBootstrapSync(getLastSyncedTimestamp());
 
     for (const tableName of SYNC_TABLE_KEYS) {
-      const dexieTable = TABLE_MAP[tableName];
+      if (!stillCurrent()) return { success: false, message: 'Account changed during sync.' };
+      const dexieTable = (userDb as any)[tableName];
       if (!dexieTable) continue;
 
       try {
@@ -648,6 +669,8 @@ export async function syncWithSupabase(): Promise<{ success: boolean; message: s
           .from(tableName)
           .select('*')
           .eq('user_id', currentUserId);
+
+        if (!stillCurrent()) return { success: false, message: 'Account changed during sync.' };
 
         if (pullError) {
           const errEntry: TableSyncError = {
@@ -663,9 +686,35 @@ export async function syncWithSupabase(): Promise<{ success: boolean; message: s
         } else {
           pullSucceeded = true;
           if (remoteRecords) {
-            await mergeRemoteRecords(dexieTable, remoteRecords, tableName, bootstrap);
+            await mergeRemoteRecords(dexieTable, remoteRecords, tableName, bootstrap, currentUserId);
+            // Earlier mobile builds seeded generic records before restoring the
+            // cloud. Discard only unused duplicates; preserve offline edits.
+            if (remoteRecords.length > 0 &&
+                (tableName === 'finance_accounts' || tableName === 'finance_categories') && stillCurrent()) {
+              const [localRows, transactions, budgets, recurring] = await Promise.all([
+                dexieTable.toArray(),
+                userDb.finance_transactions.toArray(),
+                userDb.finance_budgets.toArray(),
+                userDb.finance_recurring_transactions.toArray()
+              ]);
+              if (!stillCurrent()) return { success: false, message: 'Account changed during sync.' };
+              const duplicateIds = findDuplicateStarterIds(
+                tableName, localRows, remoteRecords, transactions, budgets, recurring
+              );
+              if (duplicateIds.length > 0) {
+                enterRemoteSync();
+                try {
+                  await dexieTable.bulkDelete(duplicateIds);
+                  await userDb.sync_queue.bulkDelete(duplicateIds.map(id => `${tableName}_${id}`));
+                } finally {
+                  exitRemoteSync();
+                }
+              }
+            }
           }
         }
+
+        if (!stillCurrent()) return { success: false, message: 'Account changed during sync.' };
 
         // During bootstrap, never push until the remote state is known for this table.
         if (bootstrap && !pullSucceeded) {
@@ -716,6 +765,8 @@ export async function syncWithSupabase(): Promise<{ success: boolean; message: s
       updateStatus('error', failureMessage);
       return { success: false, message: failureMessage };
     }
+
+    if (!stillCurrent()) return { success: false, message: 'Account changed during sync.' };
 
     const now = new Date().toISOString();
     setLastSyncedTimestamp(now);
