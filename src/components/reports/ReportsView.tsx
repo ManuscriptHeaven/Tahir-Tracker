@@ -9,8 +9,9 @@ import {
   getDaysInMonth, 
   getMonthYearFormatted 
 } from '../../utils/formatters';
+import { calculateMilkMonth, getMilkStartDate, getMilkRemainingAmount, isMilkDayActive } from '../../utils/milkCalculations';
 import { exportElementAsJpg } from '../../utils/exportImage';
-import { addMoney, subtractMoney, multiplyMoney } from '../../utils/money';
+import { addMoney, subtractMoney } from '../../utils/money';
 import { calculateChronologicalRentArrears } from '../../utils/rentCalculations';
 import { filterPortionsByProperty, getRentPropertyName, resolvePortionPropertyId } from '../../utils/rentProperties';
 import { calculatePetrolIntervals, calculateMonthlyPetrolStats } from '../../utils/petrolCalculations';
@@ -99,42 +100,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   const milkLogMap = new Map<string, typeof milkLogs[0]>();
   milkLogs.forEach(l => milkLogMap.set(`${l.date}_${l.consumerId}`, l));
 
-  let totalSuppliedKg = 0;
-  let totalMissedDays = 0;
-  let totalMissedKg = 0;
-
-  const milkPersonStats: { [id: string]: { name: string; quota: number; suppliedKg: number; missedDays: number; cost: number } } = {};
-  milkConsumers.forEach(c => {
-    milkPersonStats[c.id] = { name: c.name, quota: c.defaultDailyKg, suppliedKg: 0, missedDays: 0, cost: 0 };
-  });
-
-  monthDays.forEach(day => {
-    milkConsumers.forEach(c => {
-      const key = `${day.dateStr}_${c.id}`;
-      const log = milkLogMap.get(key);
-      let actualKg = c.defaultDailyKg;
-      let status = 'supplied';
-
-      if (log) {
-        status = log.status;
-        actualKg = log.actualKg;
-      }
-
-      if (status === 'missed' || (status !== 'custom' && actualKg === 0)) {
-        totalMissedDays += 1;
-        totalMissedKg += c.defaultDailyKg;
-        if (milkPersonStats[c.id]) milkPersonStats[c.id].missedDays += 1;
-      } else {
-        totalSuppliedKg += actualKg;
-        if (milkPersonStats[c.id]) milkPersonStats[c.id].suppliedKg += actualKg;
-      }
-    });
-  });
-
-  Object.keys(milkPersonStats).forEach(id => {
-    milkPersonStats[id].cost = multiplyMoney(milkPersonStats[id].suppliedKg, milkRate);
-  });
-  const totalMilkCost = multiplyMoney(totalSuppliedKg, milkRate);
+  const { consumerStats: milkPersonStats, totalSuppliedKg, totalMissedDays, totalMissedKg,
+    totalMonthlyAmount: totalMilkCost } = calculateMilkMonth(milkConsumers, milkLogs, selectedMonth, milkRate);
 
   // 3. PETROL CALCULATIONS
   const allProcessedPetrol = calculatePetrolIntervals(petrolRefills);
@@ -518,11 +485,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         {activeCategory === 'milk' && (() => {
           const currentMilkRecord = milkMonthlyRecords.find(r => r.monthYear === selectedMonth);
           const paidAmount = currentMilkRecord ? Number(currentMilkRecord.paidAmount || 0) : 0;
-          const remainingAmount = currentMilkRecord?.remainingAmount !== undefined
-            ? Number(currentMilkRecord.remainingAmount)
-            : Math.max(0, totalMilkCost - paidAmount);
-          const prevRemaining = currentMilkRecord ? Number(currentMilkRecord.previousRemaining || 0) : 0;
+          const latestPriorRecord = milkMonthlyRecords.filter(r => r.monthYear < selectedMonth)
+            .sort((a, b) => b.monthYear.localeCompare(a.monthYear))[0];
+          const prevRemaining = Number(currentMilkRecord?.previousRemaining ?? latestPriorRecord?.remainingAmount ?? 0);
           const totalPayable = totalMilkCost + prevRemaining;
+          const remainingAmount = getMilkRemainingAmount(currentMilkRecord, totalMilkCost, prevRemaining);
 
           return (
           <div className="space-y-3 mt-2">
@@ -585,7 +552,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                       const stat = milkPersonStats[c.id];
                       return (
                         <tr key={c.id}>
-                          <td className="py-1 px-2 font-bold text-slate-900 truncate">{c.name}</td>
+                          <td className="py-1 px-2 font-bold text-slate-900">
+                            {c.name}
+                            <div className="text-[9px] font-normal text-slate-500">Start: {formatDate(getMilkStartDate(c, selectedMonth), 'short')}</div>
+                            <div className="text-[9px] font-normal text-slate-500">{stat.eligibleDays} eligible days</div>
+                          </td>
                           <td className="py-1 px-2 text-slate-600 truncate">{c.defaultDailyKg} kg/day</td>
                           <td className="py-1 px-2 text-center font-medium text-amber-700 truncate">{stat?.missedDays || 0}</td>
                           <td className="py-1 px-2 text-right font-semibold truncate">{stat?.suppliedKg || 0} KG</td>
@@ -632,6 +603,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                             {d.day} ({d.dayOfWeek.slice(0, 2)})
                           </td>
                           {milkConsumers.map(c => {
+                            if (!isMilkDayActive(c, d.dateStr)) return (
+                              <td key={c.id} className="py-0.5 px-1 text-slate-400 text-[8.5px]">Not started</td>
+                            );
                             const key = `${d.dateStr}_${c.id}`;
                             const log = milkLogMap.get(key);
                             const isCustom = log?.status === 'custom';

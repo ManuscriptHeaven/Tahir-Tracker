@@ -3,6 +3,7 @@ import { AIProposal } from '../types/ai';
 import { UtilityBill, UtilityPayment, MilkDailyLog, LoanTransaction, PetrolRefill, RentMonthlyRecord } from '../types';
 import { calculateGasWaterShare, calculateSaleemTotalBill } from '../utils/utilityCalculations';
 import { calculatePetrolIntervals } from '../utils/petrolCalculations';
+import { isMilkDayActive } from '../utils/milkCalculations';
 import { getTodayLocalDateStr } from '../utils/dateTime';
 
 export interface ExecutionResult {
@@ -245,6 +246,10 @@ export async function executeAIProposal(proposal: AIProposal): Promise<Execution
       // -------------------------------------------------------------
       case 'add_milk_log': {
         const { consumerId, consumerName, date, actualKg, status, ratePerKg } = payload;
+        const consumer = await db.milk_consumers.get(consumerId);
+        if (consumer && !isMilkDayActive(consumer, date)) {
+          return { success: false, message: `${consumer.name} has not started milk deliveries on ${date}. Update their monthly start date first.` };
+        }
         const logId = `${date}_${consumerId}`;
 
         const existing = await db.milk_logs.get(logId);

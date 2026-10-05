@@ -9,6 +9,7 @@ import {
 } from '../../utils/formatters';
 import { getTodayLocalDateStr } from '../../utils/dateTime';
 import { addMoney, subtractMoney } from '../../utils/money';
+import { calculateMilkMonth, isMilkDayActive } from '../../utils/milkCalculations';
 import { calculateMonthlyPetrolStats } from '../../utils/petrolCalculations';
 import { 
   Home, 
@@ -120,11 +121,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const activeLoansCount = loans.filter(l => l.status === 'active').length;
 
   // 5. MILK STATS
-  let totalMilkKg = 0;
-  milkLogs.forEach(l => {
-    if (l.status !== 'missed') totalMilkKg += l.actualKg;
-  });
-  const totalMilkCost = totalMilkKg * milkRate;
+  const { totalMonthlyAmount: totalMilkCost } =
+    calculateMilkMonth(milkConsumers, milkLogs, selectedMonth, milkRate);
 
   // 6. PETROL STATS
   const monthlyPetrolStats = calculateMonthlyPetrolStats(petrolRefills, selectedMonth);
@@ -282,6 +280,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const handleMarkMilkToday = async () => {
     const today = getTodayLocalDateStr();
     for (const c of milkConsumers) {
+      if (!isMilkDayActive(c, today)) continue;
       const key = `${today}_${c.id}`;
       await db.milk_logs.put({
         id: key,

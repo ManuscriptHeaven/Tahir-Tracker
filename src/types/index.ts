@@ -75,6 +75,8 @@ export interface PersonLoanGroup {
 }
 
 export interface MilkConsumer {
+  monthlyStartDates?: Record<string, string>; // YYYY-MM -> inclusive YYYY-MM-DD
+  updatedAt?: string;
   id: string;
   name: string;
   defaultDailyKg: number;

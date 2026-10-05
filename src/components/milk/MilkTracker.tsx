@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
 import { MilkConsumer, MilkDailyLog, MilkMonthlyRecord } from '../../types';
@@ -9,6 +9,7 @@ import {
   getMonthYearFormatted 
 } from '../../utils/formatters';
 import { getTodayLocalDateStr } from '../../utils/dateTime';
+import { calculateMilkMonth, getMilkStartDate, getMilkRemainingAmount, isMilkDayActive, isValidMilkStartDate } from '../../utils/milkCalculations';
 import { 
   Milk, 
   Plus, 
@@ -74,6 +75,9 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
   // Consumer management state
   const [newConsumerName, setNewConsumerName] = useState('');
   const [newConsumerQuota, setNewConsumerQuota] = useState('1');
+  const [newConsumerStartDate, setNewConsumerStartDate] = useState('');
+  const [isSavingConsumer, setIsSavingConsumer] = useState(false);
+  const [consumerSaveError, setConsumerSaveError] = useState('');
   const [editingConsumer, setEditingConsumer] = useState<MilkConsumer | null>(null);
 
   // Day Delivery Modal State (Safe Sheet to edit specific date)
@@ -82,6 +86,15 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
     dateStr: string;
     dayOfWeek: string;
   } | null>(null);
+
+  useEffect(() => {
+    setNewConsumerStartDate('');
+    setEditingConsumer(null);
+    setNewConsumerName('');
+    setNewConsumerQuota('1');
+    setIsConsumersModalOpen(false);
+    setSelectedDayForEdit(null);
+  }, [selectedMonth]);
 
   // Temporary edits within the modal before saving or immediate reactive update
   const [customInputs, setCustomInputs] = useState<{ [consumerId: string]: string }>({});
@@ -114,6 +127,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
     status: 'supplied' | 'missed' | 'custom',
     customKgValue?: number
   ) => {
+    if (!isMilkDayActive(consumer, dateStr)) return;
     const key = `${dateStr}_${consumer.id}`;
     let kg = Number(consumer.defaultDailyKg);
 
@@ -147,6 +161,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
   // Mark all consumers as supplied for the open day
   const handleMarkDayAllSupplied = async (dateStr: string) => {
     for (const c of consumers) {
+      if (!isMilkDayActive(c, dateStr)) continue;
       const key = `${dateStr}_${c.id}`;
       await db.milk_logs.put({
         id: key,
@@ -164,6 +179,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
   const handleMarkTodayAllSupplied = async () => {
     const today = getTodayLocalDateStr();
     for (const c of consumers) {
+      if (!isMilkDayActive(c, today)) continue;
       const key = `${today}_${c.id}`;
       await db.milk_logs.put({
         id: key,
@@ -187,6 +203,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
     const entries: MilkDailyLog[] = [];
     for (const d of monthDays) {
       for (const c of consumers) {
+        if (!isMilkDayActive(c, d.dateStr)) continue;
         const key = `${d.dateStr}_${c.id}`;
         if (!logMap.has(key)) {
           entries.push({
@@ -215,30 +232,71 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
       return;
     }
 
-    if (editingConsumer) {
-      await db.milk_consumers.update(editingConsumer.id, {
-        name: newConsumerName.trim(),
-        defaultDailyKg: quota
+    const startDate = newConsumerStartDate || `${selectedMonth}-01`;
+    if (!isValidMilkStartDate(startDate, selectedMonth)) {
+      setConsumerSaveError('Choose a valid start date within the selected month.');
+      return;
+    }
+    setIsSavingConsumer(true);
+    setConsumerSaveError('');
+    try {
+      const now = new Date().toISOString();
+      await db.transaction('rw', db.milk_consumers, db.milk_logs, db.milk_monthly_records, async () => {
+        if (editingConsumer) {
+          const latest = await db.milk_consumers.get(editingConsumer.id);
+          if (!latest) throw new Error('Person no longer exists. Reopen Manage People.');
+          await db.milk_consumers.update(latest.id, {
+            name: newConsumerName.trim(), defaultDailyKg: quota,
+            monthlyStartDates: { ...latest.monthlyStartDates, [selectedMonth]: startDate },
+            updatedAt: now
+          });
+        } else {
+          const newC: MilkConsumer = {
+            id: `c_${crypto.randomUUID()}`, name: newConsumerName.trim(),
+            defaultDailyKg: quota, active: true, createdAt: now, updatedAt: now,
+            monthlyStartDates: { [selectedMonth]: startDate }
+          };
+          await db.milk_consumers.add(newC);
+        }
+        // Keep an existing settlement snapshot current without changing payments or arrears.
+        const record = await db.milk_monthly_records.where('monthYear').equals(selectedMonth).first();
+        if (record) {
+          const people = await db.milk_consumers.filter(c => c.active).toArray();
+          const monthLogs = await db.milk_logs.filter(l => l.date.startsWith(selectedMonth)).toArray();
+          const totals = calculateMilkMonth(people, monthLogs, selectedMonth, ratePerKg);
+          const previous = Number(record.previousRemaining || 0);
+          const remaining = getMilkRemainingAmount(record, totals.totalMonthlyAmount, previous);
+          await db.milk_monthly_records.update(record.id, {
+            totalKg: totals.totalSuppliedKg, ratePerKg, totalBill: totals.totalMonthlyAmount,
+            totalPayable: totals.totalMonthlyAmount + previous, remainingAmount: remaining,
+            status: remaining <= 0 ? 'paid' : Number(record.paidAmount) > 0 ? 'partial' : 'unpaid',
+            updatedAt: now
+          });
+        }
       });
       setEditingConsumer(null);
-    } else {
-      const newC: MilkConsumer = {
-        id: `c_${Date.now()}`,
-        name: newConsumerName.trim(),
-        defaultDailyKg: quota,
-        active: true,
-        createdAt: new Date().toISOString()
-      };
-      await db.milk_consumers.add(newC);
+      setNewConsumerName('');
+      setNewConsumerQuota('1');
+      setNewConsumerStartDate('');
+    } catch (error) {
+      setConsumerSaveError(error instanceof Error ? error.message : 'Could not save. Please retry.');
+    } finally {
+      setIsSavingConsumer(false);
     }
+  };
 
-    setNewConsumerName('');
-    setNewConsumerQuota('1');
+  const handleEditConsumer = (consumer: MilkConsumer) => {
+    setEditingConsumer(consumer);
+    setNewConsumerName(consumer.name);
+    setNewConsumerQuota(consumer.defaultDailyKg.toString());
+    setNewConsumerStartDate(getMilkStartDate(consumer, selectedMonth));
+    setConsumerSaveError('');
+    setIsConsumersModalOpen(true);
   };
 
   const handleDeleteConsumer = async (id: string) => {
     if (!confirm('Are you sure you want to remove this person from active tracking?')) return;
-    await db.milk_consumers.update(id, { active: false });
+    await db.milk_consumers.update(id, { active: false, updatedAt: new Date().toISOString() });
   };
 
   // Update Rate
@@ -263,64 +321,9 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
     setIsRateModalOpen(false);
   };
 
-  // Monthly totals & person breakdowns
-  let totalSuppliedKg = 0;
-  let totalMissedKg = 0;
-  let totalMissedDays = 0;
-
-  const consumerStats: { [consumerId: string]: { name: string; suppliedKg: number; missedDays: number; missedKg: number; cost: number } } = {};
-  consumers.forEach(c => {
-    consumerStats[c.id] = {
-      name: c.name,
-      suppliedKg: 0,
-      missedDays: 0,
-      missedKg: 0,
-      cost: 0
-    };
-  });
-
-  monthDays.forEach(day => {
-    consumers.forEach(c => {
-      const key = `${day.dateStr}_${c.id}`;
-      const log = logMap.get(key);
-
-      let actualKg = Number(c.defaultDailyKg);
-      let status: 'supplied' | 'missed' | 'custom' = 'supplied';
-
-      if (log) {
-        status = log.status;
-        actualKg = Number(log.actualKg);
-      }
-
-      if (status === 'missed' || (status !== 'custom' && actualKg === 0)) {
-        totalMissedDays += 1;
-        totalMissedKg += Number(c.defaultDailyKg);
-        if (consumerStats[c.id]) {
-          consumerStats[c.id].missedDays += 1;
-          consumerStats[c.id].missedKg += Number(c.defaultDailyKg);
-        }
-      } else if (status === 'custom') {
-        totalSuppliedKg += actualKg;
-        const missedDiff = Math.max(0, Number(c.defaultDailyKg) - actualKg);
-        totalMissedKg += missedDiff;
-        if (consumerStats[c.id]) {
-          consumerStats[c.id].suppliedKg += actualKg;
-          consumerStats[c.id].missedKg += missedDiff;
-        }
-      } else {
-        totalSuppliedKg += actualKg;
-        if (consumerStats[c.id]) {
-          consumerStats[c.id].suppliedKg += actualKg;
-        }
-      }
-    });
-  });
-
-  Object.keys(consumerStats).forEach(id => {
-    consumerStats[id].cost = consumerStats[id].suppliedKg * ratePerKg;
-  });
-
-  const totalMonthlyAmount = totalSuppliedKg * ratePerKg;
+  // Shared with reports and dashboard so start dates affect every monthly total.
+  const { consumerStats, totalSuppliedKg, totalMissedKg, totalMissedDays, totalMonthlyAmount } =
+    calculateMilkMonth(consumers, logs, selectedMonth, ratePerKg);
 
   // Previous remaining balance: searches for latest prior month record chronologically
   const latestPriorRecord = monthlyRecords
@@ -333,17 +336,9 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
 
   const totalPayable = totalMonthlyAmount + previousRemaining;
   const paidAmount = currentMonthRecord ? Number(currentMonthRecord.paidAmount || 0) : 0;
-  const remainingAmount = currentMonthRecord?.remainingAmount !== undefined
-    ? Number(currentMonthRecord.remainingAmount)
-    : Math.max(0, totalPayable - paidAmount);
-
-  const paymentStatus: 'paid' | 'partial' | 'unpaid' = currentMonthRecord?.status || (
-    remainingAmount <= 0 && (paidAmount > 0 || totalPayable === 0)
-      ? 'paid'
-      : paidAmount > 0
-      ? 'partial'
-      : 'unpaid'
-  );
+  const remainingAmount = getMilkRemainingAmount(currentMonthRecord, totalMonthlyAmount, previousRemaining);
+  const paymentStatus: 'paid' | 'partial' | 'unpaid' = remainingAmount <= 0
+    ? 'paid' : paidAmount > 0 ? 'partial' : 'unpaid';
 
   const handleOpenPaymentModal = () => {
     setPaymentForm({
@@ -653,9 +648,10 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
         <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">
           Person-Wise Quota & Monthly Bill ({getMonthYearFormatted(selectedMonth)})
         </h3>
+        <p className="text-xs text-slate-400 mb-3">Each person's start date applies only to this month. Days before it are excluded. Unmarked days from the start through month-end use the daily quota; mark missed or custom deliveries to adjust.</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {consumers.map(c => {
-            const stat = consumerStats[c.id] || { suppliedKg: 0, missedDays: 0, missedKg: 0, cost: 0 };
+            const stat = consumerStats[c.id];
             return (
               <div key={c.id} className="p-3.5 bg-[#071724] rounded-xl border border-slate-800 flex flex-col justify-between">
                 <div>
@@ -665,6 +661,11 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                       {c.defaultDailyKg} kg/day
                     </span>
                   </div>
+                  <button type="button" onClick={() => handleEditConsumer(c)}
+                    className="mt-2 text-xs text-cyan-300 underline underline-offset-2">
+                    Start: {formatDate(getMilkStartDate(c, selectedMonth), 'short')} · Edit
+                  </button>
+                  <div className="text-[11px] text-slate-400 mt-1">{stat.eligibleDays} eligible days · Start date included</div>
                   <div className="mt-2 text-lg font-bold text-slate-100">
                     {formatCurrency(stat.cost)}
                   </div>
@@ -768,6 +769,9 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                     </td>
 
                     {consumers.map(c => {
+                      if (!isMilkDayActive(c, day.dateStr)) return (
+                        <td key={c.id} className="py-3 px-2 text-center text-xs text-slate-500">Not started</td>
+                      );
                       const key = `${day.dateStr}_${c.id}`;
                       const log = logMap.get(key);
                       const status = log ? log.status : 'supplied';
@@ -877,6 +881,11 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
             {/* List of Consumers for this day with Segmented Pill Controls */}
             <div className="flex-1 overflow-y-auto py-3 space-y-3.5 pr-1">
               {consumers.map(consumer => {
+                if (!isMilkDayActive(consumer, selectedDayForEdit.dateStr)) return (
+                  <div key={consumer.id} className="p-3.5 rounded-xl border border-slate-800 text-sm text-slate-400">
+                    {consumer.name}: Not started · Starts {formatDate(getMilkStartDate(consumer, selectedMonth), 'short')}
+                  </div>
+                );
                 const key = `${selectedDayForEdit.dateStr}_${consumer.id}`;
                 const log = logMap.get(key);
                 const currentStatus = log ? log.status : 'supplied';
@@ -1044,6 +1053,7 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                 onClick={async () => {
                   if (selectedDayForEdit) {
                     for (const consumer of consumers) {
+                      if (!isMilkDayActive(consumer, selectedDayForEdit.dateStr)) continue;
                       const key = `${selectedDayForEdit.dateStr}_${consumer.id}`;
                       const log = logMap.get(key);
                       const currentStatus = log ? log.status : 'supplied';
@@ -1122,6 +1132,18 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                   />
                 </div>
               </div>
+              <div>
+                <label htmlFor="milk-month-start" className="block text-xs font-medium text-slate-300 mb-1">
+                  Start date for {getMonthYearFormatted(selectedMonth)}
+                </label>
+                <input id="milk-month-start" type="date" required min={`${selectedMonth}-01`}
+                  max={monthDays[monthDays.length - 1]?.dateStr}
+                  value={newConsumerStartDate || `${selectedMonth}-01`}
+                  onChange={e => setNewConsumerStartDate(e.target.value)}
+                  className="w-full px-3 py-2 bg-[#0B1D2C] border border-slate-700 rounded-xl text-sm text-slate-100" />
+                <p className="text-[11px] text-slate-400 mt-1">Billing includes this date through month-end. Other months keep their own dates.</p>
+              </div>
+              {consumerSaveError && <p role="alert" className="text-xs text-rose-300">{consumerSaveError}</p>}
               <div className="flex justify-end gap-2">
                 {editingConsumer && (
                   <button
@@ -1130,6 +1152,8 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                       setEditingConsumer(null);
                       setNewConsumerName('');
                       setNewConsumerQuota('1');
+                      setNewConsumerStartDate('');
+                      setConsumerSaveError('');
                     }}
                     className="px-3 py-1.5 text-xs text-slate-300 hover:text-white bg-[#102638] rounded-xl border border-slate-700"
                   >
@@ -1138,9 +1162,10 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                 )}
                 <button
                   type="submit"
+                  disabled={isSavingConsumer}
                   className="px-4 py-1.5 bg-[#18E6BE] hover:bg-[#23F2CB] text-slate-950 rounded-xl font-bold text-xs shadow-md shadow-[#18E6BE]/20"
                 >
-                  {editingConsumer ? 'Update Person' : '+ Add Person'}
+                  {isSavingConsumer ? 'Saving…' : editingConsumer ? 'Save Person & Start Date' : '+ Add Person'}
                 </button>
               </div>
             </form>
@@ -1155,13 +1180,12 @@ export const MilkTracker: React.FC<MilkTrackerProps> = ({
                   <div>
                     <div className="font-bold text-slate-100 text-sm">{c.name}</div>
                     <div className="text-xs text-teal-400 font-semibold">{c.defaultDailyKg} kg / day quota</div>
+                    <div className="text-xs text-slate-400">Starts {formatDate(getMilkStartDate(c, selectedMonth), 'short')}</div>
                   </div>
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => {
-                        setEditingConsumer(c);
-                        setNewConsumerName(c.name);
-                        setNewConsumerQuota(c.defaultDailyKg.toString());
+                        handleEditConsumer(c);
                       }}
                       className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-[#102638] rounded-lg"
                       title="Edit"

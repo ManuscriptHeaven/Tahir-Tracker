@@ -53,9 +53,15 @@ CREATE TABLE IF NOT EXISTS milk_consumers (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     default_daily_kg NUMERIC NOT NULL DEFAULT 1,
+    monthly_start_dates JSONB NOT NULL DEFAULT '{}'::jsonb,
+    updated_at TIMESTAMPTZ,
     active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Additive upgrade for existing installations; unset months retain the 1st.
+ALTER TABLE milk_consumers ADD COLUMN IF NOT EXISTS monthly_start_dates JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE milk_consumers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
 
 -- 5. MILK LOGS
 CREATE TABLE IF NOT EXISTS milk_logs (
