@@ -3,6 +3,7 @@ import {
   initAuth, 
   subscribeAuth, 
   signIn, 
+  signUp as authSignUp,
   signInWithGoogle as authSignInWithGoogle,
   signOut, 
   refreshSession, 
@@ -22,6 +23,7 @@ import { AuthSessionState } from '../types';
 export interface AuthContextType extends AuthSessionState {
   signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signUp: (email: string, password: string) => Promise<{ success: boolean; requiresConfirmation: boolean; error?: string }>;
   signOut: () => Promise<{ success: boolean; error?: string }>;
   refreshSession: () => Promise<any>;
   sendPasswordReset: (email: string) => Promise<{ success: boolean; error?: string }>;
@@ -42,6 +44,7 @@ const AuthContext = createContext<AuthContextType>({
   recoveryError: null,
   signInWithGoogle: async () => ({ success: false }),
   signIn: async () => ({ success: false }),
+  signUp: async () => ({ success: false, requiresConfirmation: false }),
   signOut: async () => ({ success: false }),
   refreshSession: async () => null,
   sendPasswordReset: async () => ({ success: false }),
@@ -84,6 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         recoveryError: authState.recoveryError || null,
         signInWithGoogle: authSignInWithGoogle,
         signIn,
+        signUp: authSignUp,
         signOut,
         refreshSession,
         sendPasswordReset: resetPasswordForEmail,
