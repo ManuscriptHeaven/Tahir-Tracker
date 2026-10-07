@@ -4,7 +4,8 @@ import {
   getActiveDb,
   switchUserDb,
   checkUserOnboardingStatus,
-  checkLegacyDataExists
+  checkLegacyDataExists,
+  initializeUserWorkspace
 } from './db/db';
 import { initSyncService, stopAllSyncActivity, syncWithSupabase } from './services/syncService';
 
@@ -312,11 +313,25 @@ export const AuthenticatedWorkspace: React.FC<{ user: any }> = ({ user }) => {
         const onboarded = await checkUserOnboardingStatus(user.id);
         const legacy = await checkLegacyDataExists();
         if (disposed) return;
-        setNeedsOnboarding(!onboarded && !legacy.hasLegacy);
-        // The old broken sync could populate the shared legacy DB on a phone.
-        // Once this account's cloud data is restored, that copy must not be
-        // offered for import again.
-        setLegacyDataInfo(!onboarded && legacy.hasLegacy ? legacy : null);
+
+        if (!onboarded && !legacy.hasLegacy) {
+          // Self-service SaaS path: a verified account receives a clean workspace
+          // immediately, without requiring an administrator or setup wizard.
+          await initializeUserWorkspace(user.id);
+          if (disposed) return;
+          // Best-effort initial cloud persistence. Normal sync hooks will retry any
+          // temporary network failure without blocking the user's local workspace.
+          await syncWithSupabase();
+          if (disposed) return;
+          setNeedsOnboarding(false);
+          setLegacyDataInfo(null);
+        } else {
+          setNeedsOnboarding(false);
+          // The old broken sync could populate the shared legacy DB on a phone.
+          // Once this account's cloud data is restored, that copy must not be
+          // offered for import again.
+          setLegacyDataInfo(!onboarded && legacy.hasLegacy ? legacy : null);
+        }
 
         // 4. Attach mutation hooks and resume automatic synchronization.
         cleanupSync = initSyncService();
