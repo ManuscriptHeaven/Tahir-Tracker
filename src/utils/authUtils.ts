@@ -18,8 +18,11 @@ export function formatAuthError(err: any): string {
   if (lower.includes('email not confirmed')) {
     return 'Please confirm your email address before signing in.';
   }
-  if (lower.includes('password should be at least') || lower.includes('at least 6 characters')) {
-    return 'Password must be at least 6 characters long.';
+  if (lower.includes('password should be at least') || lower.includes('password is too short')) {
+    return 'Please choose a stronger password that meets the account requirements.';
+  }
+  if (lower.includes('user already registered') || lower.includes('already been registered')) {
+    return 'This account could not be created. Try signing in or use Forgot password.';
   }
   if (
     lower.includes('otp_expired') || 
