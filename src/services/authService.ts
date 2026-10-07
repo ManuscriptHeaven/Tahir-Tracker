@@ -278,6 +278,72 @@ export async function signInWithGoogle(): Promise<{ success: boolean; error?: st
   }
 }
 
+export interface SignUpResult {
+  success: boolean;
+  requiresConfirmation: boolean;
+  error?: string;
+}
+
+/**
+ * Create a new Tahir Tracker account with email and password.
+ * Hosted Supabase projects normally require email confirmation; when confirmation
+ * is disabled, the returned session is adopted immediately.
+ */
+export async function signUp(email: string, password: string): Promise<SignUpResult> {
+  const client = getSupabaseClient();
+  if (!client) {
+    return { success: false, requiresConfirmation: false, error: 'Supabase client is not configured' };
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  if (!cleanEmail || !cleanEmail.includes('@')) {
+    return { success: false, requiresConfirmation: false, error: 'Please enter a valid email address.' };
+  }
+  if (!password || password.length < 8) {
+    return { success: false, requiresConfirmation: false, error: 'Password must be at least 8 characters long.' };
+  }
+
+  try {
+    isLoading = true;
+    authError = null;
+    notifyListeners();
+
+    const { data, error } = await client.auth.signUp({
+      email: cleanEmail,
+      password,
+      options: {
+        emailRedirectTo: getAuthRedirectUrl(),
+        data: { app: 'tahir-tracker' }
+      }
+    });
+
+    if (error) {
+      const friendly = formatAuthError(error);
+      authError = friendly;
+      return { success: false, requiresConfirmation: false, error: friendly };
+    }
+
+    if (data.session && data.user) {
+      currentSession = data.session;
+      currentUser = mapSupabaseUser(data.user);
+      authError = null;
+      isRecoveryMode = false;
+      recoveryError = null;
+      notifyListeners();
+      return { success: true, requiresConfirmation: false };
+    }
+
+    return { success: true, requiresConfirmation: true };
+  } catch (err: any) {
+    const friendly = formatAuthError(err);
+    authError = friendly;
+    return { success: false, requiresConfirmation: false, error: friendly };
+  } finally {
+    isLoading = false;
+    notifyListeners();
+  }
+}
+
 /**
  * Sign in with Email and Password
  */
