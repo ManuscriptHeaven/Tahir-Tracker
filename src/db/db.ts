@@ -20,6 +20,7 @@ import type {
   FinanceGoal,
   FinanceVoiceEntry
 } from '../types/index.ts';
+import { getWorkspaceSettingsId } from '../services/tenantWorkspace.ts';
 
 export class TahirTrackerDB extends Dexie {
   loans!: Table<LoanTransaction, string>;
@@ -247,6 +248,7 @@ export async function initializeUserWorkspace(
     const settingsCount = await userDb.settings.count();
     if (settingsCount === 0) {
       await userDb.settings.add({
+        id: getWorkspaceSettingsId(userId),
         currency,
         milkDefaultRate: 260,
         rentDueDayDefault: 10,

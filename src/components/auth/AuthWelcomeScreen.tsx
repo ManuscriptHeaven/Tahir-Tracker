@@ -24,16 +24,18 @@ interface AuthWelcomeScreenProps {
 export const AuthWelcomeScreen: React.FC<AuthWelcomeScreenProps> = ({ isRentMode = false }) => {
   const { 
     signInWithGoogle, 
-    signIn, 
+    signIn,
+    signUp,
     sendPasswordReset, 
     sendMagicLink, 
     verifyOtp,
     error: authGlobalError 
   } = useAuth();
 
-  const [mode, setMode] = useState<'welcome' | 'password' | 'forgot' | 'magic-link'>('welcome');
+  const [mode, setMode] = useState<'welcome' | 'signup' | 'forgot' | 'magic-link'>('welcome');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [showOtpInput, setShowOtpInput] = useState(false);
@@ -77,6 +79,46 @@ export const AuthWelcomeScreen: React.FC<AuthWelcomeScreenProps> = ({ isRentMode
       }
     } catch (err: any) {
       setErrorMessage(err?.message || 'Sign in failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setErrorMessage('Please enter your email address.');
+      return;
+    }
+    if (password.length < 8) {
+      setErrorMessage('Password must be at least 8 characters long.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrorMessage('Passwords do not match.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await signUp(cleanEmail, password);
+      if (!res.success) {
+        setErrorMessage(res.error || 'Account could not be created. Please try again.');
+        return;
+      }
+      if (res.requiresConfirmation) {
+        setSuccessMessage('Account created. Check your email to verify the address, then Tahir Tracker will open your private workspace automatically.');
+        setPassword('');
+        setConfirmPassword('');
+      } else {
+        setSuccessMessage('Account created. Opening your private workspace...');
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Account could not be created. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -342,7 +384,20 @@ export const AuthWelcomeScreen: React.FC<AuthWelcomeScreenProps> = ({ isRentMode
                 )}
               </button>
 
-              <div className="pt-2 text-center">
+              <div className="pt-2 text-center space-y-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('signup');
+                    setErrorMessage(null);
+                    setSuccessMessage(null);
+                    setPassword('');
+                    setConfirmPassword('');
+                  }}
+                  className="block w-full text-xs font-bold text-[#18E6BE] hover:underline cursor-pointer py-1"
+                >
+                  New to Tahir Tracker? Create your private account
+                </button>
                 <button
                   type="button"
                   onClick={() => {
@@ -354,6 +409,96 @@ export const AuthWelcomeScreen: React.FC<AuthWelcomeScreenProps> = ({ isRentMode
                 >
                   <Sparkles className="w-3.5 h-3.5 text-[#18E6BE]" />
                   <span>Send me a passwordless login link</span>
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* VIEW: Create Account */}
+          {mode === 'signup' && (
+            <form onSubmit={handleSignUp} className="space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-[#18E6BE]" />
+                  <span>Create Private Workspace</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                  Use your email and a password. After verification, your isolated Tahir Tracker workspace is created automatically.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">Email Address</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    disabled={loading}
+                    className="w-full pl-10 pr-3.5 py-3 text-xs sm:text-sm rounded-xl bg-[#071724] border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-[#18E6BE] focus:ring-1 focus:ring-[#18E6BE] transition-all"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">Create Password</label>
+                <input
+                  type="password"
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="At least 8 characters"
+                  disabled={loading}
+                  className="w-full px-3.5 py-3 text-xs sm:text-sm rounded-xl bg-[#071724] border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-[#18E6BE] focus:ring-1 focus:ring-[#18E6BE] transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">Confirm Password</label>
+                <input
+                  type="password"
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter your password"
+                  disabled={loading}
+                  className="w-full px-3.5 py-3 text-xs sm:text-sm rounded-xl bg-[#071724] border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-[#18E6BE] focus:ring-1 focus:ring-[#18E6BE] transition-all"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3.5 px-4 rounded-xl text-xs sm:text-sm font-bold text-[#06131F] bg-gradient-to-r from-teal-500 to-[#18E6BE] hover:from-teal-400 hover:to-[#23F2CB] shadow-[0_0_15px_rgba(24,230,190,0.25)] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin text-[#06131F]" /> : <CheckCircle2 className="w-4 h-4" />}
+                <span>{loading ? 'Creating account...' : 'Create Account'}</span>
+              </button>
+
+              <div className="pt-1 text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('welcome');
+                    setErrorMessage(null);
+                    setSuccessMessage(null);
+                    setPassword('');
+                    setConfirmPassword('');
+                  }}
+                  className="text-xs font-semibold text-slate-400 hover:text-white inline-flex items-center gap-1.5 cursor-pointer py-1"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Already have an account? Sign in</span>
                 </button>
               </div>
             </form>
@@ -507,7 +652,7 @@ export const AuthWelcomeScreen: React.FC<AuthWelcomeScreenProps> = ({ isRentMode
         {/* Footer Note */}
         <div className="pt-3 border-t border-slate-800 text-center">
           <p className="text-[11px] text-slate-400 leading-relaxed">
-            By signing in, you access your private, encrypted cloud workspace. Each account receives an isolated, zero-shared environment.
+            Each verified account receives its own isolated cloud workspace. Your records are protected by per-user database policies and never shared with other Tahir Tracker accounts.
           </p>
         </div>
       </div>
