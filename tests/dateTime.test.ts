@@ -18,9 +18,10 @@ describe('dateTime.ts - Timezone-Safe Date Utilities (PKT UTC+5)', () => {
     assert.match(today, /^\d{4}-\d{2}-\d{2}$/);
   });
 
-  it('getCurrentMonthYearStr should return YYYY-MM format', () => {
-    const monthYear = getCurrentMonthYearStr();
-    assert.match(monthYear, /^\d{4}-\d{2}$/);
+  it('getCurrentMonthYearStr should return the actual current local month', () => {
+    const now = new Date();
+    const expected = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    assert.strictEqual(getCurrentMonthYearStr(), expected);
   });
 
   it('parseLocalDateStr should parse YYYY-MM-DD correctly', () => {

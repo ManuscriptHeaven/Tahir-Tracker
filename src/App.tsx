@@ -8,6 +8,7 @@ import {
   initializeUserWorkspace
 } from './db/db';
 import { initSyncService, stopAllSyncActivity, syncWithSupabase } from './services/syncService';
+import { getCurrentMonthYearStr } from './utils/dateTime';
 
 // Layout
 import { Navbar } from './components/layout/Navbar';
@@ -40,8 +41,8 @@ import { LegacyDataMigrationModal } from './components/auth/LegacyDataMigrationM
 export const AppContent: React.FC = () => {
   const isRentMode = (import.meta as any).env?.VITE_APP_MODE === 'rent';
   const [activeTab, setActiveTab] = useState<NavTab>(isRentMode ? 'rent' : 'dashboard');
-  // Default to 2026-09 (current month matching spec)
-  const [selectedMonth, setSelectedMonth] = useState<string>('2026-09');
+  // Always open the tracker on the device's current local month.
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => getCurrentMonthYearStr());
   const [reportCategory, setReportCategory] = useState<ReportCategory>(isRentMode ? 'rent' : 'milk');
   const [isDbReady, setIsDbReady] = useState(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
