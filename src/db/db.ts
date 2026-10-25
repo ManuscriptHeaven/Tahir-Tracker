@@ -309,6 +309,9 @@ export async function initializeUserWorkspace(
     }
   } catch (err) {
     console.error('Failed to initialize user workspace:', err);
+    // Do not show a seemingly ready private workspace when initial seeding failed.
+    // The authenticated router will surface its retry UI instead.
+    throw err;
   }
 }
 
