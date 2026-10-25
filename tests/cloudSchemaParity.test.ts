@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const models = read('src/types/index.ts');
 const schema = read('supabase_schema.sql');
-const migration = read('supabase/migrations/20261026010000_cloud_schema_parity.sql');
+const migration = read('supabase/migrations/20261025194337_cloud_schema_parity.sql');
 const db = read('src/db/db.ts');
 
 describe('cloud schema parity for first-time tenant sync', () => {
