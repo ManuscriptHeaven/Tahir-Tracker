@@ -109,7 +109,8 @@ CREATE TABLE IF NOT EXISTS petrol_refills (
     mileage_kmpl NUMERIC DEFAULT 0,
     cost_per_km NUMERIC DEFAULT 0,
     notes TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ
 );
 CREATE INDEX IF NOT EXISTS idx_petrol_refills_date ON petrol_refills(date);
 
@@ -166,7 +167,10 @@ CREATE TABLE IF NOT EXISTS settings (
     milk_default_rate NUMERIC DEFAULT 260,
     rent_due_day_default INT DEFAULT 10,
     theme TEXT DEFAULT 'light',
-    last_backup_date TIMESTAMPTZ
+    last_backup_date TIMESTAMPTZ,
+    legacy_cleanup_done BOOLEAN DEFAULT FALSE,
+    onboarding_completed BOOLEAN DEFAULT FALSE,
+    enabled_modules JSONB
 );
 
 -- ==============================================================================
