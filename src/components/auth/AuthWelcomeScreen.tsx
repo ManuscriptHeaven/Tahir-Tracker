@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { resolveAuthEntryMode } from '../../utils/authEntryMode';
 import { 
   Lock, 
   Mail, 
@@ -32,7 +33,12 @@ export const AuthWelcomeScreen: React.FC<AuthWelcomeScreenProps> = ({ isRentMode
     error: authGlobalError 
   } = useAuth();
 
-  const [mode, setMode] = useState<'welcome' | 'signup' | 'forgot' | 'magic-link'>('welcome');
+  // A shareable /signup URL opens registration directly for unauthenticated visitors.
+  const [mode, setMode] = useState<'welcome' | 'signup' | 'forgot' | 'magic-link'>(
+    () => typeof window === 'undefined'
+      ? 'welcome'
+      : resolveAuthEntryMode(window.location.pathname, window.location.search)
+  );
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
