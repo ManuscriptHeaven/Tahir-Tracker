@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 
 interface BottomNavProps {
+  enabledModules: string[];
+  fullWorkspace: boolean;
   activeTab: NavTab;
   setActiveTab: (tab: NavTab) => void;
   onOpenQuickAdd: () => void;
@@ -19,7 +21,9 @@ interface BottomNavProps {
 export const BottomNav: React.FC<BottomNavProps> = ({ 
   activeTab, 
   setActiveTab, 
-  onOpenQuickAdd 
+  onOpenQuickAdd,
+  enabledModules,
+  fullWorkspace
 }) => {
   const isRentMode = (import.meta as any).env?.VITE_APP_MODE === 'rent';
 
