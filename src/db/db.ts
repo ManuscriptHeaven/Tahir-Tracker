@@ -21,6 +21,7 @@ import type {
   FinanceVoiceEntry
 } from '../types/index.ts';
 import { getWorkspaceSettingsId } from '../services/tenantWorkspace.ts';
+import { getTrackerName } from '../utils/trackerBranding.ts';
 
 export class TahirTrackerDB extends Dexie {
   loans!: Table<LoanTransaction, string>;
@@ -489,8 +490,10 @@ export function validateBackupJson(data: any): { isValid: boolean; error?: strin
 
 // Full DB JSON Export (sync_queue is safely excluded)
 export async function exportDatabaseToJson(): Promise<string> {
+  const settings = await db.settings.toCollection().first();
   const data = {
     appName: 'Tahir Tracker',
+    trackerName: getTrackerName(settings?.trackerName),
     version: 6,
     exportedAt: new Date().toISOString(),
     loans: await db.loans.toArray(),

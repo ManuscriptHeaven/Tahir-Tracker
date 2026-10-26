@@ -163,6 +163,8 @@ CREATE TABLE IF NOT EXISTS loans (
 -- 10. APP SETTINGS
 CREATE TABLE IF NOT EXISTS settings (
     id BIGINT PRIMARY KEY DEFAULT 1,
+    tracker_name TEXT CHECK (tracker_name IS NULL OR char_length(btrim(tracker_name)) BETWEEN 1 AND 60),
+    updated_at TIMESTAMPTZ,
     currency TEXT DEFAULT 'PKR',
     milk_default_rate NUMERIC DEFAULT 260,
     rent_due_day_default INT DEFAULT 10,

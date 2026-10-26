@@ -24,6 +24,7 @@ import {
 import { getMonthYearFormatted } from '../../utils/formatters';
 import { SyncStatus } from '../../services/syncService';
 import { useAuth } from '../../context/AuthContext';
+import { useTrackerBranding } from '../../hooks/useTrackerBranding';
 
 interface MobileDrawerProps {
   isOpen: boolean;
@@ -55,6 +56,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
   onOpenLogin,
 }) => {
   const { user, isAuthenticated } = useAuth();
+  const { trackerName, trackerInitials } = useTrackerBranding();
   const isRentMode = (import.meta as any).env?.VITE_APP_MODE === 'rent';
 
   if (!isOpen) return null;
@@ -104,13 +106,13 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
       <div className="relative w-full max-w-xs sm:max-w-sm bg-[#071724] border-r border-[rgba(70,150,180,0.2)] shadow-2xl flex flex-col h-full z-10 animate-in slide-in-from-left duration-300">
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-[rgba(70,150,180,0.14)] flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#059669] to-[#18E6BE] flex items-center justify-center text-[#06131F] font-black text-lg shadow-[0_0_15px_rgba(24,230,190,0.3)]">
-              {isRentMode ? '🏠' : 'TT'}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 shrink-0 rounded-2xl bg-gradient-to-tr from-[#059669] to-[#18E6BE] flex items-center justify-center text-[#06131F] font-black text-lg shadow-[0_0_15px_rgba(24,230,190,0.3)]">
+              {trackerInitials}
             </div>
-            <div>
-              <h2 className="font-extrabold text-base text-[#F4F8FB] tracking-tight">
-                {isRentMode ? 'Rent Tracking' : 'Tahir Tracker'}
+            <div className="min-w-0">
+              <h2 title={trackerName} className="font-extrabold text-base text-[#F4F8FB] tracking-tight break-words [overflow-wrap:anywhere]">
+                {trackerName}
               </h2>
               <p className="text-[10px] text-[#6F899B] font-medium">
                 Track Everything — Finance & Household
@@ -253,7 +255,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
               className="w-full py-2 px-3 rounded-xl bg-[#102638] hover:bg-[#122B3E] text-[#A9BDCC] hover:text-[#F4F8FB] border border-[rgba(70,150,180,0.2)] font-semibold text-xs flex items-center justify-center gap-2 transition-all"
             >
               <Download className="w-4 h-4 text-[#18E6BE]" />
-              <span>Install Tahir Tracker</span>
+              <span>Install tracker app</span>
             </button>
           )}
         </div>

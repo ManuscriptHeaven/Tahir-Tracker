@@ -51,8 +51,12 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { LoginModal } from '../auth/LoginModal';
 import { PageHeader } from '../ui/PageHeader';
+import { TrackerNameSettings } from './TrackerNameSettings';
+import { useTrackerBranding } from '../../hooks/useTrackerBranding';
+import { getTrackerFilename } from '../../utils/trackerBranding';
 
 export const SettingsView: React.FC = () => {
+  const { trackerName } = useTrackerBranding();
   const { user, isAuthenticated, signOut, updatePassword } = useAuth();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
@@ -208,7 +212,7 @@ export const SettingsView: React.FC = () => {
     try {
       const json = await exportDatabaseToJson();
       const dateStr = getTodayLocalDateStr();
-      download(json, `Tahir_Tracker_Backup_${dateStr}.json`, 'application/json');
+      download(json, `${getTrackerFilename(trackerName)}_Backup_${dateStr}.json`, 'application/json');
     } catch (err) {
       alert('Failed to export backup data.');
     }
@@ -279,6 +283,8 @@ export const SettingsView: React.FC = () => {
         subtitle="Connect Supabase database, manage offline sync, and configure default preferences"
         icon={Settings}
       />
+
+      <TrackerNameSettings />
 
       {/* 0. SUPABASE AUTHENTICATION & ACCOUNT */}
       <div className="bg-[#0B1D2C] rounded-3xl p-5 sm:p-6 border border-cyan-500/20 shadow-xl space-y-4">
