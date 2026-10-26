@@ -139,6 +139,8 @@ export const AppContent: React.FC = () => {
     <div className="min-h-screen bg-[#071724] text-[#F4F8FB] flex flex-col antialiased selection:bg-[#18E6BE] selection:text-[#06131F] w-full max-w-full overflow-x-clip">
       {/* Top App Bar with Cloud Sync & PWA Install */}
       <Navbar
+        enabledModules={enabledModules}
+        fullWorkspace={fullWorkspace}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         selectedMonth={selectedMonth}
@@ -157,6 +159,7 @@ export const AppContent: React.FC = () => {
         {/* Sub Navigation Switcher only for Full Household Tracker */}
         {!isRentMode && (
           <TrackerSubNav
+            enabledModules={enabledModules}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
           />
@@ -264,6 +267,7 @@ export const AppContent: React.FC = () => {
 
           {/* Quick Add Bottom Sheet */}
           <QuickAddSheet
+            enabledModules={enabledModules}
             isOpen={isQuickAddOpen}
             onClose={() => setIsQuickAddOpen(false)}
             onSelectAction={handleSelectQuickAction}
@@ -273,6 +277,8 @@ export const AppContent: React.FC = () => {
 
       {/* Mobile Bottom Navigation */}
       <BottomNav
+        enabledModules={enabledModules}
+        fullWorkspace={fullWorkspace}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenQuickAdd={() => setIsQuickAddOpen(true)}
