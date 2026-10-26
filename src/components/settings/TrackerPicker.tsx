@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { TRACKER_MODULES, type PlatformProfile, type TrackerModule } from '../../services/platformAccess';
 
 export function TrackerPicker({
