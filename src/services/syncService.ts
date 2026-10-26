@@ -447,6 +447,7 @@ export async function processOfflineQueue(): Promise<void> {
   if (pending.length === 0) return;
 
   for (const item of pending) {
+    if (!isSyncTableAllowed(item.tableName)) continue;
     if (getCurrentUserId() !== currentUserId || getCurrentDbUserId() !== currentUserId) return;
     try {
       if (!isQueueItemReady(item)) {
