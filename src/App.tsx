@@ -196,7 +196,7 @@ export const AppContent: React.FC = () => {
               />
             )}
 
-            {activeTab === 'finance' && (
+            {enabledModules.includes('finance') && activeTab === 'finance' && (
               <FinanceTracker
                 selectedMonth={selectedMonth}
                 setSelectedMonth={setSelectedMonth}
