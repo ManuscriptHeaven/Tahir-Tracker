@@ -2,7 +2,7 @@ import { RealtimeChannel } from '@supabase/supabase-js';
 import { getActiveDb, getCurrentDbUserId, LEGACY_DUMMY_IDS, type TahirTrackerDB } from '../db/db';
 import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
 import { getCurrentUserId, isAuthenticated, subscribeAuth } from './authService';
-import { SYNC_TABLE_KEYS, isBootstrapSync } from './syncPolicy';
+import { SYNC_TABLE_KEYS, isBootstrapSync, isSyncTableAllowed } from './syncPolicy';
 import { findDuplicateStarterIds } from './syncReconcile';
 
 export type SyncState = 'idle' | 'syncing' | 'synced' | 'realtime_active' | 'error' | 'offline' | 'unconfigured' | 'auth_required';
