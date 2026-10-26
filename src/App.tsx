@@ -240,7 +240,8 @@ export const AppContent: React.FC = () => {
               <ReportsView
                 selectedMonth={selectedMonth}
                 setSelectedMonth={setSelectedMonth}
-                initialCategory={reportCategory}
+                initialCategory={enabledModules.includes(reportCategory as TrackerModule) ? reportCategory : (enabledModules.find(id => id !== 'finance') || 'milk') as ReportCategory}
+                enabledModules={enabledModules}
               />
             )}
 
