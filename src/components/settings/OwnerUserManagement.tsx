@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { type PlatformProfile, type ApprovalStatus, type TrackerModule, TRACKER_MODULES, listPlatformMembers, managePlatformMember } from '../../services/platformAccess';
 
 function MemberCard({ member, reload }: { member: PlatformProfile; reload: () => Promise<void> }) {
