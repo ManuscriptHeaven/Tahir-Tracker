@@ -222,7 +222,7 @@ export const AppContent: React.FC = () => {
               />
             )}
 
-            {activeTab === 'petrol' && (
+            {activeTab === 'petrol' && enabledModules.includes('petrol') && (
               <PetrolTracker
                 selectedMonth={selectedMonth}
                 onOpenReport={() => openReportWithCategory('petrol')}
