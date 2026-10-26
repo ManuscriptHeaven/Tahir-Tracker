@@ -29,6 +29,8 @@ import { MobileDrawer } from './MobileDrawer';
 import { useAuth } from '../../context/AuthContext';
 
 interface NavbarProps {
+  enabledModules: string[];
+  fullWorkspace: boolean;
   activeTab: NavTab;
   setActiveTab: (tab: NavTab) => void;
   selectedMonth: string; // YYYY-MM
