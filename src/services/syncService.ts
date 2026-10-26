@@ -658,6 +658,7 @@ export async function syncWithSupabase(): Promise<{ success: boolean; message: s
     const bootstrap = isBootstrapSync(getLastSyncedTimestamp());
 
     for (const tableName of SYNC_TABLE_KEYS) {
+      if (!isSyncTableAllowed(tableName)) continue;
       if (!stillCurrent()) return { success: false, message: 'Account changed during sync.' };
       const dexieTable = (userDb as any)[tableName];
       if (!dexieTable) continue;
