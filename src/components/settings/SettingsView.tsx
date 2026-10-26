@@ -284,6 +284,10 @@ export const SettingsView: React.FC = () => {
         icon={Settings}
       />
 
+      {/* Owner approval and personal tracker choices */}
+      {profile.role === 'owner' && <OwnerUserManagement />}
+      <TrackerPicker key={profile.updated_at} profile={profile} onSave={setModules} />
+
       {/* 0. SUPABASE AUTHENTICATION & ACCOUNT */}
       <div className="bg-[#0B1D2C] rounded-3xl p-5 sm:p-6 border border-cyan-500/20 shadow-xl space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
