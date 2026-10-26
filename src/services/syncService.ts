@@ -408,7 +408,7 @@ export function initDexieMutationHooks() {
     if (!table || typeof table.hook !== 'function') return;
 
     table.hook('creating', function (primKey: any, obj: any) {
-      if (stillCurrent() && !isRemoteSyncing()) {
+      if (stillCurrent() && isSyncTableAllowed(tableName) && !isRemoteSyncing()) {
         const idStr = String(primKey || obj?.id || '');
         if (idStr) {
           enqueueSyncOperation(tableName, 'upsert', idStr, obj);
@@ -418,7 +418,7 @@ export function initDexieMutationHooks() {
     });
 
     table.hook('updating', function (modifications: any, primKey: any, obj: any) {
-      if (stillCurrent() && !isRemoteSyncing()) {
+      if (stillCurrent() && isSyncTableAllowed(tableName) && !isRemoteSyncing()) {
         const idStr = String(primKey || obj?.id || '');
         if (idStr) {
           const merged = { ...obj, ...modifications };
@@ -429,7 +429,7 @@ export function initDexieMutationHooks() {
     });
 
     table.hook('deleting', function (primKey: any) {
-      if (stillCurrent() && !isRemoteSyncing()) {
+      if (stillCurrent() && isSyncTableAllowed(tableName) && !isRemoteSyncing()) {
         const idStr = String(primKey || '');
         if (idStr) {
           enqueueSyncOperation(tableName, 'delete', idStr);
