@@ -209,7 +209,7 @@ export const AppContent: React.FC = () => {
               />
             )}
 
-            {activeTab === 'loans' && (
+            {enabledModules.includes('loans') && activeTab === 'loans' && (
               <LoanTracker
                 onOpenReport={() => openReportWithCategory('loans')}
               />
