@@ -289,6 +289,7 @@ export function triggerDebouncedPush(tableName: string, recordId?: string) {
  * Push a single modified record to Supabase
  */
 export async function pushRecordToSupabase(tableName: string, recordId: string): Promise<void> {
+  if (!isSyncTableAllowed(tableName)) return;
   if (isRemoteSyncing()) return;
   const client = getSupabaseClient();
   const dexieTable = TABLE_MAP[tableName];
@@ -326,6 +327,7 @@ export async function pushRecordToSupabase(tableName: string, recordId: string):
  * Push an entire table's local records to Supabase
  */
 export async function pushTableToSupabase(tableName: string): Promise<void> {
+  if (!isSyncTableAllowed(tableName)) return;
   if (isRemoteSyncing()) return;
   const client = getSupabaseClient();
   const dexieTable = TABLE_MAP[tableName];
@@ -362,6 +364,7 @@ export async function pushTableToSupabase(tableName: string): Promise<void> {
  * Delete a specific record from Supabase immediately when deleted locally
  */
 export async function deleteRemoteRecord(tableName: string, id: any): Promise<void> {
+  if (!isSyncTableAllowed(tableName)) return;
   if (isRemoteSyncing()) return;
   const client = getSupabaseClient();
   const currentUserId = getCurrentUserId();
