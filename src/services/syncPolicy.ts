@@ -42,7 +42,7 @@ export function setSyncAllowedModules(modules: readonly string[] | null): void {
 }
 export function isSyncTableAllowed(tableName: string): boolean {
   const module = tableModules[tableName as SyncTableName];
-  return module === null || (module !== undefined && allowedModules !== null && allowedModules.has(module));
+  return module === null || (module !== undefined && (allowedModules === null || allowedModules.has(module)));
 }
 
 export function isBootstrapSync(lastSyncedAt: string | null | undefined): boolean {
