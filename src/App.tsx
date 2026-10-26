@@ -44,7 +44,7 @@ export const AppContent: React.FC = () => {
   const isRentMode = (import.meta as any).env?.VITE_APP_MODE === 'rent';
   const { profile } = usePlatform();
   const enabledModules = profile.enabled_modules;
-  const fullWorkspace = profile.role === 'owner' || enabledModules.length === 6;
+  const fullWorkspace = enabledModules.length === 6;
   const firstModule = (enabledModules[0] || 'settings') as NavTab;
   const [activeTab, setActiveTab] = useState<NavTab>(isRentMode ? 'rent' : fullWorkspace ? 'dashboard' : firstModule);
   useEffect(() => {
@@ -145,7 +145,7 @@ export const AppContent: React.FC = () => {
         setActiveTab={setActiveTab}
         selectedMonth={selectedMonth}
         setSelectedMonth={setSelectedMonth}
-        onOpenAI={!isRentMode ? () => setIsAIAssistantOpen(true) : undefined}
+        onOpenAI={!isRentMode && fullWorkspace ? () => setIsAIAssistantOpen(true) : undefined}
         installPrompt={deferredInstallPrompt}
         onInstallPWA={handleInstallPWA}
         onOpenLogin={() => setIsLoginModalOpen(true)}
