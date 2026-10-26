@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { type PlatformProfile, type TrackerModule, loadPlatformProfile, updateMyTrackers } from '../../services/platformAccess';
 import { TrackerPicker } from '../settings/TrackerPicker';
+import { setSyncAllowedModules } from '../../services/syncPolicy';
 
 type PlatformState = {
   profile: PlatformProfile;
@@ -24,7 +25,7 @@ export function PlatformAccessGate({ userId, children }: { userId: string; child
     const refresh = async () => {
       try {
         const result = await loadPlatformProfile(userId);
-        if (live) { setProfile(result); setError(''); }
+        if (live) { setSyncAllowedModules(result.status === 'approved' ? result.allowed_modules : []); setProfile(result); setError(''); }
       } catch (err) {
         if (live) { setError(err instanceof Error ? err.message : 'Could not check account'); setProfile(null); }
       }
@@ -35,7 +36,7 @@ export function PlatformAccessGate({ userId, children }: { userId: string; child
     const onVisible = () => { if (document.visibilityState === 'visible') void refresh(); };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
-      live = false; clearInterval(timer);
+      live = false; setSyncAllowedModules(null); clearInterval(timer);
       window.removeEventListener('online', refresh);
       document.removeEventListener('visibilitychange', onVisible);
     };
