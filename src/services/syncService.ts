@@ -2,7 +2,7 @@ import { RealtimeChannel } from '@supabase/supabase-js';
 import { getActiveDb, getCurrentDbUserId, LEGACY_DUMMY_IDS, type TahirTrackerDB } from '../db/db';
 import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
 import { getCurrentUserId, isAuthenticated, subscribeAuth } from './authService';
-import { SYNC_TABLE_KEYS, isBootstrapSync } from './syncPolicy';
+import { SYNC_TABLE_KEYS, isBootstrapSync, isSyncTableAllowed } from './syncPolicy';
 import { findDuplicateStarterIds } from './syncReconcile';
 
 export type SyncState = 'idle' | 'syncing' | 'synced' | 'realtime_active' | 'error' | 'offline' | 'unconfigured' | 'auth_required';
@@ -160,6 +160,7 @@ async function handleRealtimeChange(payload: any) {
   }
 
   const table = payload.table;
+  if (!isSyncTableAllowed(table)) return;
   const dexieTable = TABLE_MAP[table];
   if (!dexieTable) return;
 
@@ -260,6 +261,7 @@ export function subscribeToRealtimeChanges(): () => void {
  * Trigger debounced push for a table when local mutations occur
  */
 export function triggerDebouncedPush(tableName: string, recordId?: string) {
+  if (!isSyncTableAllowed(tableName)) return;
   if (isRemoteSyncing()) return;
   if (!isSupabaseConfigured() || !navigator.onLine) return;
   const scheduledUserId = getCurrentUserId();
@@ -287,6 +289,7 @@ export function triggerDebouncedPush(tableName: string, recordId?: string) {
  * Push a single modified record to Supabase
  */
 export async function pushRecordToSupabase(tableName: string, recordId: string): Promise<void> {
+  if (!isSyncTableAllowed(tableName)) return;
   if (isRemoteSyncing()) return;
   const client = getSupabaseClient();
   const dexieTable = TABLE_MAP[tableName];
@@ -324,6 +327,7 @@ export async function pushRecordToSupabase(tableName: string, recordId: string):
  * Push an entire table's local records to Supabase
  */
 export async function pushTableToSupabase(tableName: string): Promise<void> {
+  if (!isSyncTableAllowed(tableName)) return;
   if (isRemoteSyncing()) return;
   const client = getSupabaseClient();
   const dexieTable = TABLE_MAP[tableName];
@@ -360,6 +364,7 @@ export async function pushTableToSupabase(tableName: string): Promise<void> {
  * Delete a specific record from Supabase immediately when deleted locally
  */
 export async function deleteRemoteRecord(tableName: string, id: any): Promise<void> {
+  if (!isSyncTableAllowed(tableName)) return;
   if (isRemoteSyncing()) return;
   const client = getSupabaseClient();
   const currentUserId = getCurrentUserId();
@@ -403,7 +408,7 @@ export function initDexieMutationHooks() {
     if (!table || typeof table.hook !== 'function') return;
 
     table.hook('creating', function (primKey: any, obj: any) {
-      if (stillCurrent() && !isRemoteSyncing()) {
+      if (stillCurrent() && isSyncTableAllowed(tableName) && !isRemoteSyncing()) {
         const idStr = String(primKey || obj?.id || '');
         if (idStr) {
           enqueueSyncOperation(tableName, 'upsert', idStr, obj);
@@ -413,7 +418,7 @@ export function initDexieMutationHooks() {
     });
 
     table.hook('updating', function (modifications: any, primKey: any, obj: any) {
-      if (stillCurrent() && !isRemoteSyncing()) {
+      if (stillCurrent() && isSyncTableAllowed(tableName) && !isRemoteSyncing()) {
         const idStr = String(primKey || obj?.id || '');
         if (idStr) {
           const merged = { ...obj, ...modifications };
@@ -424,7 +429,7 @@ export function initDexieMutationHooks() {
     });
 
     table.hook('deleting', function (primKey: any) {
-      if (stillCurrent() && !isRemoteSyncing()) {
+      if (stillCurrent() && isSyncTableAllowed(tableName) && !isRemoteSyncing()) {
         const idStr = String(primKey || '');
         if (idStr) {
           enqueueSyncOperation(tableName, 'delete', idStr);
@@ -447,6 +452,7 @@ export async function processOfflineQueue(): Promise<void> {
   if (pending.length === 0) return;
 
   for (const item of pending) {
+    if (!isSyncTableAllowed(item.tableName)) continue;
     if (getCurrentUserId() !== currentUserId || getCurrentDbUserId() !== currentUserId) return;
     try {
       if (!isQueueItemReady(item)) {
@@ -658,6 +664,7 @@ export async function syncWithSupabase(): Promise<{ success: boolean; message: s
     const bootstrap = isBootstrapSync(getLastSyncedTimestamp());
 
     for (const tableName of SYNC_TABLE_KEYS) {
+      if (!isSyncTableAllowed(tableName)) continue;
       if (!stillCurrent()) return { success: false, message: 'Account changed during sync.' };
       const dexieTable = (userDb as any)[tableName];
       if (!dexieTable) continue;

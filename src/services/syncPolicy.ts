@@ -22,6 +22,29 @@ export const SYNC_TABLE_KEYS = [
 
 export type SyncTableName = (typeof SYNC_TABLE_KEYS)[number];
 
+
+export type SyncModule = 'finance' | 'utility' | 'loans' | 'milk' | 'petrol' | 'rent';
+const tableModules: Record<SyncTableName, SyncModule | null> = {
+  utility_persons: 'utility', utility_bills: 'utility', utility_payments: 'utility',
+  milk_consumers: 'milk', milk_logs: 'milk', milk_monthly_records: 'milk',
+  petrol_refills: 'petrol',
+  rent_properties: 'rent', rent_portions: 'rent', rent_records: 'rent',
+  loans: 'loans', settings: null,
+  finance_accounts: 'finance', finance_categories: 'finance',
+  finance_transactions: 'finance', finance_budgets: 'finance',
+  finance_recurring_transactions: 'finance', finance_goals: 'finance',
+  finance_voice_entries: 'finance'
+};
+let allowedModules: Set<string> | null = null;
+
+export function setSyncAllowedModules(modules: readonly string[] | null): void {
+  allowedModules = modules === null ? null : new Set(modules);
+}
+export function isSyncTableAllowed(tableName: string): boolean {
+  const module = tableModules[tableName as SyncTableName];
+  return module === null || (module !== undefined && (allowedModules === null || allowedModules.has(module)));
+}
+
 export function isBootstrapSync(lastSyncedAt: string | null | undefined): boolean {
   return !lastSyncedAt;
 }

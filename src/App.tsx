@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavTab } from './types';
+import { usePlatform, PlatformAccessGate } from './components/auth/PlatformAccessGate';
+import { type TrackerModule } from './services/platformAccess';
 import {
   getActiveDb,
   switchUserDb,
@@ -40,7 +42,18 @@ import { LegacyDataMigrationModal } from './components/auth/LegacyDataMigrationM
 
 export const AppContent: React.FC = () => {
   const isRentMode = (import.meta as any).env?.VITE_APP_MODE === 'rent';
-  const [activeTab, setActiveTab] = useState<NavTab>(isRentMode ? 'rent' : 'dashboard');
+  const { profile } = usePlatform();
+  const enabledModules = profile.enabled_modules;
+  const fullWorkspace = enabledModules.length === 6;
+  const firstModule = (enabledModules[0] || 'settings') as NavTab;
+  const [activeTab, setActiveTab] = useState<NavTab>(isRentMode ? 'rent' : fullWorkspace ? 'dashboard' : firstModule);
+  useEffect(() => {
+    if (activeTab === 'settings') return;
+    if (activeTab === 'dashboard' && fullWorkspace) return;
+    if (activeTab === 'reports' && enabledModules.some(id => id !== 'finance')) return;
+    if (enabledModules.includes(activeTab as TrackerModule)) return;
+    setActiveTab(fullWorkspace ? 'dashboard' : firstModule);
+  }, [activeTab, fullWorkspace, firstModule, enabledModules.join(',')]);
   // Always open the tracker on the device's current local month.
   const [selectedMonth, setSelectedMonth] = useState<string>(() => getCurrentMonthYearStr());
   const [reportCategory, setReportCategory] = useState<ReportCategory>(isRentMode ? 'rent' : 'milk');
@@ -126,11 +139,13 @@ export const AppContent: React.FC = () => {
     <div className="min-h-screen bg-[#071724] text-[#F4F8FB] flex flex-col antialiased selection:bg-[#18E6BE] selection:text-[#06131F] w-full max-w-full overflow-x-clip">
       {/* Top App Bar with Cloud Sync & PWA Install */}
       <Navbar
+        enabledModules={enabledModules}
+        fullWorkspace={fullWorkspace}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         selectedMonth={selectedMonth}
         setSelectedMonth={setSelectedMonth}
-        onOpenAI={!isRentMode ? () => setIsAIAssistantOpen(true) : undefined}
+        onOpenAI={!isRentMode && fullWorkspace ? () => setIsAIAssistantOpen(true) : undefined}
         installPrompt={deferredInstallPrompt}
         onInstallPWA={handleInstallPWA}
         onOpenLogin={() => setIsLoginModalOpen(true)}
@@ -144,6 +159,7 @@ export const AppContent: React.FC = () => {
         {/* Sub Navigation Switcher only for Full Household Tracker */}
         {!isRentMode && (
           <TrackerSubNav
+            enabledModules={enabledModules}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
           />
@@ -151,14 +167,14 @@ export const AppContent: React.FC = () => {
 
         {isRentMode ? (
           <>
-            {activeTab === 'rent' && (
+            {enabledModules.includes('rent') && activeTab === 'rent' && (
               <RentTracker
                 selectedMonth={selectedMonth}
                 onOpenReport={() => openReportWithCategory('rent')}
               />
             )}
 
-            {activeTab === 'reports' && (
+            {activeTab === 'reports' && enabledModules.some(id => id !== 'finance') && (
               <ReportsView
                 selectedMonth={selectedMonth}
                 setSelectedMonth={setSelectedMonth}
@@ -172,7 +188,7 @@ export const AppContent: React.FC = () => {
           </>
         ) : (
           <>
-            {activeTab === 'dashboard' && (
+            {fullWorkspace && activeTab === 'dashboard' && (
               <Dashboard
                 selectedMonth={selectedMonth}
                 setActiveTab={setActiveTab}
@@ -180,33 +196,33 @@ export const AppContent: React.FC = () => {
               />
             )}
 
-            {activeTab === 'finance' && (
+            {enabledModules.includes('finance') && activeTab === 'finance' && (
               <FinanceTracker
                 selectedMonth={selectedMonth}
                 setSelectedMonth={setSelectedMonth}
               />
             )}
 
-            {activeTab === 'utility' && (
+            {enabledModules.includes('utility') && activeTab === 'utility' && (
               <UtilityTracker
                 onOpenReport={() => openReportWithCategory('utility')}
               />
             )}
 
-            {activeTab === 'loans' && (
+            {enabledModules.includes('loans') && activeTab === 'loans' && (
               <LoanTracker
                 onOpenReport={() => openReportWithCategory('loans')}
               />
             )}
 
-            {activeTab === 'milk' && (
+            {enabledModules.includes('milk') && activeTab === 'milk' && (
               <MilkTracker
                 selectedMonth={selectedMonth}
                 onOpenReport={() => openReportWithCategory('milk')}
               />
             )}
 
-            {activeTab === 'petrol' && (
+            {activeTab === 'petrol' && enabledModules.includes('petrol') && (
               <PetrolTracker
                 selectedMonth={selectedMonth}
                 onOpenReport={() => openReportWithCategory('petrol')}
@@ -220,11 +236,12 @@ export const AppContent: React.FC = () => {
               />
             )}
 
-            {activeTab === 'reports' && (
+            {activeTab === 'reports' && enabledModules.some(id => id !== 'finance') && (
               <ReportsView
                 selectedMonth={selectedMonth}
                 setSelectedMonth={setSelectedMonth}
-                initialCategory={reportCategory}
+                initialCategory={enabledModules.includes(reportCategory as TrackerModule) ? reportCategory : (enabledModules.find(id => id !== 'finance') || 'milk') as ReportCategory}
+                enabledModules={enabledModules}
               />
             )}
 
@@ -238,19 +255,20 @@ export const AppContent: React.FC = () => {
       {!isRentMode && (
         <>
           {/* Floating AI Voice Assistant Button */}
-          <AIFloatingButton
+          {fullWorkspace && <AIFloatingButton
             onClick={() => setIsAIAssistantOpen(true)}
-          />
+          />}
 
           {/* AI Voice & Text Assistant Modal */}
-          <AIAssistantModal
+          {fullWorkspace && <AIAssistantModal
             isOpen={isAIAssistantOpen}
             onClose={() => setIsAIAssistantOpen(false)}
             onNavigate={(tab) => setActiveTab(tab)}
-          />
+          />}
 
           {/* Quick Add Bottom Sheet */}
           <QuickAddSheet
+            enabledModules={enabledModules}
             isOpen={isQuickAddOpen}
             onClose={() => setIsQuickAddOpen(false)}
             onSelectAction={handleSelectQuickAction}
@@ -260,6 +278,8 @@ export const AppContent: React.FC = () => {
 
       {/* Mobile Bottom Navigation */}
       <BottomNav
+        enabledModules={enabledModules}
+        fullWorkspace={fullWorkspace}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenQuickAdd={() => setIsQuickAddOpen(true)}
@@ -424,7 +444,7 @@ export const MainAppRouter: React.FC = () => {
     return <AuthWelcomeScreen />;
   }
 
-  return <AuthenticatedWorkspace key={user.id} user={user} />;
+  return <PlatformAccessGate userId={user.id}><AuthenticatedWorkspace key={user.id} user={user} /></PlatformAccessGate>;
 };
 
 export const App: React.FC = () => {

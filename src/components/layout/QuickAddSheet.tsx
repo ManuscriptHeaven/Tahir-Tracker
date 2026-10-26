@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 
 interface QuickAddSheetProps {
+  enabledModules: string[];
   isOpen: boolean;
   onClose: () => void;
   onSelectAction: (action: NavTab | 'mark_today_milk' | 'manage_persons' | 'ai_assistant') => void;
@@ -21,7 +22,8 @@ interface QuickAddSheetProps {
 export const QuickAddSheet: React.FC<QuickAddSheetProps> = ({
   isOpen,
   onClose,
-  onSelectAction
+  onSelectAction,
+  enabledModules
 }) => {
   if (!isOpen) return null;
 
@@ -90,7 +92,7 @@ export const QuickAddSheet: React.FC<QuickAddSheetProps> = ({
       color: 'bg-[#0B1D2C] text-[#A9BDCC] border-[rgba(70,150,180,0.2)]',
       badge: 'Profiles'
     }
-  ];
+  ].filter(action => action.id === 'ai_assistant' ? enabledModules.length === 6 : action.id === 'manage_persons' ? enabledModules.includes('milk') : enabledModules.includes(action.id));
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">

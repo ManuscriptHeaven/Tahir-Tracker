@@ -26,6 +26,8 @@ import { SyncStatus } from '../../services/syncService';
 import { useAuth } from '../../context/AuthContext';
 
 interface MobileDrawerProps {
+  enabledModules: string[];
+  fullWorkspace: boolean;
   isOpen: boolean;
   onClose: () => void;
   activeTab: NavTab;
@@ -41,6 +43,8 @@ interface MobileDrawerProps {
 }
 
 export const MobileDrawer: React.FC<MobileDrawerProps> = ({
+  enabledModules,
+  fullWorkspace,
   isOpen,
   onClose,
   activeTab,
@@ -69,7 +73,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
     setSelectedMonth(`${newY}-${newM}`);
   };
 
-  const navItems = isRentMode
+  const navItems = (isRentMode
     ? [
         { id: 'rent' as NavTab, label: 'Rent Management', icon: Home, desc: 'Portions & Tenants' },
         { id: 'reports' as NavTab, label: 'Reports & Receipts', icon: BarChart3, desc: 'Monthly Statements' },
@@ -85,7 +89,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
         { id: 'rent' as NavTab, label: 'Rent Management', icon: Home, desc: 'Portion Rental Records' },
         { id: 'reports' as NavTab, label: 'Reports & Analytics', icon: BarChart3, desc: 'Charts & Export Statement' },
         { id: 'settings' as NavTab, label: 'Settings & Profile', icon: Settings, desc: 'Backups, Theme & Sync' },
-      ];
+      ]).filter(item => item.id === 'settings' || (item.id === 'dashboard' && fullWorkspace) || (item.id === 'reports' && enabledModules.some(id => id !== 'finance')) || enabledModules.includes(item.id));
 
   const handleSelectTab = (tab: NavTab) => {
     setActiveTab(tab);

@@ -3,18 +3,19 @@ import { NavTab } from '../../types';
 import { Zap, Milk, Fuel, Home, HandCoins } from 'lucide-react';
 
 interface TrackerSubNavProps {
+  enabledModules: string[];
   activeTab: NavTab;
   setActiveTab: (tab: NavTab) => void;
 }
 
-export const TrackerSubNav: React.FC<TrackerSubNavProps> = ({ activeTab, setActiveTab }) => {
+export const TrackerSubNav: React.FC<TrackerSubNavProps> = ({ activeTab, setActiveTab, enabledModules }) => {
   const trackers = [
     { id: 'utility' as NavTab, label: 'Utility', icon: Zap },
     { id: 'rent' as NavTab, label: 'Rent', icon: Home },
     { id: 'milk' as NavTab, label: 'Milk', icon: Milk },
     { id: 'petrol' as NavTab, label: 'Petrol', icon: Fuel },
     { id: 'loans' as NavTab, label: 'Lease & Loans', icon: HandCoins },
-  ];
+  ].filter(item => enabledModules.includes(item.id));
 
   if (!['utility', 'loans', 'milk', 'petrol', 'rent'].includes(activeTab)) {
     return null;

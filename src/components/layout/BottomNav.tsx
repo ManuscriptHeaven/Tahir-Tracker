@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 
 interface BottomNavProps {
+  enabledModules: string[];
+  fullWorkspace: boolean;
   activeTab: NavTab;
   setActiveTab: (tab: NavTab) => void;
   onOpenQuickAdd: () => void;
@@ -19,9 +21,27 @@ interface BottomNavProps {
 export const BottomNav: React.FC<BottomNavProps> = ({ 
   activeTab, 
   setActiveTab, 
-  onOpenQuickAdd 
+  onOpenQuickAdd,
+  enabledModules,
+  fullWorkspace
 }) => {
   const isRentMode = (import.meta as any).env?.VITE_APP_MODE === 'rent';
+
+
+  if (!fullWorkspace && !isRentMode) {
+    const items = [
+      ...enabledModules.map(id => ({ id: id as NavTab, label: id === 'loans' ? 'Loans' : id.charAt(0).toUpperCase() + id.slice(1) })),
+      { id: 'settings' as NavTab, label: 'Settings' }
+    ];
+    return <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#071724] border-t border-slate-700 xl:hidden" aria-label="My trackers">
+      <div className="flex gap-1 overflow-x-auto px-2 py-2">
+        {items.map(item => <button key={item.id} onClick={() => setActiveTab(item.id)}
+          className={`shrink-0 flex-1 min-w-[70px] rounded-xl px-2 py-3 text-xs font-bold ${activeTab === item.id ? 'bg-teal-500/15 text-teal-300' : 'text-slate-400'}`}>
+          {item.label}
+        </button>)}
+      </div>
+    </nav>;
+  }
 
   if (isRentMode) {
     return (

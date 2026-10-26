@@ -29,6 +29,8 @@ import { MobileDrawer } from './MobileDrawer';
 import { useAuth } from '../../context/AuthContext';
 
 interface NavbarProps {
+  enabledModules: string[];
+  fullWorkspace: boolean;
   activeTab: NavTab;
   setActiveTab: (tab: NavTab) => void;
   selectedMonth: string; // YYYY-MM
@@ -40,6 +42,8 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
+  enabledModules,
+  fullWorkspace,
   activeTab,
   setActiveTab,
   selectedMonth,
@@ -93,7 +97,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     setSelectedMonth(`${newY}-${newM}`);
   };
 
-  const desktopTabs = isRentMode
+  const desktopTabs = (isRentMode
     ? [
         { id: 'rent' as NavTab, label: 'Rent', icon: Home },
         { id: 'reports' as NavTab, label: 'Reports', icon: BarChart3 },
@@ -109,7 +113,10 @@ export const Navbar: React.FC<NavbarProps> = ({
         { id: 'rent' as NavTab, label: 'Rent', icon: Home },
         { id: 'reports' as NavTab, label: 'Reports', icon: BarChart3 },
         { id: 'settings' as NavTab, label: 'Settings', icon: Settings },
-      ];
+      ]).filter(tab => tab.id === 'settings'
+        || (tab.id === 'dashboard' && fullWorkspace)
+        || (tab.id === 'reports' && enabledModules.some(id => id !== 'finance'))
+        || enabledModules.includes(tab.id));
 
   const syncIndicator = () => {
     if (syncStatus.state === 'syncing') {
@@ -192,7 +199,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               <button
                 type="button"
-                onClick={() => setActiveTab(isRentMode ? 'rent' : 'dashboard')}
+                onClick={() => setActiveTab(isRentMode ? 'rent' : fullWorkspace ? 'dashboard' : enabledModules[0] as NavTab)}
                 className="flex items-center gap-2 sm:gap-3 rounded-2xl pr-1 text-left focus:outline-none min-w-0"
                 aria-label="Tahir Tracker home"
               >
@@ -499,6 +506,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Slide-out Mobile Navigation Drawer */}
       <MobileDrawer
+        enabledModules={enabledModules}
+        fullWorkspace={fullWorkspace}
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         activeTab={activeTab}

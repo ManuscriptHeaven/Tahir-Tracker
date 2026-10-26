@@ -49,11 +49,15 @@ import {
   Loader2
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { usePlatform } from '../auth/PlatformAccessGate';
+import { OwnerUserManagement } from './OwnerUserManagement';
+import { TrackerPicker } from './TrackerPicker';
 import { LoginModal } from '../auth/LoginModal';
 import { PageHeader } from '../ui/PageHeader';
 
 export const SettingsView: React.FC = () => {
   const { user, isAuthenticated, signOut, updatePassword } = useAuth();
+  const { profile, setModules } = usePlatform();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   // Change Password State
@@ -279,6 +283,10 @@ export const SettingsView: React.FC = () => {
         subtitle="Connect Supabase database, manage offline sync, and configure default preferences"
         icon={Settings}
       />
+
+      {/* Owner approval and personal tracker choices */}
+      {profile.role === 'owner' && <OwnerUserManagement />}
+      <TrackerPicker key={profile.updated_at} profile={profile} onSave={setModules} />
 
       {/* 0. SUPABASE AUTHENTICATION & ACCOUNT */}
       <div className="bg-[#0B1D2C] rounded-3xl p-5 sm:p-6 border border-cyan-500/20 shadow-xl space-y-4">
