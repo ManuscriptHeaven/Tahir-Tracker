@@ -219,7 +219,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
             { id: 'petrol' as ReportCategory, label: 'Petrol Report', icon: Fuel },
             { id: 'loans' as ReportCategory, label: 'Loan Report', icon: HandCoins },
             { id: 'master' as ReportCategory, label: 'Household Master', icon: Layers },
-          ].map(tab => {
+          ].filter(tab => tab.id === 'master' ? enabledModules.length === 6 : enabledModules.includes(tab.id)).map(tab => {
             const Icon = tab.icon;
             const isActive = activeCategory === tab.id;
             return (
