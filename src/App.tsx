@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavTab } from './types';
+import { usePlatform, PlatformAccessGate } from './components/auth/PlatformAccessGate';
+import { type TrackerModule } from './services/platformAccess';
 import {
   getActiveDb,
   switchUserDb,
@@ -424,7 +426,7 @@ export const MainAppRouter: React.FC = () => {
     return <AuthWelcomeScreen />;
   }
 
-  return <AuthenticatedWorkspace key={user.id} user={user} />;
+  return <PlatformAccessGate userId={user.id}><AuthenticatedWorkspace key={user.id} user={user} /></PlatformAccessGate>;
 };
 
 export const App: React.FC = () => {
