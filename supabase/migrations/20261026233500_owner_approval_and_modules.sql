@@ -69,7 +69,7 @@ AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.create_tahir_pla
 -- Preserve existing access; only the original verified workspace is designated owner.
 INSERT INTO public.platform_profiles (user_id,email,role,status,allowed_modules,enabled_modules)
 SELECT id,COALESCE(email,''),
-  CASE WHEN id='383a4285-784c-4738-841f-1ed8cd7f6042'::uuid THEN 'owner' ELSE 'member' END,
+  CASE WHEN id = (SELECT first_user.id FROM auth.users AS first_user ORDER BY first_user.created_at, first_user.id LIMIT 1) THEN 'owner' ELSE 'member' END,
   'approved', ARRAY['finance','utility','loans','milk','petrol','rent']::text[], ARRAY['finance','utility','loans','milk','petrol','rent']::text[]
 FROM auth.users
 ON CONFLICT (user_id) DO NOTHING;
