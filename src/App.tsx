@@ -260,11 +260,11 @@ export const AppContent: React.FC = () => {
           />}
 
           {/* AI Voice & Text Assistant Modal */}
-          <AIAssistantModal
+          {fullWorkspace && <AIAssistantModal
             isOpen={isAIAssistantOpen}
             onClose={() => setIsAIAssistantOpen(false)}
             onNavigate={(tab) => setActiveTab(tab)}
-          />
+          />}
 
           {/* Quick Add Bottom Sheet */}
           <QuickAddSheet
