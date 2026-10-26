@@ -34,12 +34,14 @@ interface ReportsViewProps {
   selectedMonth: string; // YYYY-MM
   setSelectedMonth: (m: string) => void;
   initialCategory?: ReportCategory;
+  enabledModules?: string[];
 }
 
 export const ReportsView: React.FC<ReportsViewProps> = ({
   selectedMonth,
   setSelectedMonth,
-  initialCategory = 'milk'
+  initialCategory = 'milk',
+  enabledModules = ['finance','utility','loans','milk','petrol','rent']
 }) => {
   const [activeCategory, setActiveCategory] = useState<ReportCategory>(initialCategory);
   const [rentPropertyFilter, setRentPropertyFilter] = useState<string>('all');
