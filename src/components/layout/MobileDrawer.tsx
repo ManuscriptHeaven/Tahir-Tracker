@@ -43,6 +43,8 @@ interface MobileDrawerProps {
 }
 
 export const MobileDrawer: React.FC<MobileDrawerProps> = ({
+  enabledModules,
+  fullWorkspace,
   isOpen,
   onClose,
   activeTab,
