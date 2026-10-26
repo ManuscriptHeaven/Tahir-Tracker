@@ -97,7 +97,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     setSelectedMonth(`${newY}-${newM}`);
   };
 
-  const desktopTabs = isRentMode
+  const desktopTabs = (isRentMode
     ? [
         { id: 'rent' as NavTab, label: 'Rent', icon: Home },
         { id: 'reports' as NavTab, label: 'Reports', icon: BarChart3 },
@@ -113,7 +113,10 @@ export const Navbar: React.FC<NavbarProps> = ({
         { id: 'rent' as NavTab, label: 'Rent', icon: Home },
         { id: 'reports' as NavTab, label: 'Reports', icon: BarChart3 },
         { id: 'settings' as NavTab, label: 'Settings', icon: Settings },
-      ];
+      ]).filter(tab => tab.id === 'settings'
+        || (tab.id === 'dashboard' && fullWorkspace)
+        || (tab.id === 'reports' && enabledModules.some(id => id !== 'finance'))
+        || enabledModules.includes(tab.id));
 
   const syncIndicator = () => {
     if (syncStatus.state === 'syncing') {
