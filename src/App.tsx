@@ -42,7 +42,18 @@ import { LegacyDataMigrationModal } from './components/auth/LegacyDataMigrationM
 
 export const AppContent: React.FC = () => {
   const isRentMode = (import.meta as any).env?.VITE_APP_MODE === 'rent';
-  const [activeTab, setActiveTab] = useState<NavTab>(isRentMode ? 'rent' : 'dashboard');
+  const { profile } = usePlatform();
+  const enabledModules = profile.enabled_modules;
+  const fullWorkspace = profile.role === 'owner' || enabledModules.length === 6;
+  const firstModule = (enabledModules[0] || 'settings') as NavTab;
+  const [activeTab, setActiveTab] = useState<NavTab>(isRentMode ? 'rent' : fullWorkspace ? 'dashboard' : firstModule);
+  useEffect(() => {
+    if (activeTab === 'settings') return;
+    if (activeTab === 'dashboard' && fullWorkspace) return;
+    if (activeTab === 'reports' && enabledModules.some(id => id !== 'finance')) return;
+    if (enabledModules.includes(activeTab as TrackerModule)) return;
+    setActiveTab(fullWorkspace ? 'dashboard' : firstModule);
+  }, [activeTab, fullWorkspace, firstModule, enabledModules.join(',')]);
   // Always open the tracker on the device's current local month.
   const [selectedMonth, setSelectedMonth] = useState<string>(() => getCurrentMonthYearStr());
   const [reportCategory, setReportCategory] = useState<ReportCategory>(isRentMode ? 'rent' : 'milk');
