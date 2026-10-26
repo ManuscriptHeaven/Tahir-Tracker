@@ -167,7 +167,7 @@ export const AppContent: React.FC = () => {
 
         {isRentMode ? (
           <>
-            {activeTab === 'rent' && (
+            {enabledModules.includes('rent') && activeTab === 'rent' && (
               <RentTracker
                 selectedMonth={selectedMonth}
                 onOpenReport={() => openReportWithCategory('rent')}
