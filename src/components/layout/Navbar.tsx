@@ -42,6 +42,8 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
+  enabledModules,
+  fullWorkspace,
   activeTab,
   setActiveTab,
   selectedMonth,
