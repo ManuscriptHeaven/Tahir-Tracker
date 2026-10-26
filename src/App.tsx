@@ -188,7 +188,7 @@ export const AppContent: React.FC = () => {
           </>
         ) : (
           <>
-            {activeTab === 'dashboard' && (
+            {fullWorkspace && activeTab === 'dashboard' && (
               <Dashboard
                 selectedMonth={selectedMonth}
                 setActiveTab={setActiveTab}
