@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
+import { useTrackerBranding } from '../../hooks/useTrackerBranding';
 import { 
   Download,
   Printer,
@@ -28,6 +29,7 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({
   setSelectedMonth
 }) => {
   const accounts = useLiveQuery(() => db.finance_accounts.toArray()) || [];
+  const { trackerName } = useTrackerBranding();
   const categories = useLiveQuery(() => db.finance_categories.toArray()) || [];
   const transactions = useLiveQuery(() => db.finance_transactions.toArray()) || [];
   const budgets = useLiveQuery(() => db.finance_budgets.toArray()) || [];
@@ -118,6 +120,7 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({
 
       {/* 2. PRINTABLE REPORT CONTAINER */}
       <div ref={reportRef} className="finance-print-page report-document print-page space-y-6 bg-[#071724] p-3 sm:p-4 rounded-2xl border border-slate-800">
+        <p className="text-sm font-bold text-slate-100 break-words [overflow-wrap:anywhere]">{trackerName}</p>
         {/* Monthly Summary Cards Banner */}
         <div className="bg-[#0B1D2C] rounded-2xl p-5 sm:p-6 border border-slate-700/50 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">

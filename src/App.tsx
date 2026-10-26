@@ -37,8 +37,15 @@ import { LoginModal } from './components/auth/LoginModal';
 import { AuthWelcomeScreen } from './components/auth/AuthWelcomeScreen';
 import { OnboardingWizard } from './components/auth/OnboardingWizard';
 import { LegacyDataMigrationModal } from './components/auth/LegacyDataMigrationModal';
+import { useTrackerBranding } from './hooks/useTrackerBranding';
 
 export const AppContent: React.FC = () => {
+  const { trackerName, trackerInitials } = useTrackerBranding();
+  useEffect(() => {
+    const previousTitle = document.title;
+    document.title = trackerName;
+    return () => { document.title = previousTitle; };
+  }, [trackerName]);
   const isRentMode = (import.meta as any).env?.VITE_APP_MODE === 'rent';
   const [activeTab, setActiveTab] = useState<NavTab>(isRentMode ? 'rent' : 'dashboard');
   // Always open the tracker on the device's current local month.
@@ -109,10 +116,10 @@ export const AppContent: React.FC = () => {
       <div className="min-h-screen bg-[#071724] text-[#F4F8FB] flex items-center justify-center p-4">
         <div className="text-center space-y-3">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#059669] to-[#18E6BE] text-[#06131F] font-black text-2xl flex items-center justify-center mx-auto shadow-[0_0_25px_rgba(24,230,190,0.35)] animate-pulse">
-            {isRentMode ? '🏠' : 'TT'}
+            {trackerInitials}
           </div>
           <h2 className="font-extrabold text-lg text-[#F4F8FB]">
-            {isRentMode ? 'Rent Tracking' : 'Tahir Tracker'}
+            {trackerName}
           </h2>
           <p className="text-xs text-[#6F899B]">
             {isRentMode ? 'Loading rental portions & cloud sync...' : 'Loading offline database & cloud sync...'}

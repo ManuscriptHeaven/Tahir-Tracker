@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
+import { useTrackerBranding } from '../../hooks/useTrackerBranding';
 import { UtilityBill, UtilityPayment } from '../../types';
 import { 
   formatCurrency, 
@@ -69,6 +70,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   const utilityPayments = useLiveQuery(() => db.utility_payments.toArray()) || [];
   const settingsList = useLiveQuery(() => db.settings.toArray());
   const currentSettings = settingsList?.[0];
+  const { trackerName } = useTrackerBranding();
   const milkRate = currentSettings?.milkDefaultRate || 260;
 
   // Month metadata
@@ -277,7 +279,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           <div>
             <div className="flex items-center gap-1.5">
               <span className="text-[9px] sm:text-[10px] uppercase tracking-widest font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
-                Personal Finance & Household Tracker
+                <span className="break-words [overflow-wrap:anywhere]">{trackerName}</span>
               </span>
             </div>
             <h1 className="text-lg sm:text-xl font-black text-slate-900 mt-0.5 uppercase tracking-tight">
@@ -1062,7 +1064,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         {/* Report Footer / Signature Block */}
         <div className="mt-4 pt-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between text-[10px] sm:text-xs text-slate-400 gap-2 print-avoid-break">
           <div>
-            <span>Tahir Tracker • Personal Finance & Household System</span>
+            <span className="break-words [overflow-wrap:anywhere]">{trackerName} • Personal Finance & Household System</span>
           </div>
           <div className="text-right">
             <span>Verified by: ________________________</span>

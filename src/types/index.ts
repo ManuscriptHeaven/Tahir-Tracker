@@ -169,6 +169,8 @@ export interface RentMonthlyRecord {
 
 export interface AppSettings {
   id?: number;
+  trackerName?: string | null;
+  updatedAt?: string;
   currency: string; // Default 'PKR'
   milkDefaultRate: number; // Default 260
   rentDueDayDefault: number; // Default 10

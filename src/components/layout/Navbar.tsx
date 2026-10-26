@@ -27,6 +27,7 @@ import { getMonthYearFormatted } from '../../utils/formatters';
 import { subscribeSyncStatus, syncWithSupabase, SyncStatus } from '../../services/syncService';
 import { MobileDrawer } from './MobileDrawer';
 import { useAuth } from '../../context/AuthContext';
+import { useTrackerBranding } from '../../hooks/useTrackerBranding';
 
 interface NavbarProps {
   activeTab: NavTab;
@@ -50,6 +51,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenLogin
 }) => {
   const { user, isAuthenticated } = useAuth();
+  const { trackerName, trackerInitials } = useTrackerBranding();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({
@@ -194,14 +196,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                 type="button"
                 onClick={() => setActiveTab(isRentMode ? 'rent' : 'dashboard')}
                 className="flex items-center gap-2 sm:gap-3 rounded-2xl pr-1 text-left focus:outline-none min-w-0"
-                aria-label="Tahir Tracker home"
+                aria-label={`${trackerName} home`}
               >
                 <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-[#059669] to-[#18E6BE] flex items-center justify-center text-[#06131F] font-black text-sm sm:text-lg shadow-[0_0_15px_rgba(24,230,190,0.3)] shrink-0">
-                  {isRentMode ? '🏠' : 'TT'}
+                  {trackerInitials}
                 </div>
                 <div className="min-w-0">
                   <h1 className="font-extrabold text-[#F4F8FB] text-xs sm:text-[17px] leading-tight tracking-tight flex items-center gap-1.5 truncate">
-                    <span className="truncate max-w-[85px] xs:max-w-[125px] sm:max-w-none">{isRentMode ? 'Rent Tracking' : 'Tahir Tracker'}</span>
+                    <span title={trackerName} className="truncate max-w-[85px] xs:max-w-[125px] sm:max-w-[220px]">{trackerName}</span>
                   </h1>
                   <p className="hidden md:block text-[10px] sm:text-[11px] font-medium text-[#6F899B] leading-none mt-0.5">
                     {isRentMode ? 'Property & Tenant Management' : 'Track Everything — Finance & Household'}
@@ -331,7 +333,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   type="button"
                   onClick={onInstallPWA}
                   className="hidden md:flex w-9 h-9 items-center justify-center rounded-xl border border-[rgba(70,150,180,0.2)] bg-[#0B1D2C] text-[#A9BDCC] hover:text-[#18E6BE] hover:bg-[#102638] transition-all"
-                  title="Install Tahir Tracker app"
+                  title="Install tracker app"
                 >
                   <Download className="w-4 h-4" />
                 </button>
@@ -440,7 +442,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                             <Download className="w-3.5 h-3.5" />
                           </div>
                           <div className="flex-1 text-left">
-                            <div className="font-bold">Install Tahir Tracker</div>
+                            <div className="font-bold">Install tracker app</div>
                             <div className="text-[10px] text-[#6F899B]">Add to home screen as native app</div>
                           </div>
                         </button>
