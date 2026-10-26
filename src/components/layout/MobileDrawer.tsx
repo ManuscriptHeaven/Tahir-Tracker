@@ -26,6 +26,8 @@ import { SyncStatus } from '../../services/syncService';
 import { useAuth } from '../../context/AuthContext';
 
 interface MobileDrawerProps {
+  enabledModules: string[];
+  fullWorkspace: boolean;
   isOpen: boolean;
   onClose: () => void;
   activeTab: NavTab;
