@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 
 interface QuickAddSheetProps {
+  enabledModules: string[];
   isOpen: boolean;
   onClose: () => void;
   onSelectAction: (action: NavTab | 'mark_today_milk' | 'manage_persons' | 'ai_assistant') => void;
