@@ -57,6 +57,7 @@ import { PageHeader } from '../ui/PageHeader';
 
 export const SettingsView: React.FC = () => {
   const { user, isAuthenticated, signOut, updatePassword } = useAuth();
+  const { profile, setModules } = usePlatform();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   // Change Password State
