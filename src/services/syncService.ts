@@ -160,6 +160,7 @@ async function handleRealtimeChange(payload: any) {
   }
 
   const table = payload.table;
+  if (!isSyncTableAllowed(table)) return;
   const dexieTable = TABLE_MAP[table];
   if (!dexieTable) return;
 
@@ -260,6 +261,7 @@ export function subscribeToRealtimeChanges(): () => void {
  * Trigger debounced push for a table when local mutations occur
  */
 export function triggerDebouncedPush(tableName: string, recordId?: string) {
+  if (!isSyncTableAllowed(tableName)) return;
   if (isRemoteSyncing()) return;
   if (!isSupabaseConfigured() || !navigator.onLine) return;
   const scheduledUserId = getCurrentUserId();
