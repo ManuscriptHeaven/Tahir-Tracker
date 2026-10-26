@@ -203,7 +203,7 @@ export const AppContent: React.FC = () => {
               />
             )}
 
-            {activeTab === 'utility' && (
+            {enabledModules.includes('utility') && activeTab === 'utility' && (
               <UtilityTracker
                 onOpenReport={() => openReportWithCategory('utility')}
               />
