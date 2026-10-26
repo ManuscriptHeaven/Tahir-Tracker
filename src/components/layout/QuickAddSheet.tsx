@@ -22,7 +22,8 @@ interface QuickAddSheetProps {
 export const QuickAddSheet: React.FC<QuickAddSheetProps> = ({
   isOpen,
   onClose,
-  onSelectAction
+  onSelectAction,
+  enabledModules
 }) => {
   if (!isOpen) return null;
 
