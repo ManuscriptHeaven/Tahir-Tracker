@@ -174,7 +174,7 @@ export const AppContent: React.FC = () => {
               />
             )}
 
-            {activeTab === 'reports' && (
+            {activeTab === 'reports' && enabledModules.some(id => id !== 'finance') && (
               <ReportsView
                 selectedMonth={selectedMonth}
                 setSelectedMonth={setSelectedMonth}
@@ -236,7 +236,7 @@ export const AppContent: React.FC = () => {
               />
             )}
 
-            {activeTab === 'reports' && (
+            {activeTab === 'reports' && enabledModules.some(id => id !== 'finance') && (
               <ReportsView
                 selectedMonth={selectedMonth}
                 setSelectedMonth={setSelectedMonth}
