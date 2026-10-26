@@ -215,7 +215,7 @@ export const AppContent: React.FC = () => {
               />
             )}
 
-            {activeTab === 'milk' && (
+            {enabledModules.includes('milk') && activeTab === 'milk' && (
               <MilkTracker
                 selectedMonth={selectedMonth}
                 onOpenReport={() => openReportWithCategory('milk')}
