@@ -255,9 +255,9 @@ export const AppContent: React.FC = () => {
       {!isRentMode && (
         <>
           {/* Floating AI Voice Assistant Button */}
-          <AIFloatingButton
+          {fullWorkspace && <AIFloatingButton
             onClick={() => setIsAIAssistantOpen(true)}
-          />
+          />}
 
           {/* AI Voice & Text Assistant Modal */}
           <AIAssistantModal
