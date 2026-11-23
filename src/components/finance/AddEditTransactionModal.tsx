@@ -38,6 +38,7 @@ export const AddEditTransactionModal: React.FC<AddEditTransactionModalProps> = (
   const [transactionDate, setTransactionDate] = useState<string>(getTodayLocalDateStr());
   const [description, setDescription] = useState<string>('');
   const [attachmentNote, setAttachmentNote] = useState<string>('');
+  const [isPending, setIsPending] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const accounts = useLiveQuery(() => db.finance_accounts.filter(a => a.isActive).toArray()) || [];
@@ -57,7 +58,9 @@ export const AddEditTransactionModal: React.FC<AddEditTransactionModalProps> = (
       setTransactionDate(transactionToEdit.transactionDate);
       setDescription(transactionToEdit.description);
       setAttachmentNote(transactionToEdit.attachmentNote || '');
+      setIsPending(transactionToEdit.status === 'pending');
     } else {
+      setIsPending(false);
       setType(defaultType);
       setAmount('');
       setTransactionDate(getTodayLocalDateStr());
@@ -127,6 +130,7 @@ export const AddEditTransactionModal: React.FC<AddEditTransactionModalProps> = (
           transferToAccountId: type === 'transfer' ? transferToAccountId : undefined,
           transferToAccountName: type === 'transfer' ? selectedTransferAccount?.name : undefined,
           transactionDate,
+          status: isPending ? 'pending' : 'completed',
           description: description.trim() || `${selectedCategory?.name || 'General'} ${type}`,
           attachmentNote: attachmentNote.trim() || undefined,
           updatedAt: now
@@ -146,7 +150,7 @@ export const AddEditTransactionModal: React.FC<AddEditTransactionModalProps> = (
           transactionDate,
           description: description.trim() || `${selectedCategory?.name || 'General'} ${type}`,
           source: 'manual',
-          status: 'completed',
+          status: isPending ? 'pending' : 'completed',
           attachmentNote: attachmentNote.trim() || undefined,
           createdAt: now,
           updatedAt: now
@@ -331,6 +335,32 @@ export const AddEditTransactionModal: React.FC<AddEditTransactionModalProps> = (
               onChange={(e) => setTransactionDate(e.target.value)}
               className="w-full px-4 py-2.5 bg-[#071724] border border-slate-700 rounded-xl text-slate-200 text-sm font-medium focus:outline-none focus:border-cyan-400 transition-all"
             />
+          </div>
+
+          {/* Status: completed vs pending */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">Status</label>
+            <div className="grid grid-cols-2 gap-2" role="group" aria-label="Transaction status">
+              <button
+                type="button"
+                aria-pressed={!isPending}
+                onClick={() => setIsPending(false)}
+                className={`py-2.5 rounded-xl text-xs font-bold border transition-all ${!isPending ? 'bg-[rgba(24,230,190,0.12)] text-[#18E6BE] border-[rgba(24,230,190,0.32)]' : 'bg-[#071724] text-slate-400 border-slate-700'}`}
+              >
+                ✓ Completed
+              </button>
+              <button
+                type="button"
+                aria-pressed={isPending}
+                onClick={() => setIsPending(true)}
+                className={`py-2.5 rounded-xl text-xs font-bold border transition-all ${isPending ? 'bg-[rgba(247,183,51,0.12)] text-[#F7B733] border-[rgba(247,183,51,0.32)]' : 'bg-[#071724] text-slate-400 border-slate-700'}`}
+              >
+                ⏳ Pending
+              </button>
+            </div>
+            {isPending && (
+              <p className="text-[11px] text-[#F7B733]">Pending items are kept out of your balance until you mark them completed.</p>
+            )}
           </div>
 
           {/* Description / Note */}

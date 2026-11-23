@@ -26,6 +26,7 @@ import {
   PieChart, 
   Target
 } from 'lucide-react';
+import { CashFlowForecastCard } from './CashFlowForecastCard';
 import { SmartQuickEntryBar } from './SmartQuickEntryBar';
 import { FinanceTransaction, FinanceTransactionType } from '../../types';
 
@@ -139,6 +140,11 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
               <div className="text-xs text-[#6F899B] mt-1">
                 {accounts.filter(a => a.isActive).length} active accounts
               </div>
+              {summary.pendingCount > 0 && (
+                <div className="text-[11px] text-[#F7B733] mt-1">
+                  ⏳ {summary.pendingCount} pending · projected {formatCurrency(summary.projectedLiquidBalance)}
+                </div>
+              )}
             </div>
           </div>
           <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between text-xs text-[#18E6BE] font-bold group-hover:underline">
@@ -214,6 +220,9 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
         onOpenAddModal={onOpenAddModal}
         onTransactionSaved={() => {}}
       />
+
+      {/* 2b. CASH-FLOW FORECAST */}
+      <CashFlowForecastCard />
 
       {/* 3. FINANCIAL HEALTH, INSIGHTS & SAVINGS GOALS ROW (3 Columns) */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-4 sm:gap-5">
