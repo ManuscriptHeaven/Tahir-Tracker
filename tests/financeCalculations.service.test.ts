@@ -67,3 +67,20 @@ describe('financeService - accuracy', () => {
     assert.match(f.description, /Not enough spending history/);
   });
 });
+
+describe('getMonthlyTrend', () => {
+  it('returns N months oldest-first, crossing year boundaries, ignoring cancelled', async () => {
+    const { getMonthlyTrend } = await import('../src/utils/financeCalculations.ts');
+    const txs: any[] = [
+      tx({ transactionType: 'income', amount: 1000, transactionDate: '2026-01-15' }),
+      tx({ transactionType: 'expense', amount: 400, transactionDate: '2026-01-20' }),
+      tx({ transactionType: 'expense', amount: 999, transactionDate: '2026-01-21', status: 'cancelled' }),
+      tx({ transactionType: 'expense', amount: 50, transactionDate: '2025-11-02' }),
+    ];
+    const t = getMonthlyTrend(txs, '2026-01', 3);
+    assert.deepStrictEqual(t.map(p => p.monthStr), ['2025-11', '2025-12', '2026-01']);
+    assert.strictEqual(t[0].expense, 50);
+    assert.strictEqual(t[1].income + t[1].expense, 0);
+    assert.deepStrictEqual([t[2].income, t[2].expense, t[2].savings], [1000, 400, 600]);
+  });
+});

@@ -72,13 +72,14 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
     .slice(0, 6);
 
   const isNetPositive = summary.netSavings >= 0;
+  const gaugeColor = healthScore.score >= 65 ? '#18E6BE' : healthScore.score >= 50 ? '#F7B733' : '#FF627B';
 
   return (
     <div className="space-y-6 pb-8 animate-in fade-in duration-300">
       {/* 1. TOP OVERVIEW HERO METRICS (4 Cards) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Card 1: Selected Month Cash Flow */}
-        <div className="bg-[#0B1D2C] rounded-2xl p-3.5 sm:p-5 border border-[rgba(70,150,180,0.18)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col justify-between relative overflow-hidden">
+        <div className="col-span-2 sm:col-span-1 bg-[#0B1D2C] rounded-2xl p-3.5 sm:p-5 border border-[rgba(70,150,180,0.18)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col justify-between relative overflow-hidden">
           <div>
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wider text-[#6F899B]">
@@ -120,7 +121,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
         <button 
           type="button"
           onClick={() => onNavigateToSubTab('accounts')}
-          className="text-left bg-[#0B1D2C] rounded-2xl p-3.5 sm:p-5 border border-[rgba(70,150,180,0.18)] hover:border-[rgba(55,210,190,0.35)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col justify-between cursor-pointer transition-all hover:-translate-y-0.5 group focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#18E6BE]"
+          className="col-span-2 sm:col-span-1 text-left bg-[#0B1D2C] rounded-2xl p-3.5 sm:p-5 border border-[rgba(70,150,180,0.18)] hover:border-[rgba(55,210,190,0.35)] shadow-[0_8px_24px_rgba(0,0,0,0.22)] flex flex-col justify-between cursor-pointer transition-all hover:-translate-y-0.5 group focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#18E6BE]"
         >
           <div>
             <div className="flex items-center justify-between">
@@ -162,7 +163,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
               </div>
             </div>
             <div className="mt-2 sm:mt-2.5">
-              <div className="text-xl sm:text-2xl lg:text-[28px] font-extrabold text-[#14E6AA] tracking-tight tabular-nums">
+              <div className="text-lg sm:text-2xl lg:text-[28px] font-extrabold text-[#14E6AA] tracking-tight tabular-nums truncate">
                 {formatCurrency(summary.monthlyIncome)}
               </div>
               <div className="text-xs text-[#6F899B] mt-1">
@@ -170,7 +171,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
               </div>
             </div>
           </div>
-          <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between text-xs text-[#14E6AA] font-bold group-hover:underline">
+          <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-[rgba(70,150,180,0.12)] hidden sm:flex items-center justify-between text-xs text-[#14E6AA] font-bold group-hover:underline">
             <span>Add income</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
           </div>
@@ -192,7 +193,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
               </div>
             </div>
             <div className="mt-2 sm:mt-2.5">
-              <div className="text-xl sm:text-2xl lg:text-[28px] font-extrabold text-[#FF627B] tracking-tight tabular-nums">
+              <div className="text-lg sm:text-2xl lg:text-[28px] font-extrabold text-[#FF627B] tracking-tight tabular-nums truncate">
                 {formatCurrency(summary.monthlyExpenses)}
               </div>
               <div className="text-xs text-[#6F899B] mt-1">
@@ -200,7 +201,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
               </div>
             </div>
           </div>
-          <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-[rgba(70,150,180,0.12)] flex items-center justify-between text-xs text-[#FF627B] font-bold group-hover:underline">
+          <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-[rgba(70,150,180,0.12)] hidden sm:flex items-center justify-between text-xs text-[#FF627B] font-bold group-hover:underline">
             <span>View budgets</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
           </div>
@@ -215,9 +216,9 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
       />
 
       {/* 3. FINANCIAL HEALTH, INSIGHTS & SAVINGS GOALS ROW (3 Columns) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-4 sm:gap-5">
         {/* Column 1: Financial Health Score (4 cols) */}
-        <div className="lg:col-span-4 bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] p-3.5 sm:p-5 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
+        <div className="xl:col-span-4 bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] p-3.5 sm:p-5 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
           <div className="flex items-center justify-between border-b border-[rgba(70,150,180,0.12)] pb-3 mb-3">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-[#18E6BE]" />
@@ -260,7 +261,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
                   cy="50"
                   r="40"
                   fill="transparent"
-                  stroke="#18E6BE"
+                  stroke={gaugeColor}
                   strokeWidth="10"
                   strokeDasharray={`${(healthScore.score / 100) * 251.2} 251.2`}
                   strokeLinecap="round"
@@ -299,7 +300,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
         </div>
 
         {/* Column 2: Spending Insights (4 cols) */}
-        <div className="lg:col-span-4 bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] p-3.5 sm:p-5 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
+        <div className="xl:col-span-4 bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] p-3.5 sm:p-5 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
           <div className="flex items-center justify-between border-b border-[rgba(70,150,180,0.12)] pb-3 mb-3">
             <div className="flex items-center gap-2 min-w-0">
               <Sparkles className="w-5 h-5 text-[#F7B733] shrink-0" />
@@ -309,7 +310,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
             </div>
             <button
               onClick={() => onNavigateToSubTab('reports')}
-              className="text-xs font-semibold text-[#18E6BE] hover:underline shrink-0"
+              className="text-xs font-semibold text-[#18E6BE] hover:underline shrink-0 py-2 px-1 -my-2"
             >
               View All
             </button>
@@ -354,7 +355,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
         </div>
 
         {/* Column 3: Savings Goals (4 cols) */}
-        <div className="lg:col-span-4 bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] p-3.5 sm:p-5 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
+        <div className="md:col-span-2 xl:col-span-4 bg-[#0B1D2C] rounded-2xl border border-[rgba(70,150,180,0.18)] p-3.5 sm:p-5 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
           <div className="flex items-center justify-between border-b border-[rgba(70,150,180,0.12)] pb-3 mb-3">
             <div className="flex items-center gap-2 min-w-0">
               <Target className="w-5 h-5 text-[#18E6BE] shrink-0" />
@@ -364,7 +365,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
             </div>
             <button
               onClick={() => onNavigateToSubTab('goals')}
-              className="text-xs font-semibold text-[#18E6BE] hover:underline shrink-0"
+              className="text-xs font-semibold text-[#18E6BE] hover:underline shrink-0 py-2 px-1 -my-2"
             >
               See All →
             </button>
@@ -425,7 +426,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
               </div>
               <button
                 onClick={() => onNavigateToSubTab('categories')}
-                className="text-xs font-semibold text-[#18E6BE] hover:underline shrink-0"
+                className="text-xs font-semibold text-[#18E6BE] hover:underline shrink-0 py-2 px-1 -my-2"
               >
                 Categories →
               </button>
