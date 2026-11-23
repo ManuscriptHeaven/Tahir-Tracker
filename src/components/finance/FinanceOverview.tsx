@@ -11,6 +11,7 @@ import {
   getCategorySpendingBreakdown, 
   getBudgetAdherence, 
   calculateFinancialHealthScore, 
+  getAverageMonthlyExpenses, 
   generateAIFinancialInsights 
 } from '../../services/financeService';
 import { 
@@ -59,7 +60,8 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({
     summary.monthlyExpenses,
     summary.savingsRate,
     budgetAdherence,
-    summary.totalLiquidBalance
+    summary.totalLiquidBalance,
+    getAverageMonthlyExpenses(transactions, selectedMonth)
   );
   const aiInsights = generateAIFinancialInsights(transactions, categories, budgetAdherence, selectedMonth);
 
