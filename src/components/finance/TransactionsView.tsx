@@ -309,6 +309,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                             <span className="px-1.5 py-0.5 bg-[#091A28] border border-[rgba(70,150,180,0.15)] text-[#A9BDCC] rounded-md font-bold text-[10px]">
                               {tx.accountName || 'Cash'} {isTransfer && `→ ${tx.transferToAccountName || 'Bank'}`}
                             </span>
+                            {tx.status === 'pending' && (
+                              <span className="text-[10px] text-[#F7B733] bg-[rgba(247,183,51,0.12)] border border-[rgba(247,183,51,0.28)] px-1.5 py-0.5 rounded font-bold">
+                                ⏳ Pending
+                              </span>
+                            )}
                             {tx.source === 'voice' && (
                               <span className="text-[10px] text-[#18E6BE] bg-[rgba(24,230,190,0.12)] border border-[rgba(24,230,190,0.25)] px-1.5 py-0.5 rounded font-bold">
                                 🎙️ Voice
@@ -341,6 +346,17 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                             {tx.transactionDate}
                           </div>
                         </div>
+
+                        {tx.status === 'pending' && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); db.finance_transactions.update(tx.id, { status: 'completed', updatedAt: new Date().toISOString() }); }}
+                            className="px-2.5 py-2 rounded-lg bg-[rgba(24,230,190,0.12)] text-[#18E6BE] border border-[rgba(24,230,190,0.3)] text-[11px] font-bold shrink-0"
+                            title="Mark as completed"
+                          >
+                            ✓ Done
+                          </button>
+                        )}
 
                         {/* Quick action icons */}
                         <div className="hidden sm:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

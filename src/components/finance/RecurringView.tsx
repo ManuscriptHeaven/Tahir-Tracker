@@ -10,7 +10,7 @@ import {
   Trash2 
 } from 'lucide-react';
 import { FinanceRecurringTransaction, FinanceRecurringFrequency } from '../../types';
-import { getDueRecurringTransactions, computeNextRunDate } from '../../services/financeService';
+import { getDueRecurringTransactions, computeNextRunDate, buildRecurringTransaction } from '../../services/financeService';
 import { formatCurrency } from '../../utils/formatters';
 import { getTodayLocalDateStr } from '../../utils/dateTime';
 
@@ -120,31 +120,20 @@ export const RecurringView: React.FC = () => {
   // 1-Click Execute Due Recurring Transaction
   const handleExecuteDue = async (rule: FinanceRecurringTransaction) => {
     const now = new Date().toISOString();
-    const category = categories.find(c => c.id === rule.categoryId);
-    const account = accounts.find(a => a.id === rule.accountId);
-
     try {
-      const newTx = {
-        id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-        transactionType: rule.transactionType,
-        amount: rule.amount,
-        currency: 'PKR',
-        categoryId: rule.categoryId,
-        categoryName: category?.name,
-        accountId: rule.accountId,
-        accountName: account?.name,
-        transactionDate: rule.nextRunDate,
-        description: rule.title,
-        source: 'recurring' as const,
-        status: 'completed' as const,
-        createdAt: now,
-        updatedAt: now
-      };
-      await db.finance_transactions.add(newTx);
+      const newTx = buildRecurringTransaction(
+        rule,
+        rule.nextRunDate,
+        new Map(accounts.map(a => [a.id, a] as const)),
+        new Map(categories.map(c => [c.id, c] as const)),
+        now
+      );
+      await db.finance_transactions.put(newTx); // deterministic id => idempotent
 
-      const newNextRun = computeNextRunDate(rule.nextRunDate, rule.frequency);
+      const newNextRun = computeNextRunDate(rule.nextRunDate, rule.frequency, rule.startDate);
       await db.finance_recurring_transactions.update(rule.id, {
         nextRunDate: newNextRun,
+        isActive: rule.endDate && newNextRun > rule.endDate ? false : rule.isActive,
         updatedAt: now
       });
     } catch (err) {

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
 import { useTrackerBranding } from '../../hooks/useTrackerBranding';
@@ -36,6 +36,7 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({
   const budgets = useLiveQuery(() => db.finance_budgets.toArray()) || [];
 
   const reportRef = useRef<HTMLDivElement>(null);
+  const [trendRange, setTrendRange] = useState<6 | 12>(6);
 
   const accountBalances = calculateAccountBalances(accounts, transactions);
   const summary = getMonthlyFinanceSummary(transactions, selectedMonth, accountBalances, accounts);
@@ -44,8 +45,19 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({
   const aiInsights = generateAIFinancialInsights(transactions, categories, budgetAdherence, selectedMonth);
 
   // 6-Month Trend Data
-  const trendData = getMonthlyTrend(transactions, selectedMonth, 6);
+  const trendData = getMonthlyTrend(transactions, selectedMonth, trendRange);
   const selectedTrend = trendData.find(d => d.monthStr === selectedMonth) || trendData[trendData.length - 1];
+
+  const netValues = trendData.map(d => d.savings);
+  const avgNet = netValues.length ? Math.round(netValues.reduce((a, b) => a + b, 0) / netValues.length) : 0;
+  const netMin = Math.min(...netValues, 0);
+  const netMax = Math.max(...netValues, 1);
+  const netSpan = netMax - netMin || 1;
+  const NW = 300;
+  const NH = 90;
+  const nx = (i: number) => (netValues.length > 1 ? (i / (netValues.length - 1)) * (NW - 16) + 8 : NW / 2);
+  const ny = (v: number) => NH - 8 - ((v - netMin) / netSpan) * (NH - 16);
+  const netPath = netValues.map((v, i) => `${i === 0 ? 'M' : 'L'}${nx(i).toFixed(1)},${ny(v).toFixed(1)}`).join(' ');
 
   const maxTrendAmount = Math.max(...trendData.map(d => Math.max(d.income, d.expense)), 1);
 
@@ -148,8 +160,23 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({
             <div className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-cyan-400" />
               <h3 className="font-bold text-slate-100 text-sm sm:text-base">
-                6-Month Financial Trend
+                {trendRange}-Month Financial Trend
               </h3>
+            </div>
+            <div className="flex gap-1 no-print" role="group" aria-label="Trend range">
+              {([6, 12] as const).map(n => (
+                <button
+                  key={n}
+                  type="button"
+                  aria-pressed={trendRange === n}
+                  onClick={() => setTrendRange(n)}
+                  className={`min-w-[36px] py-1.5 px-2 rounded-lg text-[11px] font-bold border transition-all ${
+                    trendRange === n ? 'bg-[rgba(24,230,190,0.12)] text-[#18E6BE] border-[rgba(24,230,190,0.32)]' : 'text-slate-400 border-transparent hover:text-slate-200'
+                  }`}
+                >
+                  {n}M
+                </button>
+              ))}
             </div>
             <div className="flex items-center gap-3 text-xs font-medium">
               <span className="flex items-center gap-1.5 text-teal-400"><span className="w-2.5 h-2.5 rounded-xs bg-teal-400 inline-block" /> Income</span>
@@ -157,7 +184,7 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({
             </div>
           </div>
 
-          <div className="pt-4 grid grid-cols-6 gap-2 sm:gap-4 items-end h-52">
+          <div className={`pt-4 grid gap-1 sm:gap-4 items-end h-52`} style={{ gridTemplateColumns: `repeat(${trendData.length}, minmax(0, 1fr))` }}>
             {trendData.map(d => {
               const incHeight = d.income > 0 ? Math.max(4, (d.income / maxTrendAmount) * 100) : 1;
               const expHeight = d.expense > 0 ? Math.max(4, (d.expense / maxTrendAmount) * 100) : 1;
@@ -169,13 +196,13 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({
                     {/* Income Bar */}
                     <div
                       style={{ height: `${incHeight}%` }}
-                      className="w-3 sm:w-6 bg-teal-400/90 rounded-t-md transition-all group-hover:bg-teal-300 relative shadow-sm"
+                      className={`${trendRange === 12 ? 'w-1.5 sm:w-4' : 'w-3 sm:w-6'} bg-teal-400/90 rounded-t-md transition-all group-hover:bg-teal-300 relative shadow-sm`}
                       title={`Income: ${formatCurrency(d.income)}`}
                     />
                     {/* Expense Bar */}
                     <div
                       style={{ height: `${expHeight}%` }}
-                      className="w-3 sm:w-6 bg-rose-400/90 rounded-t-md transition-all group-hover:bg-rose-300 relative shadow-sm"
+                      className={`${trendRange === 12 ? 'w-1.5 sm:w-4' : 'w-3 sm:w-6'} bg-rose-400/90 rounded-t-md transition-all group-hover:bg-rose-300 relative shadow-sm`}
                       title={`Expense: ${formatCurrency(d.expense)}`}
                     />
                   </div>
@@ -186,7 +213,7 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({
                       isSelected ? 'text-cyan-400 underline font-bold' : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    {d.monthStr.split('-')[1]}/{d.monthStr.split('-')[0].slice(2)}
+                    {trendRange === 12 ? d.monthStr.split('-')[1] : `${d.monthStr.split('-')[1]}/${d.monthStr.split('-')[0].slice(2)}`}
                   </button>
                 </div>
               );
@@ -206,6 +233,25 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({
               <div className="text-[10px] uppercase tracking-wider text-slate-400">Net</div>
               <div className={`text-xs sm:text-sm font-bold tabular-nums truncate ${selectedTrend.savings >= 0 ? 'text-cyan-400' : 'text-rose-400'}`}>{formatCurrency(selectedTrend.savings)}</div>
             </div>
+          </div>
+        </div>
+
+        {/* Net savings (profit) trend line */}
+        <div className="bg-[#0B1D2C] rounded-2xl p-5 sm:p-6 border border-slate-700/50 shadow-sm space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 className="font-bold text-slate-100 text-sm sm:text-base">Net Savings Trend</h3>
+            <span className="text-xs text-slate-400">Avg <strong className={avgNet >= 0 ? 'text-cyan-400' : 'text-rose-400'}>{formatCurrency(avgNet)}</strong> / month</span>
+          </div>
+          <svg viewBox={`0 0 ${NW} ${NH}`} className="w-full h-24 sm:h-28" preserveAspectRatio="none" role="img" aria-label="Net savings per month">
+            <line x1="0" x2={NW} y1={ny(0)} y2={ny(0)} stroke="#475569" strokeDasharray="3 3" strokeWidth="1" />
+            <path d={netPath} fill="none" stroke="#18E6BE" strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            {netValues.map((v, i) => (
+              <circle key={trendData[i].monthStr} cx={nx(i)} cy={ny(v)} r={trendData[i].monthStr === selectedMonth ? 4 : 2.5} fill={v >= 0 ? '#18E6BE' : '#FB7185'} />
+            ))}
+          </svg>
+          <div className="flex justify-between text-[10px] text-slate-500">
+            <span>{trendData[0].monthStr}</span>
+            <span>{trendData[trendData.length - 1].monthStr}</span>
           </div>
         </div>
 

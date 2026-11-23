@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
   ListOrdered, 
@@ -12,6 +12,7 @@ import {
   WalletCards,
   Mic
 } from 'lucide-react';
+import { processAutoRecurring } from '../../services/recurringService';
 import { FinanceOverview } from './FinanceOverview';
 import { TransactionsView } from './TransactionsView';
 import { AccountsView } from './AccountsView';
@@ -46,6 +47,19 @@ export const FinanceTracker: React.FC<FinanceTrackerProps> = ({
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<FinanceSubTab>('overview');
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+
+  // Record due auto-recurring items when Finance opens and whenever the app returns to the foreground
+  useEffect(() => {
+    const run = () => {
+      processAutoRecurring().catch(err => console.error('Auto-recurring failed:', err));
+    };
+    run();
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') run();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [addModalType, setAddModalType] = useState<FinanceTransactionType>('expense');
   const [transactionToEdit, setTransactionToEdit] = useState<FinanceTransaction | null>(null);

@@ -26,6 +26,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { MetricCard } from '../ui/MetricCard';
+import { isSettled } from '../../utils/financeCalculations';
 
 interface DashboardProps {
   selectedMonth: string; // YYYY-MM
@@ -60,7 +61,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   // 1. CURRENT MONTH FINANCE
   const currentMonthFinanceTx = financeTransactions.filter(
-    tx => tx.transactionDate.startsWith(selectedMonth) && tx.status !== 'cancelled'
+    tx => tx.transactionDate.startsWith(selectedMonth) && isSettled(tx)
   );
   let financeIncome = 0;
   let financeExpenses = 0;
@@ -74,7 +75,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const prevDate = new Date(curYear, curMonth - 2, 1);
   const prevMonthStr = `${prevDate.getFullYear()}-${(prevDate.getMonth() + 1).toString().padStart(2, '0')}`;
   const prevMonthFinanceTx = financeTransactions.filter(
-    tx => tx.transactionDate.startsWith(prevMonthStr) && tx.status !== 'cancelled'
+    tx => tx.transactionDate.startsWith(prevMonthStr) && isSettled(tx)
   );
   let prevIncome = 0;
   let prevExpenses = 0;
@@ -159,7 +160,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     let inc = 0;
     let exp = 0;
     financeTransactions.forEach(tx => {
-      if (tx.transactionDate.startsWith(mStr) && tx.status !== 'cancelled') {
+      if (tx.transactionDate.startsWith(mStr) && isSettled(tx)) {
         if (tx.transactionType === 'income') inc += tx.amount;
         if (tx.transactionType === 'expense') exp += tx.amount;
       }
