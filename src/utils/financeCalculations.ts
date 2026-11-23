@@ -285,6 +285,38 @@ export function getBudgetAdherence(
     });
 }
 
+export interface MonthlyTrendPoint {
+  monthStr: string; // YYYY-MM
+  income: number;
+  expense: number;
+  savings: number;
+}
+
+/**
+ * Income / expense / savings for the `months` months ending at `selectedMonth` (oldest first).
+ */
+export function getMonthlyTrend(
+  transactions: FinanceTransaction[],
+  selectedMonth: string, // YYYY-MM
+  months = 6
+): MonthlyTrendPoint[] {
+  const [year, month] = selectedMonth.split('-').map(Number);
+  const points: MonthlyTrendPoint[] = [];
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(year, month - 1 - i, 1);
+    const monthStr = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+    let income = 0;
+    let expense = 0;
+    transactions.forEach(tx => {
+      if (tx.status === 'cancelled' || !tx.transactionDate.startsWith(monthStr)) return;
+      if (tx.transactionType === 'income') income = addMoney(income, tx.amount);
+      else if (tx.transactionType === 'expense') expense = addMoney(expense, tx.amount);
+    });
+    points.push({ monthStr, income, expense, savings: subtractMoney(income, expense) });
+  }
+  return points;
+}
+
 /**
  * Average monthly expenses over the N months before (and excluding) `selectedMonth`.
  * Only months that actually contain expenses are counted, so a brand-new account

@@ -14,6 +14,7 @@ import {
   getMonthlyFinanceSummary, 
   getCategorySpendingBreakdown, 
   getBudgetAdherence, 
+  getMonthlyTrend,
   generateAIFinancialInsights 
 } from '../../services/financeService';
 import { formatCurrency } from '../../utils/formatters';
@@ -43,34 +44,10 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({
   const aiInsights = generateAIFinancialInsights(transactions, categories, budgetAdherence, selectedMonth);
 
   // 6-Month Trend Data
-  const trendMonths = (() => {
-    const list: string[] = [];
-    const [year, month] = selectedMonth.split('-').map(Number);
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(year, month - 1 - i, 1);
-      const mStr = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
-      list.push(mStr);
-    }
-    return list;
-  })();
+  const trendData = getMonthlyTrend(transactions, selectedMonth, 6);
+  const selectedTrend = trendData.find(d => d.monthStr === selectedMonth) || trendData[trendData.length - 1];
 
-  const trendData = trendMonths.map(mStr => {
-    const mTx = transactions.filter(tx => tx.transactionDate.startsWith(mStr) && tx.status !== 'cancelled');
-    let inc = 0;
-    let exp = 0;
-    mTx.forEach(tx => {
-      if (tx.transactionType === 'income') inc += Number(tx.amount) || 0;
-      if (tx.transactionType === 'expense') exp += Number(tx.amount) || 0;
-    });
-    return {
-      monthStr: mStr,
-      income: inc,
-      expense: exp,
-      savings: inc - exp
-    };
-  });
-
-  const maxTrendAmount = Math.max(...trendData.map(d => Math.max(d.income, d.expense)), 100000);
+  const maxTrendAmount = Math.max(...trendData.map(d => Math.max(d.income, d.expense)), 1);
 
   const handleExportReport = async () => {
     if (!reportRef.current) return;
@@ -135,30 +112,30 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3.5 bg-[#102638] rounded-xl border border-slate-700/40">
+            <div className="p-3.5 bg-[#102638] rounded-xl border border-slate-700/40 min-w-0">
               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Total Income</span>
-              <div className="text-base sm:text-lg font-bold text-teal-400 mt-1">
+              <div className="text-sm sm:text-lg font-bold text-teal-400 mt-1 truncate">
                 {formatCurrency(summary.monthlyIncome)}
               </div>
             </div>
 
-            <div className="p-3.5 bg-[#102638] rounded-xl border border-slate-700/40">
+            <div className="p-3.5 bg-[#102638] rounded-xl border border-slate-700/40 min-w-0">
               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Total Expenses</span>
-              <div className="text-base sm:text-lg font-bold text-rose-400 mt-1">
+              <div className="text-sm sm:text-lg font-bold text-rose-400 mt-1 truncate">
                 {formatCurrency(summary.monthlyExpenses)}
               </div>
             </div>
 
-            <div className="p-3.5 bg-[#102638] rounded-xl border border-slate-700/40">
+            <div className="p-3.5 bg-[#102638] rounded-xl border border-slate-700/40 min-w-0">
               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Net Savings</span>
-              <div className="text-base sm:text-lg font-bold text-cyan-400 mt-1">
+              <div className={`text-base sm:text-lg font-bold mt-1 ${summary.netSavings >= 0 ? 'text-cyan-400' : 'text-rose-400'}`}>
                 {formatCurrency(summary.netSavings)}
               </div>
             </div>
 
-            <div className="p-3.5 bg-[#102638] rounded-xl border border-slate-700/40">
+            <div className="p-3.5 bg-[#102638] rounded-xl border border-slate-700/40 min-w-0">
               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Total Liquidity</span>
-              <div className="text-base sm:text-lg font-bold text-slate-100 mt-1">
+              <div className="text-sm sm:text-lg font-bold text-slate-100 mt-1 truncate">
                 {formatCurrency(summary.totalLiquidBalance)}
               </div>
             </div>
@@ -182,8 +159,8 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({
 
           <div className="pt-4 grid grid-cols-6 gap-2 sm:gap-4 items-end h-52">
             {trendData.map(d => {
-              const incHeight = Math.max(8, (d.income / maxTrendAmount) * 100);
-              const expHeight = Math.max(8, (d.expense / maxTrendAmount) * 100);
+              const incHeight = d.income > 0 ? Math.max(4, (d.income / maxTrendAmount) * 100) : 1;
+              const expHeight = d.expense > 0 ? Math.max(4, (d.expense / maxTrendAmount) * 100) : 1;
               const isSelected = d.monthStr === selectedMonth;
 
               return (
@@ -204,7 +181,8 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({
                   </div>
                   <button
                     onClick={() => setSelectedMonth(d.monthStr)}
-                    className={`text-[10px] sm:text-xs font-semibold transition-all ${
+                    aria-pressed={isSelected}
+                    className={`min-h-[36px] px-1.5 text-[10px] sm:text-xs font-semibold transition-all ${
                       isSelected ? 'text-cyan-400 underline font-bold' : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
@@ -213,6 +191,21 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({
                 </div>
               );
             })}
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-800 text-center">
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-slate-400">Income · {selectedTrend.monthStr}</div>
+              <div className="text-xs sm:text-sm font-bold text-teal-400 tabular-nums truncate">{formatCurrency(selectedTrend.income)}</div>
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-slate-400">Expenses</div>
+              <div className="text-xs sm:text-sm font-bold text-rose-400 tabular-nums truncate">{formatCurrency(selectedTrend.expense)}</div>
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-slate-400">Net</div>
+              <div className={`text-xs sm:text-sm font-bold tabular-nums truncate ${selectedTrend.savings >= 0 ? 'text-cyan-400' : 'text-rose-400'}`}>{formatCurrency(selectedTrend.savings)}</div>
+            </div>
           </div>
         </div>
 
@@ -231,11 +224,11 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({
             {categorySpending.map(cat => (
               <div key={cat.categoryId} className="py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#102638] flex items-center justify-center text-lg border border-slate-700/60">
+                  <div className="w-9 h-9 shrink-0 rounded-xl bg-[#102638] flex items-center justify-center text-lg border border-slate-700/60">
                     {cat.icon}
                   </div>
-                  <div>
-                    <div className="font-bold text-slate-100 text-xs sm:text-sm">
+                  <div className="min-w-0">
+                    <div className="font-bold text-slate-100 text-xs sm:text-sm truncate">
                       {cat.categoryName}
                     </div>
                     <div className="text-[11px] text-slate-400">
@@ -244,8 +237,8 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({
                   </div>
                 </div>
 
-                <div className="text-right">
-                  <div className="font-bold text-slate-100 text-xs sm:text-sm">
+                <div className="text-right shrink-0">
+                  <div className="font-bold text-slate-100 text-xs sm:text-sm tabular-nums">
                     {formatCurrency(cat.totalAmount)}
                   </div>
                   <div className="w-20 sm:w-28 bg-[#071724] h-1.5 rounded-full mt-1.5 overflow-hidden ml-auto border border-slate-800">
@@ -257,6 +250,9 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({
                 </div>
               </div>
             ))}
+            {categorySpending.length === 0 && (
+              <div className="py-8 text-center text-xs text-slate-400">No expenses recorded for {selectedMonth}.</div>
+            )}
           </div>
         </div>
 
