@@ -9,13 +9,25 @@ import {
   HandCoins, 
   User, 
   Plus,
-  Sparkles
+  Sparkles,
+  ArrowUpRight,
+  ArrowDownLeft,
+  ArrowRightLeft
 } from 'lucide-react';
+
+export type QuickAddAction =
+  | NavTab
+  | 'mark_today_milk'
+  | 'manage_persons'
+  | 'ai_assistant'
+  | 'add_expense'
+  | 'add_income'
+  | 'add_transfer';
 
 interface QuickAddSheetProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectAction: (action: NavTab | 'mark_today_milk' | 'manage_persons' | 'ai_assistant') => void;
+  onSelectAction: (action: QuickAddAction) => void;
 }
 
 export const QuickAddSheet: React.FC<QuickAddSheetProps> = ({
@@ -26,14 +38,6 @@ export const QuickAddSheet: React.FC<QuickAddSheetProps> = ({
   if (!isOpen) return null;
 
   const quickActions = [
-    {
-      id: 'finance' as NavTab,
-      label: 'Personal Finance',
-      subtitle: 'Expense, Income & Transfer',
-      icon: Sparkles,
-      color: 'bg-[#102638] text-[#18E6BE] border-[rgba(24,230,190,0.3)] col-span-2 shadow-[0_0_15px_rgba(24,230,190,0.1)]',
-      badge: '💰 Voice & Fast'
-    },
     {
       id: 'ai_assistant' as const,
       label: 'AI Assistant',
@@ -122,6 +126,33 @@ export const QuickAddSheet: React.FC<QuickAddSheetProps> = ({
           >
             <X className="w-5 h-5" />
           </button>
+        </div>
+
+        {/* Money: one tap opens the add form directly */}
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-wider text-[#6F899B] mb-1.5">Add money entry</div>
+          <div className="grid grid-cols-3 gap-2">
+            {([
+              { id: 'add_expense' as const, label: 'Expense', icon: ArrowUpRight, color: 'text-rose-300 border-rose-500/40 bg-rose-500/10' },
+              { id: 'add_income' as const, label: 'Income', icon: ArrowDownLeft, color: 'text-teal-300 border-teal-500/40 bg-teal-500/10' },
+              { id: 'add_transfer' as const, label: 'Transfer', icon: ArrowRightLeft, color: 'text-cyan-300 border-cyan-500/40 bg-cyan-500/10' }
+            ]).map(act => {
+              const Icon = act.icon;
+              return (
+                <button
+                  key={act.id}
+                  onClick={() => {
+                    onSelectAction(act.id);
+                    onClose();
+                  }}
+                  className={`py-3 rounded-2xl border font-bold text-xs flex flex-col items-center gap-1 transition-all active:scale-[0.97] ${act.color}`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span>{act.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Action Grid */}

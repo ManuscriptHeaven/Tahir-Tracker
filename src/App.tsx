@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { NavTab } from './types';
+import { NavTab, FinanceTransactionType } from './types';
 import {
   getActiveDb,
   switchUserDb,
@@ -14,7 +14,8 @@ import { getCurrentMonthYearStr } from './utils/dateTime';
 import { Navbar } from './components/layout/Navbar';
 import { BottomNav } from './components/layout/BottomNav';
 import { TrackerSubNav } from './components/layout/TrackerSubNav';
-import { QuickAddSheet } from './components/layout/QuickAddSheet';
+import { QuickAddSheet, QuickAddAction } from './components/layout/QuickAddSheet';
+import { AddEditTransactionModal } from './components/finance/AddEditTransactionModal';
 
 // Views
 import { Dashboard } from './components/dashboard/Dashboard';
@@ -53,6 +54,7 @@ export const AppContent: React.FC = () => {
   const [reportCategory, setReportCategory] = useState<ReportCategory>(isRentMode ? 'rent' : 'milk');
   const [isDbReady, setIsDbReady] = useState(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [quickTransactionType, setQuickTransactionType] = useState<FinanceTransactionType | null>(null);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<any>(null);
@@ -99,8 +101,10 @@ export const AppContent: React.FC = () => {
     setActiveTab('reports');
   };
 
-  const handleSelectQuickAction = (action: NavTab | 'mark_today_milk' | 'manage_persons' | 'ai_assistant') => {
-    if (action === 'ai_assistant') {
+  const handleSelectQuickAction = (action: QuickAddAction) => {
+    if (action === 'add_expense' || action === 'add_income' || action === 'add_transfer') {
+      setQuickTransactionType(action === 'add_income' ? 'income' : action === 'add_transfer' ? 'transfer' : 'expense');
+    } else if (action === 'ai_assistant') {
       setIsAIAssistantOpen(true);
     } else if (action === 'manage_persons') {
       setActiveTab('utility');
@@ -261,6 +265,13 @@ export const AppContent: React.FC = () => {
             isOpen={isQuickAddOpen}
             onClose={() => setIsQuickAddOpen(false)}
             onSelectAction={handleSelectQuickAction}
+          />
+
+          {/* Add a transaction straight from the bottom + button, from any tab */}
+          <AddEditTransactionModal
+            isOpen={quickTransactionType !== null}
+            onClose={() => setQuickTransactionType(null)}
+            defaultType={quickTransactionType || 'expense'}
           />
         </>
       )}
