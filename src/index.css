@@ -241,14 +241,95 @@
   }
 }
 
-/* Mobile report preview: never silently crop a wide table. */
-@media screen and (max-width: 767px) {
-  .report-document {
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
+/* Phone portrait: show each report table row as a small card so no column is
+   cut off. Cells get their column name from data-label (see
+   utils/responsiveTables.ts). Landscape, print and the JPG export
+   (.report-export) keep the full table. */
+@media screen and (max-width: 639px) {
+  .report-document:not(.report-export) table[data-stack] {
+    display: block;
+    width: 100% !important;
+    min-width: 0 !important;
+    table-layout: auto;
   }
 
-  .report-document table {
-    min-width: 720px;
+  .report-document:not(.report-export) table[data-stack] thead {
+    display: none;
   }
+
+  .report-document:not(.report-export) table[data-stack] tbody,
+  .report-document:not(.report-export) table[data-stack] tfoot {
+    display: block;
+  }
+
+  .report-document:not(.report-export) table[data-stack] tr {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .report-document:not(.report-export) table[data-stack] tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .report-document:not(.report-export) table[data-stack] td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: auto !important;
+    min-width: 0 !important;
+    padding: 0.125rem 0 !important;
+    text-align: right !important;
+    font-size: 11.5px;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    overflow-wrap: anywhere;
+  }
+
+  .report-document:not(.report-export) table[data-stack] td * {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+  }
+
+  .report-document:not(.report-export) table[data-stack] td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    max-width: 50%;
+    text-align: left;
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #64748b;
+  }
+
+  .report-document:not(.report-export) table[data-stack] td:empty {
+    display: none;
+  }
+
+  /* First cell (month, portion, person, date...) becomes the card title. */
+  .report-document:not(.report-export) table[data-stack] td:first-child,
+  .report-document:not(.report-export) table[data-stack] td:not([data-label]) {
+    display: block;
+    text-align: left !important;
+    font-size: 12.5px;
+    font-weight: 800;
+    padding-bottom: 0.25rem !important;
+  }
+
+  .report-document:not(.report-export) table[data-stack] td:first-child::before,
+  .report-document:not(.report-export) table[data-stack] td:not([data-label])::before {
+    content: none;
+  }
+}
+
+/* JPG export renders the desktop table layout at a fixed width, so the image
+   looks the same whichever way the phone is held. */
+.report-document.report-export {
+  width: 960px !important;
+  max-width: none !important;
+  overflow: visible !important;
 }

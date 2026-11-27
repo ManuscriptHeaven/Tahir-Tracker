@@ -118,7 +118,7 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({
               <h2 className="text-lg font-bold text-slate-100">{selectedMonth} Financial Summary</h2>
             </div>
             <div className="text-right">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Savings Rate</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 whitespace-nowrap">Savings Rate</span>
               <div className="text-lg font-bold text-[#18E6BE]">{summary.savingsRate}%</div>
             </div>
           </div>
@@ -156,8 +156,8 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({
 
         {/* 6-Month Spending & Income Trend Bar Visualization */}
         <div className="bg-[#0B1D2C] rounded-2xl p-5 sm:p-6 border border-slate-700/50 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-slate-800 pb-3">
+            <div className="flex items-center gap-2 whitespace-nowrap">
               <TrendingUp className="w-5 h-5 text-cyan-400" />
               <h3 className="font-bold text-slate-100 text-sm sm:text-base">
                 {trendRange}-Month Financial Trend
@@ -222,7 +222,7 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({
 
           <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-800 text-center">
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-slate-400">Income · {selectedTrend.monthStr}</div>
+              <div className="text-[10px] uppercase tracking-wider text-slate-400">Income</div>
               <div className="text-xs sm:text-sm font-bold text-teal-400 tabular-nums truncate">{formatCurrency(selectedTrend.income)}</div>
             </div>
             <div>

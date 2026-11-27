@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useLayoutEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
 import { useTrackerBranding } from '../../hooks/useTrackerBranding';
@@ -12,6 +12,7 @@ import {
 } from '../../utils/formatters';
 import { calculateMilkMonth, getMilkStartDate, getMilkRemainingAmount, isMilkDayActive } from '../../utils/milkCalculations';
 import { exportElementAsJpg } from '../../utils/exportImage';
+import { labelStackedTableCells } from '../../utils/responsiveTables';
 import { addMoney, subtractMoney } from '../../utils/money';
 import { calculateChronologicalRentArrears } from '../../utils/rentCalculations';
 import { filterPortionsByProperty, getRentPropertyName, resolvePortionPropertyId } from '../../utils/rentProperties';
@@ -46,6 +47,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   const [rentPropertyFilter, setRentPropertyFilter] = useState<string>('all');
   const [isExporting, setIsExporting] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
+
+  // Give every table cell its column name so phones in portrait can show rows as cards.
+  useLayoutEffect(() => {
+    labelStackedTableCells(reportRef.current);
+  });
 
   // Queries
   const loans = useLiveQuery(() => db.loans.toArray()) || [];
@@ -272,7 +278,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       <div 
         id="printable-report-card" 
         ref={reportRef}
-        className="report-document bg-white rounded-3xl p-3.5 sm:p-6 border border-slate-200/90 shadow-2xl max-w-5xl mx-auto text-slate-900 font-sans print-page overflow-x-auto sm:overflow-visible"
+        className="report-document bg-white rounded-3xl p-3.5 sm:p-6 border border-slate-200/90 shadow-2xl max-w-5xl mx-auto text-slate-900 font-sans print-page"
       >
         {/* Report Header */}
         <div className="flex flex-col sm:flex-row sm:items-start justify-between border-b-2 border-slate-900 pb-2.5 mb-2.5 gap-2">
@@ -586,7 +592,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 Daily Attendance Matrix — {formattedMonthName}
               </h3>
               <div className="border border-slate-200 rounded-xl overflow-hidden">
-                <table className="w-full table-fixed text-center border-collapse text-[9.5px] sm:text-[10px]">
+                <table className="report-keep-table w-full table-fixed text-center border-collapse text-[9.5px] sm:text-[10px]">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase text-[9px]">
                       <th className="py-1 px-1.5 text-left w-[20%]">Date</th>
