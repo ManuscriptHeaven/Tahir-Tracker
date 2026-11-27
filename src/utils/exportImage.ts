@@ -8,6 +8,11 @@ export async function exportElementAsJpg(elementId: string, filename: string): P
     return false;
   }
 
+  // Capture the full desktop table layout at a fixed width, not the phone card
+  // view, so the saved image is the same in portrait and landscape.
+  node.classList.add('report-export');
+  await new Promise(resolve => requestAnimationFrame(() => resolve(null)));
+
   try {
     const dataUrl = await toJpeg(node, {
       quality: 0.95,
@@ -25,6 +30,8 @@ export async function exportElementAsJpg(elementId: string, filename: string): P
   } catch (error) {
     console.error('Error generating JPG image:', error);
     throw error;
+  } finally {
+    node.classList.remove('report-export');
   }
 }
 
